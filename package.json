@@ -1,0 +1,28 @@
+{
+  "name": "snyk-gradle-plugin",
+  "description": "Snyk CLI Gradle plugin",
+  "homepage": "https://github.com/snyk/snyk-gradle-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/snyk/snyk-gradle-plugin"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "mkdir dist; lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
+    "windows-build": "mkdir dist & lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
+    "test": "tap `find ./test -name '*.test.js'`",
+    "lint": "jscs `find ./lib -name '*.js'` -v && jscs `find ./test -name '*.js'` -v",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+  },
+  "author": "snyk.io",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "fs": "0.0.1-security",
+    "jscs": "^3.0.7",
+    "lodash": "^4.17.4",
+    "semantic-release": "^6.3.6",
+    "sinon": "^2.3.2",
+    "tap": "^10.3.2",
+    "tap-only": "0.0.5"
+  }
+}
