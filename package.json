@@ -10,8 +10,10 @@
   "scripts": {
     "build": "mkdir dist; lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
     "windows-build": "mkdir dist & lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
-    "test": "tap `find ./test -name '*.test.js'`",
+    "test": "npm run lint && npm run test-functional",
     "lint": "jscs `find ./lib -name '*.js'` -v && jscs `find ./test -name '*.js'` -v",
+    "test-functional": "tap `find ./test/functional -name '*.test.js'`",
+    "test-system": "tap `find ./test/system -name '*.test.js'`",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
   "author": "snyk.io",
@@ -19,9 +21,9 @@
   "devDependencies": {
     "fs": "0.0.1-security",
     "jscs": "^3.0.7",
-    "lodash": "^4.17.4",
+    "lodash": "^3.10.1",
+    "lodash-cli": "^3.10.1",
     "semantic-release": "^6.3.6",
-    "sinon": "^2.3.2",
     "tap": "^10.3.2",
     "tap-only": "0.0.5"
   }
