@@ -7,6 +7,9 @@
     "url": "https://github.com/snyk/snyk-gradle-plugin"
   },
   "main": "lib/index.js",
+  "directories": {
+    "test": "test"
+  },
   "scripts": {
     "build": "mkdir dist; lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
     "windows-build": "mkdir dist & lodash -p -o ./dist/lodash-min.js include=cloneDeep,extend,defaults,forEach,flatten,flattenDeep,merge,unique",
