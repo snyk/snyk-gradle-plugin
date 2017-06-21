@@ -1,22 +1,23 @@
-var test = require('tap-only');
-var parse = require('../lib/parse-gradle');
 var fs = require('fs');
+var path = require('path');
+var test = require('tap-only');
+var parse = require('../../lib/parse-gradle');
 
 test('compare full results', function (t) {
   t.plan(1);
-  var gradleOutput = fs.readFileSync(
-    __dirname + '/fixtures/gradle-dependencies-output.txt', 'utf8');
+  var gradleOutput = fs.readFileSync(path.join(
+    __dirname, '..', 'fixtures', 'gradle-dependencies-output.txt'), 'utf8');
   var depTree = parse(gradleOutput, 'myPackage@1.0.0');
-  var results = require(
-    __dirname + '/fixtures/gradle-dependencies-results.json');
+  var results = require(path.join(
+    __dirname, '..','fixtures','gradle-dependencies-results.json'));
 
   t.same(depTree, results);
 });
 
-test('parse a `gradle dependencies` output', function(t) {
+test('parse a `gradle dependencies` output', function (t) {
   t.plan(7);
-  var gradleOutput = fs.readFileSync(
-    __dirname + '/fixtures/gradle-dependencies-output.txt', 'utf8');
+  var gradleOutput = fs.readFileSync(path.join(
+    __dirname, '..', 'fixtures', 'gradle-dependencies-output.txt'), 'utf8');
   var depTree = parse(gradleOutput, 'myPackage@1.0.0');
 
   t.equal(
