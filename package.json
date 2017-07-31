@@ -20,9 +20,9 @@
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
-    "fs": "0.0.1-security",
     "jscs": "^3.0.7",
     "semantic-release": "^6.3.6",
+    "sinon": "^2.4.1",
     "tap": "^10.3.2",
     "tap-only": "0.0.5"
   },
