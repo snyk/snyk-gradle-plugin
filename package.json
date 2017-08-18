@@ -11,7 +11,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm run lint && npm run test-functional",
+    "test": "npm run lint && npm run test-functional && npm run test-system",
     "lint": "jscs `find ./lib -name '*.js'` -v && jscs `find ./test -name '*.js'` -v",
     "test-functional": "tap `find ./test/functional -name '*.test.js'`",
     "test-system": "tap --timeout=300 `find ./test/system -name '*.test.js'`",
