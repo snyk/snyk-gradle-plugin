@@ -1,7 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var test = require('tap-only');
-var parse = require('../../lib/parse-gradle');
+var parse = require('../../lib/gradle-dep-parser').parse;
 var fixturePath = path.join(__dirname, '..', 'fixtures', 'no-wrapper');
 
 test('compare full results', function (t) {
