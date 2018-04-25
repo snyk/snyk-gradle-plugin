@@ -48,8 +48,8 @@ test('parse a `gradle dependencies` output', function (t) {
       .dependencies['com.android.tools:sdklib']
       .dependencies['com.android.tools:repository']
       .dependencies['com.android.tools:common']
-      .dependencies['com.android.tools:annotations'].from[0],
-    'myPackage@1.0.0', 'resolved ommitted dependency path (1)');
+      .dependencies['com.android.tools:annotations'].name,
+    'com.android.tools:annotations', 'resolved ommitted dependency name (1)');
 
   t.equal(
     depTree['com.android.tools.build:builder']
@@ -66,6 +66,6 @@ test('parse a `gradle dependencies` output', function (t) {
       .dependencies['com.android.tools:sdklib']
       .dependencies['com.android.tools:dvlib']
       .dependencies['com.android.tools:common']
-      .dependencies['com.google.guava:guava'].from[0],
-    'myPackage@1.0.0', 'resolved ommitted dependency path (2)');
+      .dependencies['com.google.guava:guava'].name,
+    'com.google.guava:guava', 'resolved ommitted dependency name (2)');
 });
