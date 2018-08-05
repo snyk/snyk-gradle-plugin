@@ -23,7 +23,7 @@
     "jscs": "^3.0.7",
     "semantic-release": "^15",
     "sinon": "^2.4.1",
-    "tap": "^10.3.2",
+    "tap": "^12.0.1",
     "tap-only": "0.0.5"
   },
   "dependencies": {
