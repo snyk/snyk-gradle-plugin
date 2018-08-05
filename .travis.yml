@@ -10,14 +10,16 @@ node_js:
 cache:
   directories:
     - node_modules
-script: npm run test && npm run test-system
+script:
+  - npm test
+  - npm run test-system
 jobs:
   include:
     - stage: npm release
       node_js: "8" # This *has* to be the "build leader"
       script: skip
       after_success:
-        - TRAVIS_JOB_NUMBER=WORKAROUND.1 npm run semantic-release
+        - npm run semantic-release
 branches:
   only:
     - master
