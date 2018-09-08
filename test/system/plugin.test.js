@@ -31,6 +31,20 @@ test('run inspect()', function (t) {
     .catch(t.fail);
 });
 
+test('failing inspect()', function (t) {
+  t.plan(1);
+  stubSubProcessExec(t);
+  return plugin.inspect('.', path.join(
+    __dirname, '..', 'fixtures', 'no-wrapper', 'build.gradle'))
+    .then(function (result) {
+      t.fail('Should have thrown!', result);
+    })
+    .catch(function (error) {
+      t.match(error.message, 'executes successfully on this project',
+        'proper error message');
+    });
+});
+
 test('windows without wrapper', function (t) {
   t.plan(1);
 
@@ -134,7 +148,7 @@ function stubPlatform(platform, t) {
 function stubSubProcessExec(t) {
   sinon.stub(subProcess, 'execute')
     .callsFake(function () {
-      return Promise.reject('abort');
+      return Promise.reject(new Error('abort'));
     });
   t.teardown(subProcess.execute.restore);
 }
