@@ -26,8 +26,8 @@ test('parse a `gradle dependencies` output', function (t) {
       .dependencies['commons-discovery:commons-discovery'].version,
     '0.2', 'resolved correct version for discovery');
 
-  t.equal(depTree['com.android.tools.build:builder'].groupId,
-    'com.android.tools.build', 'found dependency');
+  t.equal(depTree['com.android.tools.build:builder'].name,
+    'com.android.tools.build:builder', 'found dependency');
 
   if (typeof depTree['failed:failed'] === 'undefined') {
     t.pass('failed dependency ignored');

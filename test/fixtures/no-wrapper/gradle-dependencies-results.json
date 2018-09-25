@@ -1,27 +1,19 @@
 {
   "com.google.guava:guava": {
-    "groupId": "com.google.guava",
-    "artifactId": "guava",
     "version": "18.0",
     "name": "com.google.guava:guava",
     "dependencies": {}
   },
   "batik:batik-dom": {
-    "groupId": "batik",
-    "artifactId": "batik-dom",
     "version": "1.6",
     "name": "batik:batik-dom",
     "dependencies": {}
   },
   "commons-discovery:commons-discovery": {
-    "groupId": "commons-discovery",
-    "artifactId": "commons-discovery",
     "version": "0.2",
     "name": "commons-discovery:commons-discovery",
     "dependencies": {
       "commons-logging:commons-logging": {
-        "groupId": "commons-logging",
-        "artifactId": "commons-logging",
         "version": "1.1.1",
         "name": "commons-logging:commons-logging",
         "dependencies": {}
@@ -29,48 +21,34 @@
     }
   },
   "axis:axis": {
-    "groupId": "axis",
-    "artifactId": "axis",
     "version": "1.3",
     "name": "axis:axis",
     "dependencies": {
       "axis:axis-jaxrpc": {
-        "groupId": "axis",
-        "artifactId": "axis-jaxrpc",
         "version": "1.3",
         "name": "axis:axis-jaxrpc",
         "dependencies": {}
       },
       "axis:axis-saaj": {
-        "groupId": "axis",
-        "artifactId": "axis-saaj",
         "version": "1.3",
         "name": "axis:axis-saaj",
         "dependencies": {}
       },
       "wsdl4j:wsdl4j": {
-        "groupId": "wsdl4j",
-        "artifactId": "wsdl4j",
         "version": "1.5.1",
         "name": "wsdl4j:wsdl4j",
         "dependencies": {}
       },
       "commons-logging:commons-logging": {
-        "groupId": "commons-logging",
-        "artifactId": "commons-logging",
         "version": "1.1.1",
         "name": "commons-logging:commons-logging",
         "dependencies": {}
       },
       "commons-discovery:commons-discovery": {
-        "groupId": "commons-discovery",
-        "artifactId": "commons-discovery",
         "version": "0.2",
         "name": "commons-discovery:commons-discovery",
         "dependencies": {
           "commons-logging:commons-logging": {
-            "groupId": "commons-logging",
-            "artifactId": "commons-logging",
             "version": "1.1.1",
             "name": "commons-logging:commons-logging",
             "dependencies": {}
@@ -80,20 +58,14 @@
     }
   },
   "com.android.tools.build:builder": {
-    "groupId": "com.android.tools.build",
-    "artifactId": "builder",
     "version": "2.3.0",
     "name": "com.android.tools.build:builder",
     "dependencies": {
       "com.android.tools.build:builder-model": {
-        "groupId": "com.android.tools.build",
-        "artifactId": "builder-model",
         "version": "2.3.0",
         "name": "com.android.tools.build:builder-model",
         "dependencies": {
           "com.android.tools:annotations": {
-            "groupId": "com.android.tools",
-            "artifactId": "annotations",
             "version": "25.3.0",
             "name": "com.android.tools:annotations",
             "dependencies": {}
@@ -101,33 +73,23 @@
         }
       },
       "com.android.tools.build:builder-test-api": {
-        "groupId": "com.android.tools.build",
-        "artifactId": "builder-test-api",
         "version": "2.3.0",
         "name": "com.android.tools.build:builder-test-api",
         "dependencies": {
           "com.android.tools.ddms:ddmlib": {
-            "groupId": "com.android.tools.ddms",
-            "artifactId": "ddmlib",
             "version": "25.3.0",
             "name": "com.android.tools.ddms:ddmlib",
             "dependencies": {
               "com.android.tools:common": {
-                "groupId": "com.android.tools",
-                "artifactId": "common",
                 "version": "25.3.0",
                 "name": "com.android.tools:common",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -135,8 +97,6 @@
                 }
               },
               "net.sf.kxml:kxml2": {
-                "groupId": "net.sf.kxml",
-                "artifactId": "kxml2",
                 "version": "2.3.0",
                 "name": "net.sf.kxml:kxml2",
                 "dependencies": {}
@@ -146,33 +106,23 @@
         }
       },
       "com.android.tools:sdklib": {
-        "groupId": "com.android.tools",
-        "artifactId": "sdklib",
         "version": "25.3.0",
         "name": "com.android.tools:sdklib",
         "dependencies": {
           "com.android.tools.layoutlib:layoutlib-api": {
-            "groupId": "com.android.tools.layoutlib",
-            "artifactId": "layoutlib-api",
             "version": "25.3.0",
             "name": "com.android.tools.layoutlib:layoutlib-api",
             "dependencies": {
               "com.android.tools:common": {
-                "groupId": "com.android.tools",
-                "artifactId": "common",
                 "version": "25.3.0",
                 "name": "com.android.tools:common",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -180,22 +130,16 @@
                 }
               },
               "net.sf.kxml:kxml2": {
-                "groupId": "net.sf.kxml",
-                "artifactId": "kxml2",
                 "version": "2.3.0",
                 "name": "net.sf.kxml:kxml2",
                 "dependencies": {}
               },
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.intellij:annotations": {
-                "groupId": "com.intellij",
-                "artifactId": "annotations",
                 "version": "12.0",
                 "name": "com.intellij:annotations",
                 "dependencies": {}
@@ -203,27 +147,19 @@
             }
           },
           "com.android.tools:dvlib": {
-            "groupId": "com.android.tools",
-            "artifactId": "dvlib",
             "version": "25.3.0",
             "name": "com.android.tools:dvlib",
             "dependencies": {
               "com.android.tools:common": {
-                "groupId": "com.android.tools",
-                "artifactId": "common",
                 "version": "25.3.0",
                 "name": "com.android.tools:common",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -233,27 +169,19 @@
             }
           },
           "com.android.tools:repository": {
-            "groupId": "com.android.tools",
-            "artifactId": "repository",
             "version": "25.3.0",
             "name": "com.android.tools:repository",
             "dependencies": {
               "com.android.tools:common": {
-                "groupId": "com.android.tools",
-                "artifactId": "common",
                 "version": "25.3.0",
                 "name": "com.android.tools:common",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -261,21 +189,15 @@
                 }
               },
               "org.apache.commons:commons-compress": {
-                "groupId": "org.apache.commons",
-                "artifactId": "commons-compress",
                 "version": "1.8.1",
                 "name": "org.apache.commons:commons-compress",
                 "dependencies": {}
               },
               "com.google.jimfs:jimfs": {
-                "groupId": "com.google.jimfs",
-                "artifactId": "jimfs",
                 "version": "1.1",
                 "name": "com.google.jimfs:jimfs",
                 "dependencies": {
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -285,42 +207,30 @@
             }
           },
           "com.google.code.gson:gson": {
-            "groupId": "com.google.code.gson",
-            "artifactId": "gson",
             "version": "2.2.4",
             "name": "com.google.code.gson:gson",
             "dependencies": {}
           },
           "org.apache.commons:commons-compress": {
-            "groupId": "org.apache.commons",
-            "artifactId": "commons-compress",
             "version": "1.8.1",
             "name": "org.apache.commons:commons-compress",
             "dependencies": {}
           },
           "org.apache.httpcomponents:httpclient": {
-            "groupId": "org.apache.httpcomponents",
-            "artifactId": "httpclient",
             "version": "4.1.1",
             "name": "org.apache.httpcomponents:httpclient",
             "dependencies": {
               "org.apache.httpcomponents:httpcore": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpcore",
                 "version": "4.1",
                 "name": "org.apache.httpcomponents:httpcore",
                 "dependencies": {}
               },
               "commons-logging:commons-logging": {
-                "groupId": "commons-logging",
-                "artifactId": "commons-logging",
                 "version": "1.1.1",
                 "name": "commons-logging:commons-logging",
                 "dependencies": {}
               },
               "commons-codec:commons-codec": {
-                "groupId": "commons-codec",
-                "artifactId": "commons-codec",
                 "version": "1.4",
                 "name": "commons-codec:commons-codec",
                 "dependencies": {}
@@ -328,21 +238,15 @@
             }
           },
           "org.apache.httpcomponents:httpmime": {
-            "groupId": "org.apache.httpcomponents",
-            "artifactId": "httpmime",
             "version": "4.1",
             "name": "org.apache.httpcomponents:httpmime",
             "dependencies": {
               "org.apache.httpcomponents:httpcore": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpcore",
                 "version": "4.1",
                 "name": "org.apache.httpcomponents:httpcore",
                 "dependencies": {}
               },
               "commons-logging:commons-logging": {
-                "groupId": "commons-logging",
-                "artifactId": "commons-logging",
                 "version": "1.1.1",
                 "name": "commons-logging:commons-logging",
                 "dependencies": {}
@@ -352,39 +256,27 @@
         }
       },
       "com.android.tools:sdk-common": {
-        "groupId": "com.android.tools",
-        "artifactId": "sdk-common",
         "version": "25.3.0",
         "name": "com.android.tools:sdk-common",
         "dependencies": {
           "com.android.tools:sdklib": {
-            "groupId": "com.android.tools",
-            "artifactId": "sdklib",
             "version": "25.3.0",
             "name": "com.android.tools:sdklib",
             "dependencies": {
               "com.android.tools.layoutlib:layoutlib-api": {
-                "groupId": "com.android.tools.layoutlib",
-                "artifactId": "layoutlib-api",
                 "version": "25.3.0",
                 "name": "com.android.tools.layoutlib:layoutlib-api",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -392,22 +284,16 @@
                     }
                   },
                   "net.sf.kxml:kxml2": {
-                    "groupId": "net.sf.kxml",
-                    "artifactId": "kxml2",
                     "version": "2.3.0",
                     "name": "net.sf.kxml:kxml2",
                     "dependencies": {}
                   },
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.intellij:annotations": {
-                    "groupId": "com.intellij",
-                    "artifactId": "annotations",
                     "version": "12.0",
                     "name": "com.intellij:annotations",
                     "dependencies": {}
@@ -415,27 +301,19 @@
                 }
               },
               "com.android.tools:dvlib": {
-                "groupId": "com.android.tools",
-                "artifactId": "dvlib",
                 "version": "25.3.0",
                 "name": "com.android.tools:dvlib",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -445,27 +323,19 @@
                 }
               },
               "com.android.tools:repository": {
-                "groupId": "com.android.tools",
-                "artifactId": "repository",
                 "version": "25.3.0",
                 "name": "com.android.tools:repository",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -473,21 +343,15 @@
                     }
                   },
                   "org.apache.commons:commons-compress": {
-                    "groupId": "org.apache.commons",
-                    "artifactId": "commons-compress",
                     "version": "1.8.1",
                     "name": "org.apache.commons:commons-compress",
                     "dependencies": {}
                   },
                   "com.google.jimfs:jimfs": {
-                    "groupId": "com.google.jimfs",
-                    "artifactId": "jimfs",
                     "version": "1.1",
                     "name": "com.google.jimfs:jimfs",
                     "dependencies": {
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -497,42 +361,30 @@
                 }
               },
               "com.google.code.gson:gson": {
-                "groupId": "com.google.code.gson",
-                "artifactId": "gson",
                 "version": "2.2.4",
                 "name": "com.google.code.gson:gson",
                 "dependencies": {}
               },
               "org.apache.commons:commons-compress": {
-                "groupId": "org.apache.commons",
-                "artifactId": "commons-compress",
                 "version": "1.8.1",
                 "name": "org.apache.commons:commons-compress",
                 "dependencies": {}
               },
               "org.apache.httpcomponents:httpclient": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpclient",
                 "version": "4.1.1",
                 "name": "org.apache.httpcomponents:httpclient",
                 "dependencies": {
                   "org.apache.httpcomponents:httpcore": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpcore",
                     "version": "4.1",
                     "name": "org.apache.httpcomponents:httpcore",
                     "dependencies": {}
                   },
                   "commons-logging:commons-logging": {
-                    "groupId": "commons-logging",
-                    "artifactId": "commons-logging",
                     "version": "1.1.1",
                     "name": "commons-logging:commons-logging",
                     "dependencies": {}
                   },
                   "commons-codec:commons-codec": {
-                    "groupId": "commons-codec",
-                    "artifactId": "commons-codec",
                     "version": "1.4",
                     "name": "commons-codec:commons-codec",
                     "dependencies": {}
@@ -540,21 +392,15 @@
                 }
               },
               "org.apache.httpcomponents:httpmime": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpmime",
                 "version": "4.1",
                 "name": "org.apache.httpcomponents:httpmime",
                 "dependencies": {
                   "org.apache.httpcomponents:httpcore": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpcore",
                     "version": "4.1",
                     "name": "org.apache.httpcomponents:httpcore",
                     "dependencies": {}
                   },
                   "commons-logging:commons-logging": {
-                    "groupId": "commons-logging",
-                    "artifactId": "commons-logging",
                     "version": "1.1.1",
                     "name": "commons-logging:commons-logging",
                     "dependencies": {}
@@ -564,33 +410,23 @@
             }
           },
           "com.android.tools.build:builder-test-api": {
-            "groupId": "com.android.tools.build",
-            "artifactId": "builder-test-api",
             "version": "2.3.0",
             "name": "com.android.tools.build:builder-test-api",
             "dependencies": {
               "com.android.tools.ddms:ddmlib": {
-                "groupId": "com.android.tools.ddms",
-                "artifactId": "ddmlib",
                 "version": "25.3.0",
                 "name": "com.android.tools.ddms:ddmlib",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -598,8 +434,6 @@
                     }
                   },
                   "net.sf.kxml:kxml2": {
-                    "groupId": "net.sf.kxml",
-                    "artifactId": "kxml2",
                     "version": "2.3.0",
                     "name": "net.sf.kxml:kxml2",
                     "dependencies": {}
@@ -609,14 +443,10 @@
             }
           },
           "com.android.tools.build:builder-model": {
-            "groupId": "com.android.tools.build",
-            "artifactId": "builder-model",
             "version": "2.3.0",
             "name": "com.android.tools.build:builder-model",
             "dependencies": {
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
@@ -624,14 +454,10 @@
             }
           },
           "org.bouncycastle:bcpkix-jdk15on": {
-            "groupId": "org.bouncycastle",
-            "artifactId": "bcpkix-jdk15on",
             "version": "1.48",
             "name": "org.bouncycastle:bcpkix-jdk15on",
             "dependencies": {
               "org.bouncycastle:bcprov-jdk15on": {
-                "groupId": "org.bouncycastle",
-                "artifactId": "bcprov-jdk15on",
                 "version": "1.48",
                 "name": "org.bouncycastle:bcprov-jdk15on",
                 "dependencies": {}
@@ -639,8 +465,6 @@
             }
           },
           "org.bouncycastle:bcprov-jdk15on": {
-            "groupId": "org.bouncycastle",
-            "artifactId": "bcprov-jdk15on",
             "version": "1.48",
             "name": "org.bouncycastle:bcprov-jdk15on",
             "dependencies": {}
@@ -648,21 +472,15 @@
         }
       },
       "com.android.tools:common": {
-        "groupId": "com.android.tools",
-        "artifactId": "common",
         "version": "25.3.0",
         "name": "com.android.tools:common",
         "dependencies": {
           "com.android.tools:annotations": {
-            "groupId": "com.android.tools",
-            "artifactId": "annotations",
             "version": "25.3.0",
             "name": "com.android.tools:annotations",
             "dependencies": {}
           },
           "com.google.guava:guava": {
-            "groupId": "com.google.guava",
-            "artifactId": "guava",
             "version": "18.0",
             "name": "com.google.guava:guava",
             "dependencies": {}
@@ -670,27 +488,19 @@
         }
       },
       "com.android.tools.build:manifest-merger": {
-        "groupId": "com.android.tools.build",
-        "artifactId": "manifest-merger",
         "version": "25.3.0",
         "name": "com.android.tools.build:manifest-merger",
         "dependencies": {
           "com.android.tools:common": {
-            "groupId": "com.android.tools",
-            "artifactId": "common",
             "version": "25.3.0",
             "name": "com.android.tools:common",
             "dependencies": {
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.google.guava:guava": {
-                "groupId": "com.google.guava",
-                "artifactId": "guava",
                 "version": "18.0",
                 "name": "com.google.guava:guava",
                 "dependencies": {}
@@ -698,33 +508,23 @@
             }
           },
           "com.android.tools:sdklib": {
-            "groupId": "com.android.tools",
-            "artifactId": "sdklib",
             "version": "25.3.0",
             "name": "com.android.tools:sdklib",
             "dependencies": {
               "com.android.tools.layoutlib:layoutlib-api": {
-                "groupId": "com.android.tools.layoutlib",
-                "artifactId": "layoutlib-api",
                 "version": "25.3.0",
                 "name": "com.android.tools.layoutlib:layoutlib-api",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -732,22 +532,16 @@
                     }
                   },
                   "net.sf.kxml:kxml2": {
-                    "groupId": "net.sf.kxml",
-                    "artifactId": "kxml2",
                     "version": "2.3.0",
                     "name": "net.sf.kxml:kxml2",
                     "dependencies": {}
                   },
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.intellij:annotations": {
-                    "groupId": "com.intellij",
-                    "artifactId": "annotations",
                     "version": "12.0",
                     "name": "com.intellij:annotations",
                     "dependencies": {}
@@ -755,27 +549,19 @@
                 }
               },
               "com.android.tools:dvlib": {
-                "groupId": "com.android.tools",
-                "artifactId": "dvlib",
                 "version": "25.3.0",
                 "name": "com.android.tools:dvlib",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -785,27 +571,19 @@
                 }
               },
               "com.android.tools:repository": {
-                "groupId": "com.android.tools",
-                "artifactId": "repository",
                 "version": "25.3.0",
                 "name": "com.android.tools:repository",
                 "dependencies": {
                   "com.android.tools:common": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "common",
                     "version": "25.3.0",
                     "name": "com.android.tools:common",
                     "dependencies": {
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -813,21 +591,15 @@
                     }
                   },
                   "org.apache.commons:commons-compress": {
-                    "groupId": "org.apache.commons",
-                    "artifactId": "commons-compress",
                     "version": "1.8.1",
                     "name": "org.apache.commons:commons-compress",
                     "dependencies": {}
                   },
                   "com.google.jimfs:jimfs": {
-                    "groupId": "com.google.jimfs",
-                    "artifactId": "jimfs",
                     "version": "1.1",
                     "name": "com.google.jimfs:jimfs",
                     "dependencies": {
                       "com.google.guava:guava": {
-                        "groupId": "com.google.guava",
-                        "artifactId": "guava",
                         "version": "18.0",
                         "name": "com.google.guava:guava",
                         "dependencies": {}
@@ -837,42 +609,30 @@
                 }
               },
               "com.google.code.gson:gson": {
-                "groupId": "com.google.code.gson",
-                "artifactId": "gson",
                 "version": "2.2.4",
                 "name": "com.google.code.gson:gson",
                 "dependencies": {}
               },
               "org.apache.commons:commons-compress": {
-                "groupId": "org.apache.commons",
-                "artifactId": "commons-compress",
                 "version": "1.8.1",
                 "name": "org.apache.commons:commons-compress",
                 "dependencies": {}
               },
               "org.apache.httpcomponents:httpclient": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpclient",
                 "version": "4.1.1",
                 "name": "org.apache.httpcomponents:httpclient",
                 "dependencies": {
                   "org.apache.httpcomponents:httpcore": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpcore",
                     "version": "4.1",
                     "name": "org.apache.httpcomponents:httpcore",
                     "dependencies": {}
                   },
                   "commons-logging:commons-logging": {
-                    "groupId": "commons-logging",
-                    "artifactId": "commons-logging",
                     "version": "1.1.1",
                     "name": "commons-logging:commons-logging",
                     "dependencies": {}
                   },
                   "commons-codec:commons-codec": {
-                    "groupId": "commons-codec",
-                    "artifactId": "commons-codec",
                     "version": "1.4",
                     "name": "commons-codec:commons-codec",
                     "dependencies": {}
@@ -880,21 +640,15 @@
                 }
               },
               "org.apache.httpcomponents:httpmime": {
-                "groupId": "org.apache.httpcomponents",
-                "artifactId": "httpmime",
                 "version": "4.1",
                 "name": "org.apache.httpcomponents:httpmime",
                 "dependencies": {
                   "org.apache.httpcomponents:httpcore": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpcore",
                     "version": "4.1",
                     "name": "org.apache.httpcomponents:httpcore",
                     "dependencies": {}
                   },
                   "commons-logging:commons-logging": {
-                    "groupId": "commons-logging",
-                    "artifactId": "commons-logging",
                     "version": "1.1.1",
                     "name": "commons-logging:commons-logging",
                     "dependencies": {}
@@ -904,39 +658,27 @@
             }
           },
           "com.android.tools:sdk-common": {
-            "groupId": "com.android.tools",
-            "artifactId": "sdk-common",
             "version": "25.3.0",
             "name": "com.android.tools:sdk-common",
             "dependencies": {
               "com.android.tools:sdklib": {
-                "groupId": "com.android.tools",
-                "artifactId": "sdklib",
                 "version": "25.3.0",
                 "name": "com.android.tools:sdklib",
                 "dependencies": {
                   "com.android.tools.layoutlib:layoutlib-api": {
-                    "groupId": "com.android.tools.layoutlib",
-                    "artifactId": "layoutlib-api",
                     "version": "25.3.0",
                     "name": "com.android.tools.layoutlib:layoutlib-api",
                     "dependencies": {
                       "com.android.tools:common": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "common",
                         "version": "25.3.0",
                         "name": "com.android.tools:common",
                         "dependencies": {
                           "com.android.tools:annotations": {
-                            "groupId": "com.android.tools",
-                            "artifactId": "annotations",
                             "version": "25.3.0",
                             "name": "com.android.tools:annotations",
                             "dependencies": {}
                           },
                           "com.google.guava:guava": {
-                            "groupId": "com.google.guava",
-                            "artifactId": "guava",
                             "version": "18.0",
                             "name": "com.google.guava:guava",
                             "dependencies": {}
@@ -944,22 +686,16 @@
                         }
                       },
                       "net.sf.kxml:kxml2": {
-                        "groupId": "net.sf.kxml",
-                        "artifactId": "kxml2",
                         "version": "2.3.0",
                         "name": "net.sf.kxml:kxml2",
                         "dependencies": {}
                       },
                       "com.android.tools:annotations": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "annotations",
                         "version": "25.3.0",
                         "name": "com.android.tools:annotations",
                         "dependencies": {}
                       },
                       "com.intellij:annotations": {
-                        "groupId": "com.intellij",
-                        "artifactId": "annotations",
                         "version": "12.0",
                         "name": "com.intellij:annotations",
                         "dependencies": {}
@@ -967,27 +703,19 @@
                     }
                   },
                   "com.android.tools:dvlib": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "dvlib",
                     "version": "25.3.0",
                     "name": "com.android.tools:dvlib",
                     "dependencies": {
                       "com.android.tools:common": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "common",
                         "version": "25.3.0",
                         "name": "com.android.tools:common",
                         "dependencies": {
                           "com.android.tools:annotations": {
-                            "groupId": "com.android.tools",
-                            "artifactId": "annotations",
                             "version": "25.3.0",
                             "name": "com.android.tools:annotations",
                             "dependencies": {}
                           },
                           "com.google.guava:guava": {
-                            "groupId": "com.google.guava",
-                            "artifactId": "guava",
                             "version": "18.0",
                             "name": "com.google.guava:guava",
                             "dependencies": {}
@@ -997,27 +725,19 @@
                     }
                   },
                   "com.android.tools:repository": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "repository",
                     "version": "25.3.0",
                     "name": "com.android.tools:repository",
                     "dependencies": {
                       "com.android.tools:common": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "common",
                         "version": "25.3.0",
                         "name": "com.android.tools:common",
                         "dependencies": {
                           "com.android.tools:annotations": {
-                            "groupId": "com.android.tools",
-                            "artifactId": "annotations",
                             "version": "25.3.0",
                             "name": "com.android.tools:annotations",
                             "dependencies": {}
                           },
                           "com.google.guava:guava": {
-                            "groupId": "com.google.guava",
-                            "artifactId": "guava",
                             "version": "18.0",
                             "name": "com.google.guava:guava",
                             "dependencies": {}
@@ -1025,21 +745,15 @@
                         }
                       },
                       "org.apache.commons:commons-compress": {
-                        "groupId": "org.apache.commons",
-                        "artifactId": "commons-compress",
                         "version": "1.8.1",
                         "name": "org.apache.commons:commons-compress",
                         "dependencies": {}
                       },
                       "com.google.jimfs:jimfs": {
-                        "groupId": "com.google.jimfs",
-                        "artifactId": "jimfs",
                         "version": "1.1",
                         "name": "com.google.jimfs:jimfs",
                         "dependencies": {
                           "com.google.guava:guava": {
-                            "groupId": "com.google.guava",
-                            "artifactId": "guava",
                             "version": "18.0",
                             "name": "com.google.guava:guava",
                             "dependencies": {}
@@ -1049,42 +763,30 @@
                     }
                   },
                   "com.google.code.gson:gson": {
-                    "groupId": "com.google.code.gson",
-                    "artifactId": "gson",
                     "version": "2.2.4",
                     "name": "com.google.code.gson:gson",
                     "dependencies": {}
                   },
                   "org.apache.commons:commons-compress": {
-                    "groupId": "org.apache.commons",
-                    "artifactId": "commons-compress",
                     "version": "1.8.1",
                     "name": "org.apache.commons:commons-compress",
                     "dependencies": {}
                   },
                   "org.apache.httpcomponents:httpclient": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpclient",
                     "version": "4.1.1",
                     "name": "org.apache.httpcomponents:httpclient",
                     "dependencies": {
                       "org.apache.httpcomponents:httpcore": {
-                        "groupId": "org.apache.httpcomponents",
-                        "artifactId": "httpcore",
                         "version": "4.1",
                         "name": "org.apache.httpcomponents:httpcore",
                         "dependencies": {}
                       },
                       "commons-logging:commons-logging": {
-                        "groupId": "commons-logging",
-                        "artifactId": "commons-logging",
                         "version": "1.1.1",
                         "name": "commons-logging:commons-logging",
                         "dependencies": {}
                       },
                       "commons-codec:commons-codec": {
-                        "groupId": "commons-codec",
-                        "artifactId": "commons-codec",
                         "version": "1.4",
                         "name": "commons-codec:commons-codec",
                         "dependencies": {}
@@ -1092,21 +794,15 @@
                     }
                   },
                   "org.apache.httpcomponents:httpmime": {
-                    "groupId": "org.apache.httpcomponents",
-                    "artifactId": "httpmime",
                     "version": "4.1",
                     "name": "org.apache.httpcomponents:httpmime",
                     "dependencies": {
                       "org.apache.httpcomponents:httpcore": {
-                        "groupId": "org.apache.httpcomponents",
-                        "artifactId": "httpcore",
                         "version": "4.1",
                         "name": "org.apache.httpcomponents:httpcore",
                         "dependencies": {}
                       },
                       "commons-logging:commons-logging": {
-                        "groupId": "commons-logging",
-                        "artifactId": "commons-logging",
                         "version": "1.1.1",
                         "name": "commons-logging:commons-logging",
                         "dependencies": {}
@@ -1116,33 +812,23 @@
                 }
               },
               "com.android.tools.build:builder-test-api": {
-                "groupId": "com.android.tools.build",
-                "artifactId": "builder-test-api",
                 "version": "2.3.0",
                 "name": "com.android.tools.build:builder-test-api",
                 "dependencies": {
                   "com.android.tools.ddms:ddmlib": {
-                    "groupId": "com.android.tools.ddms",
-                    "artifactId": "ddmlib",
                     "version": "25.3.0",
                     "name": "com.android.tools.ddms:ddmlib",
                     "dependencies": {
                       "com.android.tools:common": {
-                        "groupId": "com.android.tools",
-                        "artifactId": "common",
                         "version": "25.3.0",
                         "name": "com.android.tools:common",
                         "dependencies": {
                           "com.android.tools:annotations": {
-                            "groupId": "com.android.tools",
-                            "artifactId": "annotations",
                             "version": "25.3.0",
                             "name": "com.android.tools:annotations",
                             "dependencies": {}
                           },
                           "com.google.guava:guava": {
-                            "groupId": "com.google.guava",
-                            "artifactId": "guava",
                             "version": "18.0",
                             "name": "com.google.guava:guava",
                             "dependencies": {}
@@ -1150,8 +836,6 @@
                         }
                       },
                       "net.sf.kxml:kxml2": {
-                        "groupId": "net.sf.kxml",
-                        "artifactId": "kxml2",
                         "version": "2.3.0",
                         "name": "net.sf.kxml:kxml2",
                         "dependencies": {}
@@ -1161,14 +845,10 @@
                 }
               },
               "com.android.tools.build:builder-model": {
-                "groupId": "com.android.tools.build",
-                "artifactId": "builder-model",
                 "version": "2.3.0",
                 "name": "com.android.tools.build:builder-model",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
@@ -1176,14 +856,10 @@
                 }
               },
               "org.bouncycastle:bcpkix-jdk15on": {
-                "groupId": "org.bouncycastle",
-                "artifactId": "bcpkix-jdk15on",
                 "version": "1.48",
                 "name": "org.bouncycastle:bcpkix-jdk15on",
                 "dependencies": {
                   "org.bouncycastle:bcprov-jdk15on": {
-                    "groupId": "org.bouncycastle",
-                    "artifactId": "bcprov-jdk15on",
                     "version": "1.48",
                     "name": "org.bouncycastle:bcprov-jdk15on",
                     "dependencies": {}
@@ -1191,8 +867,6 @@
                 }
               },
               "org.bouncycastle:bcprov-jdk15on": {
-                "groupId": "org.bouncycastle",
-                "artifactId": "bcprov-jdk15on",
                 "version": "1.48",
                 "name": "org.bouncycastle:bcprov-jdk15on",
                 "dependencies": {}
@@ -1200,15 +874,11 @@
             }
           },
           "net.sf.kxml:kxml2": {
-            "groupId": "net.sf.kxml",
-            "artifactId": "kxml2",
             "version": "2.3.0",
             "name": "net.sf.kxml:kxml2",
             "dependencies": {}
           },
           "com.google.code.gson:gson": {
-            "groupId": "com.google.code.gson",
-            "artifactId": "gson",
             "version": "2.2.4",
             "name": "com.google.code.gson:gson",
             "dependencies": {}
@@ -1216,27 +886,19 @@
         }
       },
       "com.android.tools.ddms:ddmlib": {
-        "groupId": "com.android.tools.ddms",
-        "artifactId": "ddmlib",
         "version": "25.3.0",
         "name": "com.android.tools.ddms:ddmlib",
         "dependencies": {
           "com.android.tools:common": {
-            "groupId": "com.android.tools",
-            "artifactId": "common",
             "version": "25.3.0",
             "name": "com.android.tools:common",
             "dependencies": {
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.google.guava:guava": {
-                "groupId": "com.google.guava",
-                "artifactId": "guava",
                 "version": "18.0",
                 "name": "com.google.guava:guava",
                 "dependencies": {}
@@ -1244,8 +906,6 @@
             }
           },
           "net.sf.kxml:kxml2": {
-            "groupId": "net.sf.kxml",
-            "artifactId": "kxml2",
             "version": "2.3.0",
             "name": "net.sf.kxml:kxml2",
             "dependencies": {}
@@ -1253,28 +913,20 @@
         }
       },
       "com.android.tools.jack:jack-api": {
-        "groupId": "com.android.tools.jack",
-        "artifactId": "jack-api",
         "version": "0.13.0",
         "name": "com.android.tools.jack:jack-api",
         "dependencies": {}
       },
       "com.android.tools.jill:jill-api": {
-        "groupId": "com.android.tools.jill",
-        "artifactId": "jill-api",
         "version": "0.10.0",
         "name": "com.android.tools.jill:jill-api",
         "dependencies": {}
       },
       "com.android.tools.analytics-library:protos": {
-        "groupId": "com.android.tools.analytics-library",
-        "artifactId": "protos",
         "version": "25.3.0",
         "name": "com.android.tools.analytics-library:protos",
         "dependencies": {
           "com.google.protobuf:protobuf-java": {
-            "groupId": "com.google.protobuf",
-            "artifactId": "protobuf-java",
             "version": "3.0.0",
             "name": "com.google.protobuf:protobuf-java",
             "dependencies": {}
@@ -1282,20 +934,14 @@
         }
       },
       "com.android.tools.analytics-library:shared": {
-        "groupId": "com.android.tools.analytics-library",
-        "artifactId": "shared",
         "version": "25.3.0",
         "name": "com.android.tools.analytics-library:shared",
         "dependencies": {
           "com.android.tools.analytics-library:protos": {
-            "groupId": "com.android.tools.analytics-library",
-            "artifactId": "protos",
             "version": "25.3.0",
             "name": "com.android.tools.analytics-library:protos",
             "dependencies": {
               "com.google.protobuf:protobuf-java": {
-                "groupId": "com.google.protobuf",
-                "artifactId": "protobuf-java",
                 "version": "3.0.0",
                 "name": "com.google.protobuf:protobuf-java",
                 "dependencies": {}
@@ -1303,28 +949,20 @@
             }
           },
           "com.android.tools:annotations": {
-            "groupId": "com.android.tools",
-            "artifactId": "annotations",
             "version": "25.3.0",
             "name": "com.android.tools:annotations",
             "dependencies": {}
           },
           "com.android.tools:common": {
-            "groupId": "com.android.tools",
-            "artifactId": "common",
             "version": "25.3.0",
             "name": "com.android.tools:common",
             "dependencies": {
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.google.guava:guava": {
-                "groupId": "com.google.guava",
-                "artifactId": "guava",
                 "version": "18.0",
                 "name": "com.google.guava:guava",
                 "dependencies": {}
@@ -1332,15 +970,11 @@
             }
           },
           "com.google.guava:guava": {
-            "groupId": "com.google.guava",
-            "artifactId": "guava",
             "version": "18.0",
             "name": "com.google.guava:guava",
             "dependencies": {}
           },
           "com.google.code.gson:gson": {
-            "groupId": "com.google.code.gson",
-            "artifactId": "gson",
             "version": "2.2.4",
             "name": "com.google.code.gson:gson",
             "dependencies": {}
@@ -1348,34 +982,24 @@
         }
       },
       "com.android.tools.analytics-library:tracker": {
-        "groupId": "com.android.tools.analytics-library",
-        "artifactId": "tracker",
         "version": "25.3.0",
         "name": "com.android.tools.analytics-library:tracker",
         "dependencies": {
           "com.android.tools:annotations": {
-            "groupId": "com.android.tools",
-            "artifactId": "annotations",
             "version": "25.3.0",
             "name": "com.android.tools:annotations",
             "dependencies": {}
           },
           "com.android.tools:common": {
-            "groupId": "com.android.tools",
-            "artifactId": "common",
             "version": "25.3.0",
             "name": "com.android.tools:common",
             "dependencies": {
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.google.guava:guava": {
-                "groupId": "com.google.guava",
-                "artifactId": "guava",
                 "version": "18.0",
                 "name": "com.google.guava:guava",
                 "dependencies": {}
@@ -1383,14 +1007,10 @@
             }
           },
           "com.android.tools.analytics-library:protos": {
-            "groupId": "com.android.tools.analytics-library",
-            "artifactId": "protos",
             "version": "25.3.0",
             "name": "com.android.tools.analytics-library:protos",
             "dependencies": {
               "com.google.protobuf:protobuf-java": {
-                "groupId": "com.google.protobuf",
-                "artifactId": "protobuf-java",
                 "version": "3.0.0",
                 "name": "com.google.protobuf:protobuf-java",
                 "dependencies": {}
@@ -1398,20 +1018,14 @@
             }
           },
           "com.android.tools.analytics-library:shared": {
-            "groupId": "com.android.tools.analytics-library",
-            "artifactId": "shared",
             "version": "25.3.0",
             "name": "com.android.tools.analytics-library:shared",
             "dependencies": {
               "com.android.tools.analytics-library:protos": {
-                "groupId": "com.android.tools.analytics-library",
-                "artifactId": "protos",
                 "version": "25.3.0",
                 "name": "com.android.tools.analytics-library:protos",
                 "dependencies": {
                   "com.google.protobuf:protobuf-java": {
-                    "groupId": "com.google.protobuf",
-                    "artifactId": "protobuf-java",
                     "version": "3.0.0",
                     "name": "com.google.protobuf:protobuf-java",
                     "dependencies": {}
@@ -1419,28 +1033,20 @@
                 }
               },
               "com.android.tools:annotations": {
-                "groupId": "com.android.tools",
-                "artifactId": "annotations",
                 "version": "25.3.0",
                 "name": "com.android.tools:annotations",
                 "dependencies": {}
               },
               "com.android.tools:common": {
-                "groupId": "com.android.tools",
-                "artifactId": "common",
                 "version": "25.3.0",
                 "name": "com.android.tools:common",
                 "dependencies": {
                   "com.android.tools:annotations": {
-                    "groupId": "com.android.tools",
-                    "artifactId": "annotations",
                     "version": "25.3.0",
                     "name": "com.android.tools:annotations",
                     "dependencies": {}
                   },
                   "com.google.guava:guava": {
-                    "groupId": "com.google.guava",
-                    "artifactId": "guava",
                     "version": "18.0",
                     "name": "com.google.guava:guava",
                     "dependencies": {}
@@ -1448,15 +1054,11 @@
                 }
               },
               "com.google.guava:guava": {
-                "groupId": "com.google.guava",
-                "artifactId": "guava",
                 "version": "18.0",
                 "name": "com.google.guava:guava",
                 "dependencies": {}
               },
               "com.google.code.gson:gson": {
-                "groupId": "com.google.code.gson",
-                "artifactId": "gson",
                 "version": "2.2.4",
                 "name": "com.google.code.gson:gson",
                 "dependencies": {}
@@ -1464,15 +1066,11 @@
             }
           },
           "com.google.protobuf:protobuf-java": {
-            "groupId": "com.google.protobuf",
-            "artifactId": "protobuf-java",
             "version": "3.0.0",
             "name": "com.google.protobuf:protobuf-java",
             "dependencies": {}
           },
           "com.google.guava:guava": {
-            "groupId": "com.google.guava",
-            "artifactId": "guava",
             "version": "18.0",
             "name": "com.google.guava:guava",
             "dependencies": {}
@@ -1480,21 +1078,15 @@
         }
       },
       "com.squareup:javawriter": {
-        "groupId": "com.squareup",
-        "artifactId": "javawriter",
         "version": "2.5.0",
         "name": "com.squareup:javawriter",
         "dependencies": {}
       },
       "org.bouncycastle:bcpkix-jdk15on": {
-        "groupId": "org.bouncycastle",
-        "artifactId": "bcpkix-jdk15on",
         "version": "1.48",
         "name": "org.bouncycastle:bcpkix-jdk15on",
         "dependencies": {
           "org.bouncycastle:bcprov-jdk15on": {
-            "groupId": "org.bouncycastle",
-            "artifactId": "bcprov-jdk15on",
             "version": "1.48",
             "name": "org.bouncycastle:bcprov-jdk15on",
             "dependencies": {}
@@ -1502,28 +1094,20 @@
         }
       },
       "org.bouncycastle:bcprov-jdk15on": {
-        "groupId": "org.bouncycastle",
-        "artifactId": "bcprov-jdk15on",
         "version": "1.48",
         "name": "org.bouncycastle:bcprov-jdk15on",
         "dependencies": {}
       },
       "org.ow2.asm:asm": {
-        "groupId": "org.ow2.asm",
-        "artifactId": "asm",
         "version": "5.0.4",
         "name": "org.ow2.asm:asm",
         "dependencies": {}
       },
       "org.ow2.asm:asm-tree": {
-        "groupId": "org.ow2.asm",
-        "artifactId": "asm-tree",
         "version": "5.0.4",
         "name": "org.ow2.asm:asm-tree",
         "dependencies": {
           "org.ow2.asm:asm": {
-            "groupId": "org.ow2.asm",
-            "artifactId": "asm",
             "version": "5.0.4",
             "name": "org.ow2.asm:asm",
             "dependencies": {}
