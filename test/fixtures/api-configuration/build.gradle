@@ -1,0 +1,5 @@
+apply plugin: 'java-library'
+
+dependencies {
+  api 'commons-httpclient:commons-httpclient:3.1'
+}
