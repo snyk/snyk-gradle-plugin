@@ -137,6 +137,30 @@ test('darwin with wrapper in root', function (t) {
     });
 });
 
+test('only sub-project has deps', function (t) {
+  t.plan(2);
+  const options = {
+    'gradle-sub-project': 'subproj',
+  };
+  return plugin.inspect('.',
+    path.join(__dirname, '..', 'fixtures', 'multi-project', 'build.gradle'),
+    options)
+    .then(function (result) {
+      t.match(result.package.name, '/subproj',
+        'sub project name is included in the root pkg name');
+
+      t.equal(result.package
+        .dependencies['com.android.tools.build:builder']
+        .dependencies['com.android.tools:sdklib']
+        .dependencies['com.android.tools:repository']
+        .dependencies['com.android.tools:common']
+        .dependencies['com.android.tools:annotations'].version,
+      '25.3.0',
+      'correct version found');
+    })
+    .catch(t.fail);
+});
+
 function stubPlatform(platform, t) {
   sinon.stub(os, 'platform')
     .callsFake(function () {
