@@ -82,3 +82,24 @@ test('parse a `gradle dependencies` output', function (t) {
     t.same(depTree, results);
   });
 });
+
+test('parse a `gradle dependencies` output', function (t) {
+  return t.test('handle ( -> ) properly', function (t) {
+    t.plan(1);
+    var gradleOutput = fs.readFileSync(path.join(
+      fixturePath, 'version-issue', 'gradle-dependencies-output.txt'), 'utf8');
+    var depTree = parse(gradleOutput);
+    t.same(depTree, {
+      'org.example:foo': {
+        name: 'org.example:foo',
+        version: '2.0.1',
+        dependencies: {},
+      },
+      'org.springframework.boot:spring-boot-starter-actuator': {
+        version: '1.5.9.RELEASE',
+        name: 'org.springframework.boot:spring-boot-starter-actuator',
+        dependencies: {},
+      },
+    }, 'handles version selection correctly');
+  });
+});
