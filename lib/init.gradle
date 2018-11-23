@@ -1,4 +1,9 @@
 allprojects {
+  task listAllPlugins {
+    doLast {
+      project.plugins.each { println it }
+    }
+  }
   task listAllJars {
       doLast {
           configurations.compile.each { File file -> println file.name }
