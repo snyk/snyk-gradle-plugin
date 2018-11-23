@@ -16,10 +16,9 @@ script:
 jobs:
   include:
     - stage: npm release
+      if: branch = master AND type != pull_request
       node_js: "8" # This *has* to be the "build leader"
-      script: skip
-      after_success:
-        - npm run semantic-release
+      script: npx semantic-release
 branches:
   only:
     - master

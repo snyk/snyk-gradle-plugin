@@ -14,14 +14,12 @@
     "test": "npm run lint && npm run test-functional",
     "lint": "eslint -c .eslintrc lib test",
     "test-functional": "tap -R spec ./test/functional/*.test.js",
-    "test-system": "tap -R spec ./test/system/*.test.js",
-    "semantic-release": "semantic-release"
+    "test-system": "tap -R spec ./test/system/*.test.js"
   },
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
     "eslint": "^4.11.0",
-    "semantic-release": "^15",
     "sinon": "^2.4.1",
     "tap": "^12.0.1",
     "tap-only": "0.0.5"
