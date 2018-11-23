@@ -1,0 +1,14 @@
+apply plugin: 'java'
+apply plugin: 'checkstyle'
+
+ext {
+    checkstyleVersion = '8.10.1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    runtime group: 'axis', name: 'axis', version: '1.4'
+}

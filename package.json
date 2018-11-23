@@ -25,6 +25,7 @@
     "tap-only": "0.0.5"
   },
   "dependencies": {
-    "clone-deep": "^0.3.0"
+    "clone-deep": "^0.3.0",
+    "debug": "^3"
   }
 }

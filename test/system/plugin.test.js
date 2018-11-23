@@ -161,6 +161,19 @@ test('only sub-project has deps', function (t) {
     .catch(t.fail);
 });
 
+test('default configuration is used by default', function (t) {
+  return plugin.inspect('.',
+    path.join(__dirname, '..', 'fixtures', 'checkstyle', 'build.gradle'))
+    .then(function (result) {
+      t.ok(result.package.dependencies['axis:axis'], 'axis:axis found');
+      t.equal(result.package.dependencies['axis:axis'].version,
+        '1.4',
+        'correct version found');
+      t.end();
+    })
+    .catch(t.fail);
+});
+
 function stubPlatform(platform, t) {
   sinon.stub(os, 'platform')
     .callsFake(function () {
