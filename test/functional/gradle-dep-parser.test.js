@@ -7,10 +7,11 @@ var fixturePath = path.join(__dirname, '..', 'fixtures');
 test('compare full results', function (t) {
   t.plan(1);
   var gradleOutput = fs.readFileSync(
-    path.join(fixturePath, 'no-wrapper', 'gradle-dependencies-output.txt'), 'utf8');
+    path.join(fixturePath, 'no wrapper', 'gradle-dependencies-output.txt'),
+    'utf8');
   var depTree = parse(gradleOutput, 'myPackage@1.0.0');
   var results = require(
-    path.join(fixturePath, 'no-wrapper','gradle-dependencies-results.json'));
+    path.join(fixturePath, 'no wrapper','gradle-dependencies-results.json'));
 
   t.same(depTree, results);
 });
@@ -18,7 +19,7 @@ test('compare full results', function (t) {
 test('parse a `gradle dependencies` output', function (t) {
   t.plan(7);
   var gradleOutput = fs.readFileSync(path.join(
-    fixturePath, 'no-wrapper', 'gradle-dependencies-output.txt'), 'utf8');
+    fixturePath, 'no wrapper', 'gradle-dependencies-output.txt'), 'utf8');
   var depTree = parse(gradleOutput, 'myPackage@1.0.0');
 
   t.equal(
@@ -74,10 +75,12 @@ test('parse a `gradle dependencies` output', function (t) {
   return t.test('handle (n) marker', function (t) {
     t.plan(1);
     var gradleOutput = fs.readFileSync(path.join(
-      fixturePath, 'api-configuration', 'gradle-dependencies-output.txt'), 'utf8');
+      fixturePath, 'api-configuration', 'gradle-dependencies-output.txt'),
+    'utf8');
     var depTree = parse(gradleOutput);
     var results = require(
-      path.join(fixturePath, 'api-configuration','gradle-dependencies-results.json'));
+      path.join(fixturePath, 'api-configuration',
+        'gradle-dependencies-results.json'));
 
     t.same(depTree, results);
   });

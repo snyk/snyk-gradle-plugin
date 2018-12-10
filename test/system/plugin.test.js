@@ -6,7 +6,7 @@ var plugin = require('../../lib');
 var subProcess = require('../../lib/sub-process');
 
 var rootNoWrapper = path.join(
-  __dirname, '..', 'fixtures', 'no-wrapper');
+  __dirname, '..', 'fixtures', 'no wrapper');
 
 var rootWithWrapper = path.join(
   __dirname, '..', 'fixtures', 'with-wrapper');
@@ -17,7 +17,7 @@ var subWithWrapper = path.join(
 test('run inspect()', function (t) {
   t.plan(1);
   return plugin.inspect('.', path.join(
-    __dirname, '..', 'fixtures', 'no-wrapper', 'build.gradle'))
+    __dirname, '..', 'fixtures', 'no wrapper', 'build.gradle'))
     .then(function (result) {
       t.equal(result.package
         .dependencies['com.android.tools.build:builder']
@@ -35,7 +35,7 @@ test('failing inspect()', function (t) {
   t.plan(1);
   stubSubProcessExec(t);
   return plugin.inspect('.', path.join(
-    __dirname, '..', 'fixtures', 'no-wrapper', 'build.gradle'))
+    __dirname, '..', 'fixtures', 'no wrapper', 'build.gradle'))
     .then(function (result) {
       t.fail('Should have thrown!', result);
     })
