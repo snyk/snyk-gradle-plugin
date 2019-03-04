@@ -1,6 +1,6 @@
 var fs = require('fs');
 var path = require('path');
-var test = require('tap-only');
+var test = require('tap').test;
 var parse = require('../../lib/gradle-dep-parser').parse;
 var fixturePath = path.join(__dirname, '..', 'fixtures');
 
@@ -72,7 +72,7 @@ test('parse a `gradle dependencies` output', function (t) {
 });
 
 test('parse a `gradle dependencies` output', function (t) {
-  return t.test('handle (n) marker', function (t) {
+  return t.test('handle (n) and (c)  marker', function (t) {
     t.plan(1);
     var gradleOutput = fs.readFileSync(path.join(
       fixturePath, 'api-configuration', 'gradle-dependencies-output.txt'),
@@ -105,4 +105,26 @@ test('parse a `gradle dependencies` output', function (t) {
       },
     }, 'handles version selection correctly');
   });
+});
+
+
+test('parse a `gradle dependencies` output', function (t) {
+  t.plan(2);
+  var gradleOutput = fs.readFileSync(path.join(
+    fixturePath, 'no wrapper', 'gradle-dependencies-output.txt'), 'utf8');
+  var depTree = parse(gradleOutput, 'myPackage@1.0.0');
+
+  t.equal(
+    depTree['com.android.tools.build:builder']
+      .dependencies['com.android.tools:sdk-common']
+      .dependencies['org.bouncycastle:bcpkix-jdk15on']
+      .dependencies['org.bouncycastle:bcprov-jdk15on'].version,
+    '1.48', 'resolved ommitted dependency version');
+
+  t.equal(
+    depTree['com.android.tools.build:builder']
+      .dependencies['com.android.tools:sdk-common']
+      .dependencies['org.bouncycastle:bcpkix-jdk15on']
+      .dependencies['org.bouncycastle:bcprov-jdk15on'].name,
+    'org.bouncycastle:bcprov-jdk15on', 'resolved ommitted dependency name');
 });

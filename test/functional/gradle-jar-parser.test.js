@@ -1,4 +1,4 @@
-var test = require('tap-only');
+var test = require('tap').test;
 var parse = require('../../lib/gradle-jar-parser').parse;
 
 test('parse empty text', function (t) {
