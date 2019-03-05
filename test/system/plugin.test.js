@@ -1,6 +1,6 @@
 var os = require('os');
 var path = require('path');
-var test = require('tap-only');
+var test = require('tap').test;
 var sinon = require('sinon');
 var plugin = require('../../lib');
 var subProcess = require('../../lib/sub-process');

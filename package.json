@@ -23,8 +23,7 @@
     "eslint": "^4.11.0",
     "semantic-release": "^15",
     "sinon": "^2.4.1",
-    "tap": "^12.0.1",
-    "tap-only": "0.0.5"
+    "tap": "github:snyk/node-tap#alternative-runtimes"
   },
   "dependencies": {
     "clone-deep": "^0.3.0"
