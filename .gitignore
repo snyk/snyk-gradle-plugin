@@ -4,3 +4,5 @@ __pycache__/
 .gradle
 /dist
 package-lock.json
+test/fixtures/**/build
+npm-debug.log
