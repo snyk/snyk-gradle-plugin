@@ -12,6 +12,7 @@ test('check build args with array', function (t) {
   t.deepEqual(result, [
     'dependencies',
     '-q',
+    '--no-daemon',
     '--build-file',
     'build.gradle',
     '--configuration',
@@ -27,6 +28,7 @@ test('check build args with string', function (t) {
   t.deepEqual(result, [
     'dependencies',
     '-q',
+    '--no-daemon',
     '--build-file build.gradle --configuration compile',
   ]);
   t.end();
