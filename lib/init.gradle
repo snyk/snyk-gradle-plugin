@@ -1,17 +1,67 @@
-allprojects {
-  task listAllJars {
-      doLast {
-          configurations.compile.each { File file -> println file.name }
-      }
-  }
-  task listLocalJars {
-    doLast {
-      def userDir = System.getProperty("user.dir")
-      configurations.compile.each {
-        if (it.absolutePath.contains(userDir)) {
-          println it.name
+import groovy.json.JsonOutput
+
+// This script does the following: for all the projects in the build file,
+// generate a merged configuration of all the available configurations,
+// and then list the dependencies as a tree.
+
+// It's the responsibility of the caller to pick the project(s) they are 
+// interested in from the results.
+
+// CLI usages:
+// gradle -q -I init.gradle snykResolvedDepsJson
+// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf
+
+// (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
+
+// Output format:
+// Since Gradle is chatty and often prints a "Welcome" banner even with -q option,
+// the only output line that matters is prefixed with "JSONDEPS " and is a JSON representation
+// of the dependencies trees for all projects in the following format
+
+// interface Result = {
+//     '$rootProject': string;
+//     [project: string]: DepDict;
+// };
+// interface DepDict { 
+//     [name: string]: DepTree;
+// }
+// interface DepTree {
+//     name: string;
+//     version: string;
+//     dependencies?: DepDict;
+// }
+
+rootProject { rootProj ->
+    task snykResolvedDepsJson { 
+        def result = ['$rootProject': rootProj.name]
+
+        def onlyConf = project.hasProperty('configuration') ? configuration : null
+
+        def depsToObject
+        depsToObject = { deps ->
+            def res = [:]
+            deps.each { d ->
+                def row = ['name': "$d.moduleGroup:$d.moduleName", 'version': d.moduleVersion]
+                def subDeps = depsToObject(d.children)
+                if (subDeps.size() > 0) {
+                    row['dependencies'] = subDeps
+                }
+                res[row['name']] = row
+            }
+            return res
         }
-      }
+
+        doLast {
+            allprojects.each { proj ->
+                if (proj.configurations.size() > 0) {
+                    def snykConf = proj.configurations.create('snykMergedDepsConf')
+                    proj.configurations
+                        .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
+                        .each { snykConf.extendsFrom(it) }
+                    result[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                }
+            }
+            println("JSONDEPS " + JsonOutput.toJson(result))
+        }
     }
-  }
 }

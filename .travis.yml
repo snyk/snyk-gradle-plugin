@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial # ubuntu 16.04 LTS, EOL April 2021
 sudo: false
 notifications:
   email: false
@@ -10,6 +10,8 @@ node_js:
 cache:
   directories:
     - node_modules
+    - $HOME/.gradle
+    - .gradle
 script:
   - npm test
 jobs:

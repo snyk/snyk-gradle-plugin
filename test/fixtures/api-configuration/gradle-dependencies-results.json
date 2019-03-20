@@ -1,7 +1,0 @@
-{
-  "commons-httpclient:commons-httpclient": {
-    "version": "3.1",
-    "name": "commons-httpclient:commons-httpclient",
-    "dependencies": {}
-  }
-}
