@@ -1,5 +1,8 @@
 # https://www.appveyor.com/docs/appveyor-yml
 
+os: Visual Studio 2015
+platform:
+  - x64
 # to disable automatic builds
 build: off
 branches:
@@ -29,6 +32,10 @@ install:
   - node --version
   - npm --version
   - npm install
+  - choco install gradle
+  # During the first run, Gradle prints "Welcome to Gradle!" banner, even with -q
+  # so, run it once to ensure stdout won't be polluted anymore
+  - gradle -v
 
 test_script:
   - npm run test

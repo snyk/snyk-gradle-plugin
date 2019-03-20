@@ -11,7 +11,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm run lint && npm run test-functional",
+    "test": "npm run lint && npm run test-functional && npm run test-system",
     "lint": "eslint -c .eslintrc lib test",
     "test-functional": "tap -R spec ./test/functional/*.test.js",
     "test-system": "tap -R spec ./test/system/*.test.js",

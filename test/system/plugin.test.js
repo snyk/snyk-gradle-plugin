@@ -28,7 +28,7 @@ test('run inspect()', function (t) {
       '25.3.0',
       'correct version found');
     })
-    .catch(t.fail);
+    .catch(t.threw);
 });
 
 test('failing inspect()', function (t) {
@@ -158,7 +158,7 @@ test('only sub-project has deps', function (t) {
       '25.3.0',
       'correct version found');
     })
-    .catch(t.fail);
+    .catch(t.threw);
 });
 
 function stubPlatform(platform, t) {
