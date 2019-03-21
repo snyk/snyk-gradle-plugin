@@ -1,19 +1,17 @@
-var os = require('os');
-var fs = require('fs');
-var path = require('path');
-var subProcess = require('./sub-process');
+import * as os from 'os';
+import * as fs from 'fs';
+import * as  path from 'path';
+import * as subProcess from './sub-process';
+
 var packageFormatVersion = 'mvn:0.0.1';
 
-module.exports = {
-  inspect: inspect,
-};
-
-module.exports.__tests = {
+// tslint:disable-next-line
+export const __tests = {
   buildArgs: buildArgs,
   extractJsonFromScriptOutput: extractJsonFromScriptOutput,
 };
 
-function inspect(root, targetFile, options) {
+export function inspect(root, targetFile, options?) {
   if (!options) {
     options = {dev: false};
   }
@@ -42,7 +40,7 @@ function extractJsonFromScriptOutput(stdoutText) {
       jsonLine = l.substr(9);
     }
   });
-  return JSON.parse(jsonLine);
+  return JSON.parse(jsonLine!);
 }
 
 function getAllDeps(root, targetFile, options, subProject) {
@@ -62,8 +60,8 @@ function getAllDeps(root, targetFile, options, subProject) {
     args[i] = a.replace(/^--configuration[= ]/, '-Pconfiguration=');
     // Transform --configuration foo
     if (a === '--configuration') {
-      args[i] = '-Pconfiguration=' + args[i+1];
-      args[i+1] = '';
+      args[i] = '-Pconfiguration=' + args[i + 1];
+      args[i + 1] = '';
     }
   });
 
@@ -81,7 +79,7 @@ function getAllDeps(root, targetFile, options, subProject) {
         packageName += '/' + subProject;
         depTree = allProjectDeps[subProject];
       } else {
-        depTree = allProjectDeps[allProjectDeps['$rootProject']];
+        depTree = allProjectDeps[allProjectDeps.$rootProject];
       }
       var packageVersion = '0.0.0';
       return {
@@ -119,7 +117,7 @@ function getCommand(root, targetFile) {
 }
 
 function buildArgs(root, targetFile, gradleArgs) {
-  var args = [];
+  var args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
   if (targetFile) {
     if (!fs.existsSync(path.resolve(root, targetFile))) {

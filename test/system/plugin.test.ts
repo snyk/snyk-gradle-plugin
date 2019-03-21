@@ -1,9 +1,9 @@
-var os = require('os');
-var path = require('path');
-var test = require('tap').test;
-var sinon = require('sinon');
-var plugin = require('../../lib');
-var subProcess = require('../../lib/sub-process');
+import * as os from 'os';
+import * as path from 'path';
+import {test} from 'tap';
+import {stub, SinonStub} from 'sinon';
+import * as plugin from '../../lib';
+import * as subProcess from '../../lib/sub-process';
 
 var rootNoWrapper = path.join(
   __dirname, '..', 'fixtures', 'no wrapper');
@@ -54,7 +54,7 @@ test('windows without wrapper', function (t) {
   return plugin.inspect(rootNoWrapper, 'build.gradle')
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       t.same(cmd, 'gradle', 'invokes gradle directly');
     });
 });
@@ -68,7 +68,7 @@ test('darwin without wrapper', function (t) {
   return plugin.inspect(rootNoWrapper, 'build.gradle')
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       t.same(cmd, 'gradle', 'invokes gradle directly');
     });
 });
@@ -82,7 +82,7 @@ test('windows with wrapper', function (t) {
   return plugin.inspect(rootWithWrapper, 'build.gradle')
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       var expectedCmd = path.join(
         __dirname, '..', 'fixtures', 'with-wrapper', 'gradlew.bat');
       t.same(cmd, expectedCmd, 'invokes wrapper bat');
@@ -98,7 +98,7 @@ test('darwin with wrapper', function (t) {
   return plugin.inspect(rootWithWrapper, 'build.gradle')
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       var expectedCmd = path.join(
         __dirname, '..', 'fixtures', 'with-wrapper', 'gradlew');
       t.same(cmd, expectedCmd, 'invokes wrapper script');
@@ -114,7 +114,7 @@ test('windows with wrapper in root', function (t) {
   return plugin.inspect(subWithWrapper, path.join('app', 'build.gradle'))
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       var expectedCmd = path.join(
         __dirname, '..', 'fixtures', 'with-wrapper-in-root', 'gradlew.bat');
       t.same(cmd, expectedCmd, 'invokes wrapper bat');
@@ -130,7 +130,7 @@ test('darwin with wrapper in root', function (t) {
   return plugin.inspect(subWithWrapper, path.join('app', 'build.gradle'))
     .then(t.fail)
     .catch(function () {
-      var cmd = subProcess.execute.getCall(0).args[0];
+      var cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
       var expectedCmd = path.join(
         __dirname, '..', 'fixtures', 'with-wrapper-in-root', 'gradlew');
       t.same(cmd, expectedCmd, 'invokes wrapper script');
@@ -250,17 +250,17 @@ test('malformed build.gradle', function (t) {
 });
 
 function stubPlatform(platform, t) {
-  sinon.stub(os, 'platform')
+  stub(os, 'platform')
     .callsFake(function () {
       return platform;
     });
-  t.teardown(os.platform.restore);
+  t.teardown((os.platform as SinonStub).restore);
 }
 
 function stubSubProcessExec(t) {
-  sinon.stub(subProcess, 'execute')
+  stub(subProcess, 'execute')
     .callsFake(function () {
       return Promise.reject(new Error('abort'));
     });
-  t.teardown(subProcess.execute.restore);
+  t.teardown((subProcess.execute as SinonStub).restore);
 }
