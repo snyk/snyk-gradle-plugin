@@ -21,10 +21,3 @@ Additional command line arguments to Gradle can be provided after `--`, for exam
 ## Under the hood
 
 See `lib/init.gradle` for the Groovy script injected in Gradle builds to gather and resolve the dependencies.
-
-## Developer notes
-
-Minimum supported version of Node.js is 4.
-
-It does not support ts-node (required to run tests from `.ts` files), so we have to run `.js` tests from `./dist` 
-for now.
