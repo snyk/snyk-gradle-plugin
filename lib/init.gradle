@@ -18,17 +18,20 @@ import groovy.json.JsonOutput
 // the only output line that matters is prefixed with "JSONDEPS " and is a JSON representation
 // of the dependencies trees for all projects in the following format
 
-// interface Result = {
-//     '$defaultProject': string;
-//     [project: string]: DepDict;
-// };
+// interface JsonDepsScriptResult {
+//   defaultProject: string;
+//   projects: ProjectsDict;
+// }
+// interface ProjectsDict {
+//   [project: string]: DepDict;
+// }
 // interface DepDict { 
-//     [name: string]: DepTree;
+//   [name: string]: DepTree;
 // }
 // interface DepTree {
-//     name: string;
-//     version: string;
-//     dependencies?: DepDict;
+//   name: string;
+//   version: string;
+//   dependencies?: DepDict;
 // }
 
 // We are attaching this task to every project, as this is the only reliable way to run it
@@ -54,7 +57,8 @@ allprojects { everyProj ->
         }
 
         doLast { task ->
-            def result = ['$defaultProject': task.project.name]
+            def projectsDict = [:]
+            def result = ['defaultProject': task.project.name, 'projects': projectsDict]
             if (!snykMergedDepsConfExecuted) {
                 allprojects.each { proj ->
                     if (proj.configurations.size() > 0 && proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
@@ -62,7 +66,7 @@ allprojects { everyProj ->
                         proj.configurations
                             .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
                             .each { snykConf.extendsFrom(it) }
-                        result[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                        projectsDict[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
                     }
                 }
                 println("JSONDEPS " + JsonOutput.toJson(result))

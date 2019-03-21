@@ -6,26 +6,36 @@
     "type": "git",
     "url": "https://github.com/snyk/snyk-gradle-plugin"
   },
-  "main": "lib/index.js",
+  "main": "dist/lib/index.js",
   "directories": {
     "test": "test"
   },
+  "files": [
+    "dist",
+    "lib/init.gradle"
+  ],
   "scripts": {
-    "test": "npm run lint && npm run test-functional && npm run test-system",
-    "lint": "eslint -c .eslintrc lib test",
-    "test-functional": "tap -R spec ./test/functional/*.test.js",
-    "test-system": "tap -R spec --timeout=180 ./test/system/*.test.js",
-    "semantic-release": "semantic-release"
+    "build": "tsc",
+    "lint": "tslint --project tsconfig.json --format stylish",
+    "prepare": "npm run build",
+    "semantic-release": "semantic-release",
+    "test": "npm run build && npm run lint && npm run test-functional && npm run test-system",
+    "test-functional": "tap -R spec ./dist/test/functional/*.test.js",
+    "test-system": "tap -R spec --timeout=180 ./dist/test/system/*.test.js"
   },
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
-    "eslint": "^4.11.0",
+    "@types/node": "^4.9.1",
+    "@types/sinon": "^7.0.10",
     "semantic-release": "^15",
     "sinon": "^2.4.1",
-    "tap": "github:snyk/node-tap#alternative-runtimes"
+    "tap": "github:snyk/node-tap#alternative-runtimes",
+    "tslint": "^5.14.0",
+    "typescript": "^3.3.4000"
   },
   "dependencies": {
-    "clone-deep": "^0.3.0"
+    "clone-deep": "^0.3.0",
+    "tslib": "^1.9.3"
   }
 }
