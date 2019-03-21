@@ -1,7 +1,7 @@
-var childProcess = require('child_process');
+import * as childProcess from 'child_process';
 
-module.exports.execute = function (command, args, options) {
-  var spawnOptions = {shell: true};
+export function execute(command, args, options) {
+  var spawnOptions: childProcess.SpawnOptions = {shell: true};
   if (options && options.cwd) {
     spawnOptions.cwd = options.cwd;
   }
@@ -25,4 +25,4 @@ module.exports.execute = function (command, args, options) {
       resolve(stdout || stderr);
     });
   });
-};
+}

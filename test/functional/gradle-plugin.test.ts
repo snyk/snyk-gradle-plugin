@@ -1,5 +1,5 @@
-var test = require('tap').test;
-var plugin = require('../../lib').__tests;
+import {test} from 'tap';
+import {__tests as plugin} from '../../lib';
 
 test('check build args with array', function (t) {
   t.plan(1);
@@ -36,8 +36,11 @@ test('check build args with string', function (t) {
 
 test('extractJsonFromScriptOutput', function (t) {
   t.plan(1);
-  var result = plugin.extractJsonFromScriptOutput('Mr Gradle says hello\nla dee da, la dee da\nJSONDEPS {"hello": "world"}\nsome other noise');
-  t.deepEqual(result, {'hello': 'world'});
+  var result = plugin.extractJsonFromScriptOutput(`Mr Gradle says hello
+la dee da, la dee da
+JSONDEPS {"hello": "world"}
+some other noise`);
+  t.deepEqual(result, {hello: 'world'});
   t.end();
 });
 
