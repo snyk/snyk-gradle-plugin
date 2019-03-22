@@ -26,5 +26,5 @@ See `lib/init.gradle` for the Groovy script injected in Gradle builds to gather 
 
 Minimum supported version of Node.js is 4.
 
-It does not support ts-node (required to run tests from `.ts` files), so we have to run `.js` tests from `./dist` 
+It does not fully support running tests from `.ts` files using `ts-node`, so we have to run `.js` tests from `./dist`
 for now.
