@@ -19,7 +19,7 @@ import groovy.json.JsonOutput
 // of the dependencies trees for all projects in the following format
 
 // interface Result = {
-//     '$rootProject': string;
+//     '$defaultProject': string;
 //     [project: string]: DepDict;
 // };
 // interface DepDict { 
@@ -31,10 +31,12 @@ import groovy.json.JsonOutput
 //     dependencies?: DepDict;
 // }
 
-rootProject { rootProj ->
+// We are attaching this task to every project, as this is the only reliable way to run it
+// when we start with a subproject build.gradle. As a consequence, we need to make sure we
+// only ever run it once.
+def snykMergedDepsConfExecuted = false
+allprojects { everyProj ->
     task snykResolvedDepsJson { 
-        def result = ['$rootProject': rootProj.name]
-
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
         def depsToObject
@@ -51,17 +53,21 @@ rootProject { rootProj ->
             return res
         }
 
-        doLast {
-            allprojects.each { proj ->
-                if (proj.configurations.size() > 0) {
-                    def snykConf = proj.configurations.create('snykMergedDepsConf')
-                    proj.configurations
-                        .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
-                        .each { snykConf.extendsFrom(it) }
-                    result[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+        doLast { task ->
+            def result = ['$defaultProject': task.project.name]
+            if (!snykMergedDepsConfExecuted) {
+                allprojects.each { proj ->
+                    if (proj.configurations.size() > 0 && proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
+                        def snykConf = proj.configurations.create('snykMergedDepsConf')
+                        proj.configurations
+                            .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
+                            .each { snykConf.extendsFrom(it) }
+                        result[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                    }
                 }
+                println("JSONDEPS " + JsonOutput.toJson(result))
+                snykMergedDepsConfExecuted = true
             }
-            println("JSONDEPS " + JsonOutput.toJson(result))
         }
     }
 }
