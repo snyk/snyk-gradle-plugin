@@ -170,6 +170,9 @@ function buildArgs(root, targetFile, gradleArgs: string[]) {
   // Gradle process just never exits, from the Node's standpoint.
   args.push('--no-daemon');
 
+  // Parallel builds can cause race conditions and multiple JSONDEPS lines in the output
+  args.push('--no-parallel');
+
   if (gradleArgs) {
     args.push(...gradleArgs);
   }

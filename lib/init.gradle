@@ -36,7 +36,7 @@ import groovy.json.JsonOutput
 
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
-// only ever run it once.
+// only ever run it once, for the "starting" project.
 def snykMergedDepsConfExecuted = false
 allprojects { everyProj ->
     task snykResolvedDepsJson { 
