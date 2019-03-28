@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/node": "^4.9.1",
     "@types/sinon": "^7.0.10",
+    "@types/tmp": "0.0.34",
     "semantic-release": "^15",
     "sinon": "^2.4.1",
     "tap": "github:snyk/node-tap#alternative-runtimes",
@@ -36,6 +37,7 @@
   },
   "dependencies": {
     "clone-deep": "^0.3.0",
+    "tmp": "0.0.33",
     "tslib": "^1.9.3"
   }
 }
