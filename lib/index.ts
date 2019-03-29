@@ -192,7 +192,8 @@ function buildArgs(root, targetFile, gradleArgs: string[]) {
   args.push('--no-daemon');
 
   // Parallel builds can cause race conditions and multiple JSONDEPS lines in the output
-  args.push('--no-parallel');
+  // Gradle 4.3.0+ has `--no-parallel` flag, but we want to support older versions.
+  args.push('-Dorg.gradle.parallel=false');
 
   if (gradleArgs) {
     args.push(...gradleArgs);

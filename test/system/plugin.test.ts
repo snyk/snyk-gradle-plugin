@@ -165,6 +165,18 @@ test('multi-project: only sub-project has deps, none returned for main', (t) => 
     .catch(t.threw);
 });
 
+test('multi-project: using gradle 3.0.0 via wrapper', (t) => {
+  t.plan(2);
+  const resultPromise = plugin.inspect('.',
+    path.join(fixtureDir('multi-project-gradle-3'), 'build.gradle'));
+  resultPromise.then((result) => {
+    t.match(result.package.name, '.',
+      'returned project name is not sub-project');
+    t.notOk(result.package.dependencies);
+  })
+    .catch(t.threw);
+});
+
 test('multi-confg: both compile and runtime deps picked up by default', (t) => {
   t.plan(4);
   const resultPromise = plugin.inspect('.',
