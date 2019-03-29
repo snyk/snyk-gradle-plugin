@@ -8,6 +8,11 @@ node_js:
   - "8"
   - "6"
   - "4"
+env:
+  # test against final major Gradle versions
+  - GRADLE_VERSION=3.5.1
+  - GRADLE_VERSION=4.10.3
+  - GRADLE_VERSION=5.3.1
 cache:
   directories:
     - node_modules
@@ -20,7 +25,12 @@ before_install:
   - sudo apt-get install -y openjdk-8-jdk --no-install-recommends
   - sudo update-java-alternatives -s java-1.8.0-openjdk-amd64
   - export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+  # sdkman helps to install different gradle versions
+  - curl -s "https://get.sdkman.io" | bash
+  - source "$HOME/.sdkman/bin/sdkman-init.sh"
+  - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
 script:
+  - sdk install gradle $GRADLE_VERSION
   - npm test
 jobs:
   include:
