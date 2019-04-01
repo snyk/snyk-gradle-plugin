@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as  path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
+import {MissingSubProjectError} from './errors';
 import chalk from 'chalk';
 
 const packageFormatVersion = 'mvn:0.0.1';
@@ -150,27 +151,44 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
 }
 
 async function getAllDepsOneProject(root, targetFile, options, subProject): Promise<DepTree> {
-  let packageName = path.basename(root);
+  const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   let depDict = {} as DepDict;
   if (subProject) {
-    packageName += '/' + subProject;
-    if (!allProjectDeps.projects[subProject]) {
-      throw new Error(`Specified sub-project not found: "${subProject}"`);
-    }
-    depDict = allProjectDeps.projects[subProject].depDict;
-  } else {
-    depDict = allProjectDeps.projects[allProjectDeps.defaultProject].depDict;
+    return getDepsSubProject(root, subProject, allProjectDeps);
   }
-  const packageVersion = '0.0.0';
+
+  depDict = allProjectDeps.projects[allProjectDeps.defaultProject].depDict;
+
   return {
     dependencies: depDict,
     name: packageName,
-    version: packageVersion,
+    // TODO: extract from project
+    // https://snyksec.atlassian.net/browse/BST-558
+    version: '0.0.0',
     packageFormatVersion,
   };
 }
 
+function getDepsSubProject(root, subProject, allProjectDeps) {
+  const packageName = `${path.basename(root)}/${subProject}`;
+  let depDict = {} as DepDict;
+
+  if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
+    throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
+  }
+
+  depDict = allProjectDeps.projects[subProject].depDict;
+
+  return {
+    dependencies: depDict,
+    name: packageName,
+    // TODO: extract from project
+    // https://snyksec.atlassian.net/browse/BST-558
+    version: '0.0.0',
+    packageFormatVersion,
+  };
+}
 async function getAllDepsAllProjects(root, targetFile, options): Promise<DepRoot[]> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const basePackageName = path.basename(root);

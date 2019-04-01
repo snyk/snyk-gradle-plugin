@@ -26,16 +26,16 @@ test('failing inspect()', async (t) => {
   }
 });
 
-test('multi-project: error on missing subproject', (t) => {
+test('multi-project: error on missing sub-project', (t) => {
   const options = {
-    'gradle-sub-project': 'wrongsubproj',
+    'gradle-sub-project': 'non-existent',
   };
   t.plan(1);
   t.rejects(
     inspect('.',
       path.join(fixtureDir('multi-project'), 'build.gradle'),
       options),
-    'Specified sub-project not found: "wrongsubproj"',
+    'Specified sub-project not found::"non-existent". Found these projects: defaultProject, projects',
     'error message is as expected',
     );
 });
