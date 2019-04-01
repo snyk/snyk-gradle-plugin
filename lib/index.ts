@@ -129,8 +129,9 @@ async function getAllDeps(root, targetFile, options, subProject): Promise<DepTre
     let packageName = path.basename(root);
     let depTree = {} as DepDict;
     if (subProject) {
-      packageName += '/' + subProject;
-      depTree = allProjectDeps.projects[subProject];
+      const trimmedSubProject = subProject.trim();
+      packageName += '/' + trimmedSubProject;
+      depTree = allProjectDeps.projects[trimmedSubProject];
     } else {
       depTree = allProjectDeps.projects[allProjectDeps.defaultProject];
     }
