@@ -23,9 +23,14 @@ import groovy.json.JsonOutput
 //   projects: ProjectsDict;
 // }
 // interface ProjectsDict {
-//   [project: string]: DepDict;
+//   [project: string]: GradleProjectInfo;
 // }
-// interface DepDict { 
+
+// interface GradleProjectInfo {
+//   depDict: DepDict;
+//   targetFile: string;
+// }
+// export interface DepDict {
 //   [name: string]: DepTree;
 // }
 // interface DepTree {
@@ -42,12 +47,12 @@ allprojects { everyProj ->
     task snykResolvedDepsJson { 
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
-        def depsToObject
-        depsToObject = { deps ->
+        def depsToDict
+        depsToDict = { deps ->
             def res = [:]
             deps.each { d ->
                 def row = ['name': "$d.moduleGroup:$d.moduleName", 'version': d.moduleVersion]
-                def subDeps = depsToObject(d.children)
+                def subDeps = depsToDict(d.children)
                 if (subDeps.size() > 0) {
                     row['dependencies'] = subDeps
                 }
@@ -61,12 +66,21 @@ allprojects { everyProj ->
             def result = ['defaultProject': task.project.name, 'projects': projectsDict]
             if (!snykMergedDepsConfExecuted) {
                 allprojects.each { proj ->
-                    if (proj.configurations.size() > 0 && proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
-                        def snykConf = proj.configurations.create('snykMergedDepsConf')
-                        proj.configurations
-                            .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
-                            .each { snykConf.extendsFrom(it) }
-                        projectsDict[proj.name] = depsToObject(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                    if (proj.configurations.size() > 0) {
+                        if (proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
+                            def snykConf = proj.configurations.create('snykMergedDepsConf')
+                            proj.configurations
+                                .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
+                                .each { snykConf.extendsFrom(it) }
+                            projectsDict[proj.name] = [
+                                'targetFile': findProject(proj.path).buildFile.toString(),
+                                'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                            ]
+                        }
+                    } else {
+                        projectsDict[proj.name] = [
+                            'targetFile': findProject(proj.path).buildFile.toString()
+                        ]
                     }
                 }
                 println("JSONDEPS " + JsonOutput.toJson(result))

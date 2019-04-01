@@ -6,16 +6,115 @@ import * as tmp from 'tmp';
 
 const packageFormatVersion = 'mvn:0.0.1';
 
-export interface SingleProjectResult {
+// TODO(kyegupov): the types below will be extracted to a common plugin interface library
+
+export interface BaseInspectOptions {
+  dev?: boolean;
+
+  // Additional command line arguments to Gradle, supplied after "--" to the Snyk CLI.
+  // E.g. --configuration=foo
+  args?: string[];
+}
+
+// The return type of inspect() depends on the multiDepRoots flag.
+
+export interface SingleRootInspectOptions extends BaseInspectOptions {
+  // Return the information not on the main project, but on the specific subproject defined in the build.
+  'gradle-sub-project'?: string;
+}
+
+export interface MultiRootsInspectOptions extends BaseInspectOptions {
+  // Return multiple "dependency roots" as a MultiDepRootsResult.
+  // Dep roots correspond to sub-projects in Gradle or projects in a Yark workspace.
+  // Eventually, this flag will be an implicit default.
+  // For now, plugins return SingleDepRootResult by default.
+  multiDepRoots: true;
+}
+
+// Legacy result type. Will be deprecated soon.
+export interface SingleDepRootResult {
   plugin: PluginMetadata;
   package: DepTree;
 }
 
-// TODO(kyegupov): extract to snyk-plugin-common
-interface PluginMetadata {
+export interface MultiDepRootsResult {
+  plugin: PluginMetadata;
+  depRoots: DepRoot[];
+}
+
+export interface PluginMetadata {
   name: string;
   runtime: string;
+
+  // TODO(BST-542): remove, DepRoot.targetFile to be used instead
+  // Note: can be missing, see targetFileFilteredForCompatibility
   targetFile?: string;
+}
+
+export interface DepDict {
+  [name: string]: DepTree;
+}
+
+// TODO(BST-542): proper name should be decided.
+// This is essentially a "dependency root and associated dependency graph".
+// Possible name: DiscoveryResult, Inspectable, or maybe stick with DepRoot
+export interface DepRoot {
+  depTree: DepTree; // to be soon replaced with depGraph
+
+  // this will eventually become a structure (list) of "build" files,
+  // also known as "project roots".
+  // Note: can be missing, see targetFileFilteredForCompatibility
+  targetFile?: string;
+
+  meta?: any; // TODO(BST-542): decide on the format
+}
+
+export interface DepTree {
+  name: string;
+  version: string;
+  dependencies?: DepDict;
+  packageFormatVersion?: string;
+}
+
+export async function inspect(root, targetFile, options?: SingleRootInspectOptions): Promise<SingleDepRootResult>;
+export async function inspect(root, targetFile, options: MultiRootsInspectOptions): Promise<MultiDepRootsResult>;
+
+export async function inspect(root, targetFile, options?: SingleRootInspectOptions | MultiRootsInspectOptions):
+  Promise<SingleDepRootResult | MultiDepRootsResult> {
+  if (!options) {
+    options = {dev: false};
+  }
+  let subProject = options['gradle-sub-project'];
+  if (subProject) {
+    subProject = subProject.trim();
+  }
+  const plugin = {
+    name: 'bundled:gradle',
+    runtime: 'unknown',
+    targetFile: targetFileFilteredForCompatibility(targetFile),
+  };
+  if ((options as MultiRootsInspectOptions).multiDepRoots) {
+    if (subProject) {
+      throw new Error('gradle-sub-project flag is incompatible with multiDepRoots');
+    }
+    return {
+      plugin,
+      depRoots: await getAllDepsAllProjects(root, targetFile, options),
+    };
+  }
+  return {
+    plugin,
+    package: await getAllDepsOneProject(root, targetFile, options, subProject),
+  };
+}
+
+// See the comment for DepRoot.targetFile
+// Note: for Gradle, we are not returning the name unless it's a .kts file.
+// This is a workaround for a project naming problem happening in Registry
+// (legacy projects are named without "build.gradle" attached to them).
+// See ticket BST-529 re permanent solution.
+function targetFileFilteredForCompatibility(targetFile: string): string | undefined {
+  return (path.basename(targetFile) === 'build.gradle.kts') ? targetFile : undefined;
 }
 
 interface JsonDepsScriptResult {
@@ -24,34 +123,12 @@ interface JsonDepsScriptResult {
 }
 
 interface ProjectsDict {
-  [project: string]: DepDict;
+  [project: string]: GradleProjectInfo;
 }
 
-interface DepDict {
-  [name: string]: DepTree;
-}
-
-interface DepTree {
-  name: string;
-  version: string;
-  dependencies?: DepDict;
-  packageFormatVersion?: string;
-}
-
-export async function inspect(root, targetFile, options?): Promise<SingleProjectResult> {
-  if (!options) {
-    options = {dev: false};
-  }
-  const subProject = options['gradle-sub-project'];
-  const pkg = await getAllDeps(root, targetFile, options, subProject);
-  return {
-    plugin: {
-      name: 'bundled:gradle',
-      runtime: 'unknown',
-      targetFile: (path.basename(targetFile) === 'build.gradle.kts') ? targetFile : undefined,
-    },
-    package: pkg,
-  };
+interface GradleProjectInfo {
+  depDict: DepDict;
+  targetFile: string;
 }
 
 function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
@@ -71,7 +148,47 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
-async function getAllDeps(root, targetFile, options, subProject): Promise<DepTree> {
+async function getAllDepsOneProject(root, targetFile, options, subProject): Promise<DepTree> {
+  let packageName = path.basename(root);
+  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  let depDict = {} as DepDict;
+  if (subProject) {
+    packageName += '/' + subProject;
+    if (!allProjectDeps.projects[subProject]) {
+      throw new Error(`Specified sub-project not found: "${subProject}"`);
+    }
+    depDict = allProjectDeps.projects[subProject].depDict;
+  } else {
+    depDict = allProjectDeps.projects[allProjectDeps.defaultProject].depDict;
+  }
+  const packageVersion = '0.0.0';
+  return {
+    dependencies: depDict,
+    name: packageName,
+    version: packageVersion,
+    packageFormatVersion,
+  };
+}
+
+async function getAllDepsAllProjects(root, targetFile, options): Promise<DepRoot[]> {
+  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const basePackageName = path.basename(root);
+  const packageVersion = '0.0.0';
+  return Object.keys(allProjectDeps.projects).map((proj) => {
+    const packageName = proj === allProjectDeps.defaultProject ? basePackageName : basePackageName + '/' + proj;
+    return {
+      targetFile: targetFileFilteredForCompatibility(allProjectDeps.projects[proj].targetFile),
+      depTree: {
+        dependencies: allProjectDeps.projects[proj].depDict,
+        name: packageName,
+        version: packageVersion,
+        packageFormatVersion,
+      },
+    };
+  });
+}
+
+async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResult> {
   const args = buildArgs(root, targetFile, options.args);
 
   let tmpInitGradle: tmp.SynchrounousResult | null = null;
@@ -125,23 +242,7 @@ async function getAllDeps(root, targetFile, options, subProject): Promise<DepTre
     if (tmpInitGradle !== null) {
       tmpInitGradle.removeCallback();
     }
-    const allProjectDeps = extractJsonFromScriptOutput(stdoutText);
-    let packageName = path.basename(root);
-    let depTree = {} as DepDict;
-    if (subProject) {
-      const trimmedSubProject = subProject.trim();
-      packageName += '/' + trimmedSubProject;
-      depTree = allProjectDeps.projects[trimmedSubProject];
-    } else {
-      depTree = allProjectDeps.projects[allProjectDeps.defaultProject];
-    }
-    const packageVersion = '0.0.0';
-    return {
-      dependencies: depTree,
-      name: packageName,
-      version: packageVersion,
-      packageFormatVersion,
-    };
+    return extractJsonFromScriptOutput(stdoutText);
   } catch (error) {
     error.message = error.message + '\n\n' +
       'Please make sure that `' + command + ' ' + args.join(' ') +
@@ -193,7 +294,7 @@ function buildArgs(root, targetFile, gradleArgs: string[]) {
 
   // Parallel builds can cause race conditions and multiple JSONDEPS lines in the output
   // Gradle 4.3.0+ has `--no-parallel` flag, but we want to support older versions.
-  // Not `=false`, because https://github.com/gradle/gradle/issues/1827
+  // Not `=false` to be compatible with 3.5.x: https://github.com/gradle/gradle/issues/1827
   args.push('-Dorg.gradle.parallel=');
 
   if (gradleArgs) {
