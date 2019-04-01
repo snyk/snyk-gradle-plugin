@@ -13,7 +13,7 @@ test('check build args with array', (t) => {
     'snykResolvedDepsJson',
     '-q',
     '--no-daemon',
-    '-Dorg.gradle.parallel=false',
+    '-Dorg.gradle.parallel=',
     '--build-file',
     'build.gradle',
     '--configuration',
@@ -30,7 +30,7 @@ test('check build args with string', (t) => {
     'snykResolvedDepsJson',
     '-q',
     '--no-daemon',
-    '-Dorg.gradle.parallel=false',
+    '-Dorg.gradle.parallel=',
     '--build-file build.gradle --configuration compile',
   ]);
   t.end();
