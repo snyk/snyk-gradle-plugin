@@ -101,6 +101,17 @@ test('multi-project: only sub-project has deps, none returned for main', (t) => 
     .catch(t.threw);
 });
 
+test('multi-project: parallel is handled correctly', (t) => {
+  t.plan(2);
+  // Note: Gradle has to be run from the directory with `gradle.properties` to pick that one up
+  const resultPromise = plugin.inspect(fixtureDir('multi-project-parallel'), 'build.gradle');
+  resultPromise.then((result) => {
+    t.match(result.package.name, 'multi-project-parallel', 'expected project name');
+    t.ok(result.package.dependencies);
+  })
+    .catch(t.threw);
+});
+
 test('multi-project: using gradle 3.0.0 via wrapper', (t) => {
   t.plan(2);
   const resultPromise = plugin.inspect('.',

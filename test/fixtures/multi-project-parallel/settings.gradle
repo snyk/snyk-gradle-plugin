@@ -1,0 +1,9 @@
+rootProject.name = 'root-proj'
+
+include 'subproj0'
+include 'subproj1'
+include 'subproj2'
+include 'subproj3'
+include 'subproj4'
+
+
