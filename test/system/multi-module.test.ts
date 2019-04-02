@@ -149,3 +149,20 @@ test('multiDepRoots incompatible with gradle-sub-project', (t) => {
     path.join(fixtureDir('multi-project'), 'build.gradle'),
     {'multiDepRoots': true, 'gradle-sub-project': true} as MultiRootsInspectOptions));
 });
+
+test('multi-project: parallel with multiDepRoots produces multiple results with different names', async (t) => {
+  // Note: Gradle has to be run from the directory with `gradle.properties` to pick that one up
+  const result = await inspect(fixtureDir('multi-project-parallel'), 'build.gradle', {multiDepRoots: true});
+  t.equal(result.depRoots.length, 6);
+  const names = new Set<string>();
+  for (const p of result.depRoots) {
+    names.add(p.depTree.name);
+  }
+  t.deepEqual(names, new Set<string>([
+    'multi-project-parallel', 
+    'multi-project-parallel/subproj0', 
+    'multi-project-parallel/subproj1', 
+    'multi-project-parallel/subproj2', 
+    'multi-project-parallel/subproj3', 
+    'multi-project-parallel/subproj4']));
+});
