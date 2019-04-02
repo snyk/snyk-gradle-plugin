@@ -26,6 +26,7 @@
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@types/chalk": "^2.2.0",
     "@types/node": "^4.9.1",
     "@types/sinon": "^7.0.10",
     "@types/tmp": "0.0.34",
@@ -36,6 +37,7 @@
     "typescript": "^3.3.4000"
   },
   "dependencies": {
+    "chalk": "^2.4.2",
     "clone-deep": "^0.3.0",
     "tmp": "0.0.33",
     "tslib": "^1.9.3"

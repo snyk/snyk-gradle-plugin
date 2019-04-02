@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as  path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
+import chalk from 'chalk';
 
 const packageFormatVersion = 'mvn:0.0.1';
 
@@ -244,11 +245,31 @@ async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResu
     }
     return extractJsonFromScriptOutput(stdoutText);
   } catch (error) {
-    error.message = error.message + '\n\n' +
-      'Please make sure that `' + command + ' ' + args.join(' ') +
-      '` executes successfully on this project.\n\n' +
-      'If the problem persists, collect the output of `' +
-      command + ' ' + args.join(' ') + '` and contact support@snyk.io\n';
+    // It'd be nice to set it in the inner catch{} block below.
+    // However, it's not safe: the inner catch{} will be executed even it inner try{}
+    // succeeds. Seems like an async/await implementation problem.
+    let gradleVersionOutput = '[COULD NOT RUN gradle -v] ';
+    try {
+      gradleVersionOutput = await subProcess.execute(command, ['-v'], {cwd: root});
+    } catch (_) {
+      // intentionally empty
+    }
+    const orange = chalk.rgb(255, 128, 0);
+    gradleVersionOutput = orange(gradleVersionOutput);
+    const subProcessError = orange(error.message);
+    const mainErrorMessage = `Error running Gradle dependency analysis.
+
+Please ensure you are calling the \`snyk\` command with correct arguments.
+If the problem persists, contact support@snyk.io, providing the full error
+message from above, starting with ===== DEBUG INFORMATION START =====.`;
+    const blackOnYellow = chalk.bgYellowBright.black;
+
+    error.message = `${blackOnYellow('===== DEBUG INFORMATION START =====')}
+${orange(gradleVersionOutput)}
+${orange(error.message)}
+${blackOnYellow('===== DEBUG INFORMATION END =====')}
+
+${chalk.red.bold(mainErrorMessage)}`;
     throw error;
   }
 }

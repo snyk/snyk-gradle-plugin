@@ -19,7 +19,7 @@ export function stubPlatform(platform, t) {
 export function stubSubProcessExec(t) {
   stub(subProcess, 'execute')
     .callsFake(() => {
-      return Promise.reject(new Error('abort'));
+      return Promise.reject(new Error('fake process aborted'));
     });
   t.teardown((subProcess.execute as SinonStub).restore);
 }

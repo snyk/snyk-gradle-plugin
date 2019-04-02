@@ -14,10 +14,16 @@ test('malformed build.gradle', (t) => {
     /unexpected token/);
 });
 
-test('failing inspect()', (t) => {
-  t.plan(1);
-  stubSubProcessExec(t);
-  t.rejects(inspect('.', path.join(rootNoWrapper, 'build.gradle')));
+test('failing inspect()', async (t) => {
+  try {
+    await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {args: ['--dearGradlePleaseCrash']});
+    t.fail('Expected error');
+  } catch (error) {
+    t.match(error.message, 'Please ensure you are calling the `snyk` command with correct arguments',
+      'proper error message');
+    t.match(error.message, /Gradle \d+\.\d+\.\d+/,
+      'the error message has Gradle version');
+  }
 });
 
 test('multi-project: error on missing subproject', (t) => {

@@ -1,6 +1,6 @@
 import * as childProcess from 'child_process';
 
-export function execute(command, args, options): Promise<string> {
+export function execute(command: string, args: string[], options: {cwd?: string}): Promise<string> {
   const spawnOptions: childProcess.SpawnOptions = {shell: true};
   if (options && options.cwd) {
     spawnOptions.cwd = options.cwd;
@@ -20,7 +20,15 @@ export function execute(command, args, options): Promise<string> {
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        return reject(new Error('Subrocess exit code: ' + code + ', stdout: ' + stdout + ', stderr: ' + stderr));
+        const fullCommand = command + ' ' + args.join(' ');
+        return reject(new Error(`
+>>> command: ${fullCommand}
+>>> exit code: ${code}
+>>> stdout:
+${stdout}
+>>> stderr:
+${stderr}
+`));
       }
       resolve(stdout || stderr);
     });
