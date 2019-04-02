@@ -16,7 +16,6 @@
       "noImplicitAny": false // Needed to compile tap and ansi-escapes
   },
   "include": [
-      "./lib/**/*",
-      "./test/**/*",
+      "./lib/**/*"
   ]
 }

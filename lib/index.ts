@@ -196,8 +196,8 @@ async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResu
   // TODO: move to buildArgs, adjust tests
   let initGradlePath: string | null = null;
   if (/index.js$/.test(__filename)) {
-    // running from ./dist/lib
-    initGradlePath = path.join(__dirname, '../../lib/init.gradle');
+    // running from ./dist
+    initGradlePath = path.join(__dirname, '../lib/init.gradle');
   } else if (/index.ts$/.test(__filename)) {
     // running from ./lib
     initGradlePath = path.join(__dirname, 'init.gradle');
