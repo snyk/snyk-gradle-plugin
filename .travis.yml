@@ -37,7 +37,7 @@ jobs:
       node_js: "8" # This *has* to be the "build leader"
       script: skip
       after_success:
-        - npm run semantic-release
+        - npx semantic-release
 branches:
   only:
     - master

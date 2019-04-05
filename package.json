@@ -18,7 +18,6 @@
     "build": "tsc",
     "lint": "tslint --project tsconfig.json --format stylish",
     "prepare": "npm run build",
-    "semantic-release": "semantic-release",
     "test": "npm run lint && npm run test-functional && npm run test-system",
     "test-functional": "tap -R spec ./test/functional/*.test.[tj]s",
     "test-system": "tap -R spec --timeout=180 ./test/system/*.test.[tj]s"
@@ -30,7 +29,6 @@
     "@types/node": "^4.9.1",
     "@types/sinon": "^7.0.10",
     "@types/tmp": "0.0.34",
-    "semantic-release": "^15",
     "sinon": "^2.4.1",
     "tap": "^12.6.1",
     "tslint": "^5.14.0",
