@@ -125,6 +125,7 @@ test('multi-project: deps for both projects are returned with multiDepRoots flag
     if (p.depTree.name === '.') {
       t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
+      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     } else {
       t.equal(p.depTree.name, './subproj',
@@ -138,6 +139,7 @@ test('multi-project: deps for both projects are returned with multiDepRoots flag
       '25.3.0',
       'correct version found');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
+      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     }
   }
@@ -165,4 +167,32 @@ test('multi-project: parallel with multiDepRoots produces multiple results with 
     'multi-project-parallel/subproj2', 
     'multi-project-parallel/subproj3', 
     'multi-project-parallel/subproj4']));
+});
+
+test('multi-project: multiDepRoots + configuration', async (t) => {
+  const result = await inspect('.',
+    path.join(fixtureDir('multi-project'), 'build.gradle'), {multiDepRoots: true, args: ['--configuration', 'compileOnly']});
+  // It's an array, so we have to scan
+  t.equal(result.depRoots.length, 2);
+  for (const p of result.depRoots) {
+    if (p.depTree.name === '.') {
+      t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
+      t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
+      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
+      // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
+    } else {
+      t.equal(p.depTree.name, './subproj',
+        'sub project name is included in the root pkg name');
+      t.equal(p.depTree
+        .dependencies!['axis:axis'].version,
+      '1.3',
+      'correct version found');
+      t.notOk(p.depTree
+        .dependencies!['com.android.tools.build:builder'],
+        'non-compileOnly dependency is not found');
+      t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
+      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
+      // t.match(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
+    }
+  }
 });
