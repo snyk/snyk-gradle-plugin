@@ -51,6 +51,13 @@ export interface PluginMetadata {
   // TODO(BST-542): remove, DepRoot.targetFile to be used instead
   // Note: can be missing, see targetFileFilteredForCompatibility
   targetFile?: string;
+
+  // Plugin-specific metadata
+  meta?: {
+    // If we don't return the results for all dependency roots (subprojects),
+    // still record their names to warn the user about them not being scanned
+    allDepRootNames?: string[];
+  };
 }
 
 export interface DepDict {
@@ -90,7 +97,7 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
   if (subProject) {
     subProject = subProject.trim();
   }
-  const plugin = {
+  const plugin: PluginMetadata = {
     name: 'bundled:gradle',
     runtime: 'unknown',
     targetFile: targetFileFilteredForCompatibility(targetFile),
@@ -104,9 +111,14 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
       depRoots: await getAllDepsAllProjects(root, targetFile, options),
     };
   }
+  const depTreeAndDepRootNames = await getAllDepsOneProject(root, targetFile, options, subProject);
+  if (depTreeAndDepRootNames.allDepRootNames) {
+    plugin.meta = plugin.meta || {};
+    plugin.meta.allDepRootNames = depTreeAndDepRootNames.allDepRootNames;
+  }
   return {
     plugin,
-    package: await getAllDepsOneProject(root, targetFile, options, subProject),
+    package: depTreeAndDepRootNames.depTree,
   };
 }
 
@@ -150,23 +162,31 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
-async function getAllDepsOneProject(root, targetFile, options, subProject): Promise<DepTree> {
+async function getAllDepsOneProject(root, targetFile, options, subProject):
+    Promise<{depTree: DepTree, allDepRootNames: string[]}> {
   const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const allDepRootNames = Object.keys(allProjectDeps.projects);
   let depDict = {} as DepDict;
   if (subProject) {
-    return getDepsSubProject(root, subProject, allProjectDeps);
+    return {
+      depTree: getDepsSubProject(root, subProject, allProjectDeps),
+      allDepRootNames,
+    };
   }
 
   depDict = allProjectDeps.projects[allProjectDeps.defaultProject].depDict;
 
   return {
-    dependencies: depDict,
-    name: packageName,
-    // TODO: extract from project
-    // https://snyksec.atlassian.net/browse/BST-558
-    version: '0.0.0',
-    packageFormatVersion,
+    depTree: {
+      dependencies: depDict,
+      name: packageName,
+      // TODO: extract from project
+      // https://snyksec.atlassian.net/browse/BST-558
+      version: '0.0.0',
+      packageFormatVersion,
+    },
+    allDepRootNames,
   };
 }
 

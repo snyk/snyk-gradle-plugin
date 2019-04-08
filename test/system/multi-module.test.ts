@@ -8,6 +8,7 @@ test('multi-project, explicitly targeting a subproject build file', async (t) =>
     path.join(fixtureDir('multi-project'), 'subproj', 'build.gradle'));
   t.equals(result.package.name, '.',
     'root project is "."');
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['subproj']);
 
   t.equal(result.package
     .dependencies!['com.android.tools.build:builder']
@@ -25,6 +26,7 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
     'subproj/build.gradle');
   t.equals(result.package.name, 'multi-project',
     'root project is "multi-project"');
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['subproj']);
 
   t.equal(result.package
     .dependencies!['com.android.tools.build:builder']
@@ -42,6 +44,7 @@ test('multi-project, ran from a subproject directory', async (t) => {
     'build.gradle');
   t.equals(result.package.name, 'subproj',
     'root project is "subproj"');
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['subproj']);
 
   t.equal(result.package
     .dependencies!['com.android.tools.build:builder']
@@ -62,6 +65,7 @@ test('multi-project: only sub-project has deps and they are returned', async (t)
     options);
   t.match(result.package.name, '/subproj',
     'sub project name is included in the root pkg name');
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
 
   t.equal(result.package
     .dependencies!['com.android.tools.build:builder']
@@ -78,6 +82,7 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     path.join(fixtureDir('multi-project'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
+    t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
 
@@ -86,6 +91,7 @@ test('multi-project: using gradle 3.0.0 via wrapper', async (t) => {
     path.join(fixtureDir('multi-project-gradle-3'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
+    t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
 
@@ -103,6 +109,9 @@ test('multi-project: only sub-project has deps and they are returned space needs
   const result = await inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
     options);
+
+    t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
+
   t.match(result.package.name, '/subproj',
     'sub project name is included in the root pkg name');
 
@@ -161,11 +170,11 @@ test('multi-project: parallel with multiDepRoots produces multiple results with 
     names.add(p.depTree.name);
   }
   t.deepEqual(names, new Set<string>([
-    'multi-project-parallel', 
-    'multi-project-parallel/subproj0', 
-    'multi-project-parallel/subproj1', 
-    'multi-project-parallel/subproj2', 
-    'multi-project-parallel/subproj3', 
+    'multi-project-parallel',
+    'multi-project-parallel/subproj0',
+    'multi-project-parallel/subproj1',
+    'multi-project-parallel/subproj2',
+    'multi-project-parallel/subproj3',
     'multi-project-parallel/subproj4']));
 });
 
