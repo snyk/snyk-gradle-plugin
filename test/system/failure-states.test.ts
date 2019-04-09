@@ -35,7 +35,7 @@ test('multi-project: error on missing sub-project', (t) => {
     inspect('.',
       path.join(fixtureDir('multi-project'), 'build.gradle'),
       options),
-    'Specified sub-project not found::"non-existent". Found these projects: defaultProject, projects',
+    /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,
     'error message is as expected',
     );
 });
