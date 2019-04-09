@@ -17,21 +17,40 @@ function debugLog(s: string) {
       debugModule.enable(process.env.DEBUG);
     }
     logger = debugModule('snyk-gradle-plugin');
-    console.log('debugger initialized ' + process.env.DEBUG);
   }
   logger(s);
 }
 
 const packageFormatVersion = 'mvn:0.0.1';
 
+const isWin = /^win/.test(os.platform());
+const quot = isWin ? '"' : '\'';
+
 // TODO(kyegupov): the types below will be extracted to a common plugin interface library
 
 export interface BaseInspectOptions {
   dev?: boolean;
 
+  // A regular expression (Java syntax, case-insensitive) to select Gradle configurations.
+  // If only one configuration matches, its attributes will be used for dependency resolution;
+  // otherwise, an artificial merged configuration will be created (see configuration-attributes
+  // below).
+  // Attributes are important for dependency resolution in Android builds (see
+  // https://developer.android.com/studio/build/dependencies#variant_aware )
+  'configuration-matching'?: string;
+
+  // A comma-separated list of key:value pairs, e.g. "buildtype=release,usage=java-runtime".
+  // If specified, will scan all configurations for attributes with names that contain "keys" (case-insensitive)
+  // and have values that have a string representation that match the specified one, and will copy
+  // these attributes into the merged configuration.
+  // Attributes are important for dependency resolution in Android builds (see
+  // https://developer.android.com/studio/build/dependencies#variant_aware )
+  'configuration-attributes'?: string;
+
   // Additional command line arguments to Gradle, supplied after "--" to the Snyk CLI.
-  // E.g. --configuration=foo
+  // E.g. legacy --configuration=foo (see configuration-matching instead)
   args?: string[];
+
 }
 
 // The return type of inspect() depends on the multiDepRoots flag.
@@ -261,9 +280,18 @@ async function printIfEcho(line: string) {
   }
 }
 
+// <insert a npm left-pad joke here>
+function leftPad(s: string, n: number) {
+  return ' '.repeat(Math.max(n - s.length, 0)) + s;
+}
+
 async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | MultiRootsInspectOptions):
     Promise<JsonDepsScriptResult> {
-  const args = buildArgs(root, targetFile, options.args);
+  const args = buildArgs(
+    root, targetFile,
+    options['configuration-matching'],
+    options['configuration-attributes'],
+    options.args);
 
   let tmpInitGradle: tmp.SynchrounousResult | null = null;
 
@@ -298,18 +326,15 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
 
   args.push('-I ' + initGradlePath);
 
-  // There might be a --configuration option in 'args'.
-  // We need to convert it to a property: https://stackoverflow.com/a/48370451
-
-  // TODO: (in snyk-cli) move `configuration` to `options`, disallow arbitrary args,
-  // pin down `options` format via Typescript
-
+  // There might be a legacy --configuration option in 'args'.
+  // It has been superseded by --configurationMatching option for Snyk CLI (see buildArgs),
+  // but we are handling it to support the legacy setups.
   args.forEach((a, i) => {
     // Transform --configuration=foo
-    args[i] = a.replace(/^--configuration[= ]/, '-Pconfiguration=');
+    args[i] = a.replace(/^--configuration[= ]([a-zA-Z_])+/, `-Pconfiguration=${quot}^$1$$${quot}`);
     // Transform --configuration foo
     if (a === '--configuration') {
-      args[i] = '-Pconfiguration=' + args[i + 1];
+      args[i] = `-Pconfiguration=${quot}^${args[i + 1]}$${quot}`;
       args[i + 1] = '';
     }
   });
@@ -321,7 +346,11 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
       tmpInitGradle.removeCallback();
     }
     return extractJsonFromScriptOutput(stdoutText);
-  } catch (error) {
+  } catch (error0) {
+    const error: Error = error0;
+    const gradleErrorMarkers = /^\s*>\s.*$/;
+    const gradleErrorEssence = error.message.split('\n').filter((l) => gradleErrorMarkers.test(l)).join('\n');
+
     // It'd be nice to set it in the inner catch{} block below.
     // However, it's not safe: the inner catch{} will be executed even it inner try{}
     // succeeds. Seems like an async/await implementation problem.
@@ -334,7 +363,6 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
     const orange = chalk.rgb(255, 128, 0);
     const blackOnYellow = chalk.bgYellowBright.black;
     gradleVersionOutput = orange(gradleVersionOutput);
-    const subProcessError = orange(error.message);
     let mainErrorMessage = `Error running Gradle dependency analysis.
 
 Please ensure you are calling the \`snyk\` command with correct arguments.
@@ -346,23 +374,56 @@ message from above, starting with ===== DEBUG INFORMATION START =====.`;
     // There are no automated tests for this yet (setting up Android SDK is quite problematic).
     // See test/manual/README.md
 
-    if (/Cannot choose between the following configurations/.test(error.message)
+    if (/Cannot choose between the following/.test(error.message)
       || /Could not select value from candidates/.test(error.message)) {
+
+        // Extract attribute information via JSONATTRS marker:
+        const jsonAttrs = JSON.parse(
+          (error.message as string).split('\n').filter((line) => /^JSONATTRS /.test(line))[0].substr(10),
+        );
+        const attrNameWidth = Math.max(...Object.keys(jsonAttrs).map((name) => name.length));
+        const jsonAttrsPretty = Object.keys(jsonAttrs).map(
+          (name) => chalk.whiteBright(leftPad(name, attrNameWidth)) + ': ' + chalk.gray(jsonAttrs[name].join(', ')),
+        ).join('\n');
+
         mainErrorMessage = `Error running Gradle dependency analysis.
 
 It seems like you are scanning an Android build with ambiguous dependency variants.
 We cannot automatically resolve dependencies for such builds.
 
-We recommend converting your subproject dependency specifications from the form of
-    implementation project(":mymodule")
+You have several options to make dependency resolution rules more specific:
+
+1. Run Snyk CLI tool with an attribute filter, e.g.:
+    ${chalk.whiteBright('snyk test --all-sub-projects --configuration-attributes=buildtype:release,usage:java-runtime')}
+
+The filter will select matching attributes from those found in your configurations, use them
+to select matching configuration(s) to be used to resolve dependencies. Any sub-string of the full
+attribute name is enough.
+
+Select the values for the attributes that would allow to unambiguously select the correct dependency
+variant. The Gradle error message above should contain information about attributes found in
+different variants.
+
+Suggested attributes: buildtype, usage and your "flavor dimension" for Android builds.
+
+The following attributes and their possible values were found in your configurations:
+${jsonAttrsPretty}
+
+2. Run Snyk CLI tool for specific configuration(s), e.g.:
+    ${chalk.whiteBright("snyk test --gradle-sub-project=my-app --configuration-matching='^releaseRuntimeClasspath$'")}
+
+(note that some configurations won't be present in every your subproject)
+
+3. Converting your subproject dependency specifications from the form of
+    ${chalk.whiteBright("implementation project(':mymodule')")}
 to
-    implementation project(path: ':mymodule', configuration: 'default')
-or running Snyk CLI tool for a specific configuration, e.g.:
-    snyk test --all-sub-projects -- --configuration=releaseRuntimeClasspath`;
+    ${chalk.whiteBright("implementation project(path: ':mymodule', configuration: 'default')")}`;
     }
 
     const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
-    error.message = `${blackOnYellow('===== DEBUG INFORMATION START =====')}
+    error.message = `${chalk.red.bold('Gradle Error (short):\n' + gradleErrorEssence)}
+
+${blackOnYellow('===== DEBUG INFORMATION START =====')}
 ${orange(fullCommandText)}
 ${orange(gradleVersionOutput)}
 ${orange(error.message)}
@@ -391,7 +452,11 @@ function getCommand(root, targetFile) {
   return 'gradle';
 }
 
-function buildArgs(root, targetFile, gradleArgs?: string[]) {
+function buildArgs(
+    root, targetFile,
+    configurationMatching: string|undefined,
+    configurationAttributes: string|undefined,
+    gradleArgs?: string[]) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
   if (targetFile) {
@@ -402,11 +467,17 @@ function buildArgs(root, targetFile, gradleArgs?: string[]) {
 
     let formattedTargetFile = targetFile;
     if (/\s/.test(targetFile)) { // checking for whitespaces
-      const isWin = /^win/.test(os.platform());
-      const quot = isWin ? '"' : '\'';
       formattedTargetFile = quot + targetFile + quot;
     }
     args.push(formattedTargetFile);
+  }
+
+  // Arguments to init script are supplied as properties: https://stackoverflow.com/a/48370451
+  if (configurationMatching) {
+    args.push(`-Pconfiguration=${quot}${configurationMatching}${quot}`);
+  }
+  if (configurationAttributes) {
+    args.push(`-PconfAttr=${quot}${configurationAttributes}${quot}`);
   }
 
   // For some reason, this is not required for Unix, but on Windows, without this flag, apparently,
