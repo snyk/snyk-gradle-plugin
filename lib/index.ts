@@ -273,14 +273,34 @@ async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResu
       // intentionally empty
     }
     const orange = chalk.rgb(255, 128, 0);
+    const blackOnYellow = chalk.bgYellowBright.black;
     gradleVersionOutput = orange(gradleVersionOutput);
     const subProcessError = orange(error.message);
-    const mainErrorMessage = `Error running Gradle dependency analysis.
+    let mainErrorMessage = `Error running Gradle dependency analysis.
 
 Please ensure you are calling the \`snyk\` command with correct arguments.
 If the problem persists, contact support@snyk.io, providing the full error
 message from above, starting with ===== DEBUG INFORMATION START =====.`;
-    const blackOnYellow = chalk.bgYellowBright.black;
+
+    // Special case for Android, where merging the configurations is sometimes
+    // impossible.
+    // There are no automated tests for this yet (setting up Android SDK is quite problematic).
+    // See test/manual/README.md
+
+    if (/Cannot choose between the following configurations/.test(error.message)
+      || /Could not select value from candidates/.test(error.message)) {
+        mainErrorMessage = `Error running Gradle dependency analysis.
+
+It seems like you are scanning an Android build with ambiguous dependency variants.
+We cannot automatically resolve dependencies for such builds.
+
+We recommend converting your subproject dependency specifications from the form of
+    implementation project(":mymodule")
+to
+    implementation project(path: ':mymodule', configuration: 'default')
+or running Snyk CLI tool for a specific configuration, e.g.:
+    snyk test --all-sub-projects -- --configuration=releaseRuntimeClasspath`;
+    }
 
     error.message = `${blackOnYellow('===== DEBUG INFORMATION START =====')}
 ${orange(gradleVersionOutput)}
