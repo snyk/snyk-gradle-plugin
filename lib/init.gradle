@@ -4,7 +4,7 @@ import groovy.json.JsonOutput
 // generate a merged configuration of all the available configurations,
 // and then list the dependencies as a tree.
 
-// It's the responsibility of the caller to pick the project(s) they are 
+// It's the responsibility of the caller to pick the project(s) they are
 // interested in from the results.
 
 // CLI usages:
@@ -44,7 +44,7 @@ import groovy.json.JsonOutput
 // only ever run it once, for the "starting" project.
 def snykMergedDepsConfExecuted = false
 allprojects { everyProj ->
-    task snykResolvedDepsJson { 
+    task snykResolvedDepsJson {
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
         def depsToDict
@@ -66,17 +66,26 @@ allprojects { everyProj ->
             def result = ['defaultProject': task.project.name, 'projects': projectsDict]
             if (!snykMergedDepsConfExecuted) {
                 allprojects.each { proj ->
+                    def snykConf = null
                     if (proj.configurations.size() > 0) {
-                        if (proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
-                            def snykConf = proj.configurations.create('snykMergedDepsConf')
+                        if (onlyConf != null) {
+                            // We select one existing configuration, with its attributes.
+                            snykConf = proj.configurations.getByName(onlyConf)
+                        } else if (proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
+                            // We create a new, "merged" configuration here. It has no attributes, which might be
+                            // a problem for Android builds, where a resolution of a dependency "variant"
+                            // is often dependent on configuration attributes (such as BuildType or Usage).
+                            snykConf = proj.configurations.create('snykMergedDepsConf')
                             proj.configurations
                                 .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
                                 .each { snykConf.extendsFrom(it) }
-                            projectsDict[proj.name] = [
-                                'targetFile': findProject(proj.path).buildFile.toString(),
-                                'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
-                            ]
                         }
+                    }
+                    if (snykConf != null) {
+                        projectsDict[proj.name] = [
+                            'targetFile': findProject(proj.path).buildFile.toString(),
+                            'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                        ]
                     } else {
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString()
