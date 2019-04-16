@@ -82,7 +82,7 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     path.join(fixtureDir('multi-project'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
-    t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
 
@@ -202,6 +202,58 @@ test('multi-project: multiDepRoots + configuration', async (t) => {
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
+    }
+  }
+});
+
+test('multi-project-dependency-cycle: scanning the main project works fine', async (t) => {
+  const result = await inspect('.',
+    path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
+    {});
+  t.equal(result.package.name, '.', 'root project name is "."');
+  t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);
+
+  t.equal(result.package
+    .dependencies!['com.github.jitpack:subproj']
+    .dependencies!['com.github.jitpack:root-proj'].version,
+  "unspecified",
+  'dependency cycle is returned in the results');
+
+  t.notOk(result.package
+    .dependencies!['com.github.jitpack:subproj']
+    .dependencies!['com.github.jitpack:root-proj'].dependencies,
+  'dependency cycle is terminated');
+
+  t.equal(result.package
+    .dependencies!['com.github.jitpack:subproj']
+    .dependencies!['com.android.tools.build:builder']
+    .dependencies!['com.android.tools:sdklib']
+    .dependencies!['com.android.tools:repository']
+    .dependencies!['com.android.tools:common']
+    .dependencies!['com.android.tools:annotations'].version,
+  '25.3.0',
+  'a dependency chain is found through subproj dependency');
+});
+
+test('multi-project-dependency-cycle: scanning all subprojects works fine', async (t) => {
+  const result = await inspect('.',
+    path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
+    {multiDepRoots: true});
+  // It's an array, so we have to scan
+  t.equal(result.depRoots.length, 2);
+  for (const p of result.depRoots) {
+    if (p.depTree.name === '.') {
+      t.equal(p.depTree
+        .dependencies!['com.github.jitpack:subproj']
+        .dependencies!['com.github.jitpack:root-proj'].version,
+      "unspecified",
+      'dependency cycle is returned for the main');
+    } else {
+      t.equal(p.depTree
+        .dependencies!['com.github.jitpack:root-proj']
+        .dependencies!['com.github.jitpack:subproj'].version,
+      "unspecified",
+      'dependency cycle is returned for the subproj');
     }
   }
 });

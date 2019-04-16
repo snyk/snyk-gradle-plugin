@@ -47,16 +47,22 @@ allprojects { everyProj ->
     task snykResolvedDepsJson {
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
+        // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
         def depsToDict
-        depsToDict = { deps ->
+        depsToDict = { Iterable deps, Set currentChain ->
             def res = [:]
             deps.each { d ->
-                def row = ['name': "$d.moduleGroup:$d.moduleName", 'version': d.moduleVersion]
-                def subDeps = depsToDict(d.children)
-                if (subDeps.size() > 0) {
-                    row['dependencies'] = subDeps
+                def depName = "$d.moduleGroup:$d.moduleName"
+                if (!currentChain.contains(depName)) {
+                    def row = ['name': depName, 'version': d.moduleVersion]
+                    currentChain.add(depName)
+                    def subDeps = depsToDict(d.children, currentChain)
+                    currentChain.remove(depName)
+                    if (subDeps.size() > 0) {
+                        row['dependencies'] = subDeps
+                    }
+                    res[row['name']] = row
                 }
-                res[row['name']] = row
             }
             return res
         }
@@ -84,7 +90,7 @@ allprojects { everyProj ->
                     if (snykConf != null) {
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
-                            'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies)
+                            'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies, new HashSet())
                         ]
                     } else {
                         projectsDict[proj.name] = [
