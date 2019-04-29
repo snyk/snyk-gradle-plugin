@@ -31,10 +31,7 @@ before_install:
   - curl -s "https://get.sdkman.io" | bash
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
-after_success:
-  - travis_terminate 0 # try to make Windows quit
 script:
-  - export GRADLE_OPTS=-Dorg.gradle.daemon=false
   - sdk install gradle $GRADLE_VERSION
   - jdk_switcher use $JAVA_VERSION
   - npm test
