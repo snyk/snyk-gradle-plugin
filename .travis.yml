@@ -6,16 +6,20 @@ notifications:
 language: node_js
 jdk:
   - openjdk8
+  - oraclejdk9
 node_js:
   - "10"
   - "8"
   - "6"
 env:
   - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
+  # java 9 and gradle 3 not supported
 
   - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk8
+  - GRADLE_VERSION=4.10.3 JAVA_VERSION=oraclejdk9
 
   - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk8
+  - GRADLE_VERSION=5.3.1 JAVA_VERSION=oraclejdk9
 
 cache:
   directories:
