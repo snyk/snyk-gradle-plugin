@@ -76,7 +76,13 @@ allprojects { everyProj ->
                     if (proj.configurations.size() > 0) {
                         if (onlyConf != null) {
                             // We select one existing configuration, with its attributes.
-                            snykConf = proj.configurations.getByName(onlyConf)
+                            try {
+                                snykConf = proj.configurations.getByName(onlyConf)
+                            } catch (e) {
+                                throw new RuntimeException('Configuration not found: ' + onlyConf +
+                                    ', available configurations for project ' + proj + ': '
+                                     + proj.configurations.collect { it.name })
+                            }
                         } else if (proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
                             // We create a new, "merged" configuration here. It has no attributes, which might be
                             // a problem for Android builds, where a resolution of a dependency "variant"
