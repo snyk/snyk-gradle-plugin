@@ -88,7 +88,7 @@ test('multi-project: only sub-project has deps, none returned for main', async (
 
 test('multi-project: using gradle via wrapper', async (t) => {
   const result = await inspect('.',
-    path.join(fixtureDir('multi-project-gradle-wrapper'), 'build.gradle'));
+    path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
   t.deepEqual(result.plugin.meta!.allDepRootNames, ['root-proj', 'subproj']);

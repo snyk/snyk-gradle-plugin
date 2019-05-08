@@ -19,7 +19,7 @@ test('windows with wrapper in root', async (t) => {
     t.fail('Expected failure');
   } catch {
     const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = path.join(subWithWrapper, 'gradlew.bat');
+    const expectedCmd = '"' + path.join(subWithWrapper, 'gradlew.bat') + '"';
     t.same(cmd, expectedCmd, 'invokes wrapper bat');
   }
 });
@@ -33,7 +33,7 @@ test('windows with wrapper', async (t) => {
     t.fail('Expected failure');
   } catch {
     const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = path.join(rootWithWrapper, 'gradlew.bat');
+    const expectedCmd = '"' + path.join(rootWithWrapper, 'gradlew.bat') + '"';
     t.same(cmd, expectedCmd, 'invokes wrapper bat');
   }
 });
