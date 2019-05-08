@@ -32,7 +32,7 @@ test('darwin with wrapper', async (t) => {
     t.fail('Expected failure');
   } catch {
     const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = path.join(rootWithWrapper, 'gradlew');
+    const expectedCmd = "'" + path.join(rootWithWrapper, 'gradlew') + "'";
     t.same(cmd, expectedCmd, 'invokes wrapper script');
   }
 });
@@ -46,7 +46,7 @@ test('darwin with wrapper in root', async (t) => {
     t.fail('Expected failure');
   } catch {
     const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = path.join(subWithWrapper, 'gradlew');
+    const expectedCmd = "'" + path.join(subWithWrapper, "gradlew") + "'";
     t.same(cmd, expectedCmd, 'invokes wrapper script');
   }
 });

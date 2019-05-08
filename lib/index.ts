@@ -333,18 +333,19 @@ ${chalk.red.bold(mainErrorMessage)}`;
 }
 
 function getCommand(root, targetFile) {
-  const isWin = /^win/.test(os.platform());
-  const wrapperScript = isWin ? 'gradlew.bat' : './gradlew';
+  const isWinLocal = /^win/.test(os.platform()); // local check, can be stubbed in tests
+  const quotLocal = isWinLocal ? '"' : '\'';
+  const wrapperScript = isWinLocal ? 'gradlew.bat' : './gradlew';
   // try to find a sibling wrapper script first
   let pathToWrapper = path.resolve(
     root, path.dirname(targetFile), wrapperScript);
   if (fs.existsSync(pathToWrapper)) {
-    return pathToWrapper;
+    return quotLocal + pathToWrapper + quotLocal;
   }
   // now try to find a wrapper in the root
   pathToWrapper = path.resolve(root, wrapperScript);
   if (fs.existsSync(pathToWrapper)) {
-    return pathToWrapper;
+    return quotLocal + pathToWrapper + quotLocal;
   }
   return 'gradle';
 }
