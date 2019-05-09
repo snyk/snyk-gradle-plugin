@@ -9,7 +9,7 @@ import groovy.json.JsonOutput
 
 // CLI usages:
 // gradle -q -I init.gradle snykResolvedDepsJson
-// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf
+// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf -PonlySubProject=sub-project
 
 // (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
 
@@ -45,6 +45,7 @@ import groovy.json.JsonOutput
 def snykMergedDepsConfExecuted = false
 allprojects { everyProj ->
     task snykResolvedDepsJson {
+        def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
         // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
@@ -69,9 +70,17 @@ allprojects { everyProj ->
 
         doLast { task ->
             def projectsDict = [:]
-            def result = ['defaultProject': task.project.name, 'projects': projectsDict]
+            def defaultProjectName = task.project.name
+            def result = ['defaultProject': defaultProjectName, 'projects': projectsDict]
             if (!snykMergedDepsConfExecuted) {
-                allprojects.each { proj ->
+
+                def shouldScanProject = {
+                    onlyProj == null ||
+                    (onlyProj == '.' && it.name == defaultProjectName) ||
+                    it.name == onlyProj
+                }
+
+                allprojects.findAll(shouldScanProject).each { proj ->
                     def snykConf = null
                     if (proj.configurations.size() > 0) {
                         if (onlyConf != null) {

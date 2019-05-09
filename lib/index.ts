@@ -30,7 +30,15 @@ export interface MultiRootsInspectOptions extends BaseInspectOptions {
   // Dep roots correspond to sub-projects in Gradle or projects in a Yark workspace.
   // Eventually, this flag will be an implicit default.
   // For now, plugins return SingleDepRootResult by default.
+
+  // TODO(kyegupov): this should be renamed to allSubProjects,
+  // see https://github.com/snyk/snyk-cli-interface/blob/master/lib/legacy/plugin.ts
   multiDepRoots: true;
+}
+
+function isMultiSubProject(options: SingleRootInspectOptions | MultiRootsInspectOptions):
+    options is MultiRootsInspectOptions {
+  return (options as MultiRootsInspectOptions).multiDepRoots;
 }
 
 // Legacy result type. Will be deprecated soon.
@@ -102,7 +110,7 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
     runtime: 'unknown',
     targetFile: targetFileFilteredForCompatibility(targetFile),
   };
-  if ((options as MultiRootsInspectOptions).multiDepRoots) {
+  if (isMultiSubProject(options)) {
     if (subProject) {
       throw new Error('gradle-sub-project flag is incompatible with multiDepRoots');
     }
@@ -227,7 +235,8 @@ async function getAllDepsAllProjects(root, targetFile, options): Promise<DepRoot
   });
 }
 
-async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResult> {
+async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | MultiRootsInspectOptions):
+    Promise<JsonDepsScriptResult> {
   const args = buildArgs(root, targetFile, options.args);
 
   let tmpInitGradle: tmp.SynchrounousResult | null = null;
@@ -255,6 +264,10 @@ async function getAllDeps(root, targetFile, options): Promise<JsonDepsScriptResu
     error.message = error.message + '\n\n' +
       'Failed to create a temporary file to host Snyk init script for Gradle build analysis.';
     throw error;
+  }
+
+  if (!isMultiSubProject(options)) {
+    args.push('-PonlySubProject=' + (options['gradle-sub-project'] || '.'));
   }
 
   args.push('-I ' + initGradlePath);
@@ -350,7 +363,7 @@ function getCommand(root, targetFile) {
   return 'gradle';
 }
 
-function buildArgs(root, targetFile, gradleArgs: string[]) {
+function buildArgs(root, targetFile, gradleArgs?: string[]) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
   if (targetFile) {
