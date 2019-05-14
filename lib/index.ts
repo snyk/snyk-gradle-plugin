@@ -151,13 +151,13 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   lines.forEach((l) => {
     if (/^JSONDEPS /.test(l)) {
       if (jsonLine !== null) {
-        throw new Error('More than one line with "JSONDEPS " prefix was returned');
+        throw new Error('More than one line with "JSONDEPS " prefix was returned; full output:\n' + stdoutText);
       }
       jsonLine = l.substr(9);
     }
   });
   if (jsonLine === null) {
-    throw new Error('No line prefixed with "JSONDEPS " was returned');
+    throw new Error('No line prefixed with "JSONDEPS " was returned; full output:\n' + stdoutText);
   }
   return JSON.parse(jsonLine!);
 }
@@ -322,7 +322,9 @@ or running Snyk CLI tool for a specific configuration, e.g.:
     snyk test --all-sub-projects -- --configuration=releaseRuntimeClasspath`;
     }
 
+    const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
     error.message = `${blackOnYellow('===== DEBUG INFORMATION START =====')}
+${orange(fullCommandText)}
 ${orange(gradleVersionOutput)}
 ${orange(error.message)}
 ${blackOnYellow('===== DEBUG INFORMATION END =====')}

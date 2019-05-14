@@ -46,9 +46,24 @@ some other noise`);
   t.end();
 });
 
-test('extractJsonFromScriptOutput throws on multiple JSONDEPS', (t) => {
-  t.plan(1);
-  t.throws(() => {
-    testableMethods.extractJsonFromScriptOutput('JSONDEPS {"hello": "world"}\nJSONDEPS ["one more thing"]');
-  });
+test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {
+  const output = 'something else entirely';
+  try{
+    testableMethods.extractJsonFromScriptOutput(output);
+    t.fail('Error expected');
+  } catch (e) {
+    t.match(e.message, 'No line prefixed with "JSONDEPS " was returned', 'expected error message');
+    t.match(e.message, output, 'error message contains output');
+  }
+});
+
+test('extractJsonFromScriptOutput throws on multiple JSONDEPS', async (t) => {
+  const output = 'JSONDEPS {"hello": "world"}\nJSONDEPS ["one more thing"]';
+  try{
+    testableMethods.extractJsonFromScriptOutput(output);
+    t.fail('Error expected');
+  } catch (e) {
+    t.match(e.message, 'More than one line with "JSONDEPS " prefix was returned', 'expected error message');
+    t.match(e.message, output, 'error message contains output');
+  }
 });
