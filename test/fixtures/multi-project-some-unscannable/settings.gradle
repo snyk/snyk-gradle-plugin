@@ -1,0 +1,6 @@
+rootProject.name = 'root-proj'
+
+include 'subproj'
+include 'subproj-fail'
+
+

@@ -1,5 +1,9 @@
 apply plugin: 'java-library'
 
+repositories {
+  mavenCentral()
+}
+
 dependencies {
   api 'commons-httpclient:commons-httpclient:3.1'
 }
