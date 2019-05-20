@@ -21,6 +21,7 @@ import groovy.json.JsonOutput
 // interface JsonDepsScriptResult {
 //   defaultProject: string;
 //   projects: ProjectsDict;
+//   allSubProjectNames: string[];
 // }
 // interface ProjectsDict {
 //   [project: string]: GradleProjectInfo;
@@ -71,7 +72,11 @@ allprojects { everyProj ->
         doLast { task ->
             def projectsDict = [:]
             def defaultProjectName = task.project.name
-            def result = ['defaultProject': defaultProjectName, 'projects': projectsDict]
+            def result = [
+                'defaultProject': defaultProjectName,
+                'projects': projectsDict,
+                'allSubProjectNames': allprojects.collect { it.name }
+            ]
             if (!snykMergedDepsConfExecuted) {
 
                 def shouldScanProject = {

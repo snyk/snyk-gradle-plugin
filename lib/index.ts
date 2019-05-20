@@ -64,7 +64,7 @@ export interface PluginMetadata {
   meta?: {
     // If we don't return the results for all dependency roots (subprojects),
     // still record their names to warn the user about them not being scanned
-    allDepRootNames?: string[];
+    allSubProjectNames?: string[];
   };
 }
 
@@ -120,9 +120,9 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
     };
   }
   const depTreeAndDepRootNames = await getAllDepsOneProject(root, targetFile, options, subProject);
-  if (depTreeAndDepRootNames.allDepRootNames) {
+  if (depTreeAndDepRootNames.allSubProjectNames) {
     plugin.meta = plugin.meta || {};
-    plugin.meta.allDepRootNames = depTreeAndDepRootNames.allDepRootNames;
+    plugin.meta.allSubProjectNames = depTreeAndDepRootNames.allSubProjectNames;
   }
   return {
     plugin,
@@ -142,6 +142,7 @@ function targetFileFilteredForCompatibility(targetFile: string): string | undefi
 interface JsonDepsScriptResult {
   defaultProject: string;
   projects: ProjectsDict;
+  allSubProjectNames: string[];
 }
 
 interface ProjectsDict {
@@ -171,15 +172,15 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
 }
 
 async function getAllDepsOneProject(root, targetFile, options, subProject):
-    Promise<{depTree: DepTree, allDepRootNames: string[]}> {
+    Promise<{depTree: DepTree, allSubProjectNames: string[]}> {
   const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
-  const allDepRootNames = Object.keys(allProjectDeps.projects);
+  const allSubProjectNames = allProjectDeps.allSubProjectNames;
   let depDict = {} as DepDict;
   if (subProject) {
     return {
       depTree: getDepsSubProject(root, subProject, allProjectDeps),
-      allDepRootNames,
+      allSubProjectNames,
     };
   }
 
@@ -194,7 +195,7 @@ async function getAllDepsOneProject(root, targetFile, options, subProject):
       version: '0.0.0',
       packageFormatVersion,
     },
-    allDepRootNames,
+    allSubProjectNames,
   };
 }
 
