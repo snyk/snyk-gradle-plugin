@@ -8,7 +8,19 @@ import chalk from 'chalk';
 import debugModule = require('debug');
 
 // To enable debugging output, run the CLI as `DEBUG=snyk-gradle-plugin snyk ...`
-const debugLogging = debugModule('snyk-gradle-plugin');
+let logger: debugModule.Debugger | null = null;
+function debugLog(s: string) {
+  if (logger === null) {
+    // Lazy init: Snyk CLI needs to process the CLI argument "-d" first.
+    // TODO(BST-648): more robust handling of the debug settings
+    if (process.env.DEBUG) {
+      debugModule.enable(process.env.DEBUG);
+    }
+    logger = debugModule('snyk-gradle-plugin');
+    console.log('debugger initialized ' + process.env.DEBUG);
+  }
+  logger(s);
+}
 
 const packageFormatVersion = 'mvn:0.0.1';
 
@@ -245,7 +257,7 @@ const reEcho = /^SNYKECHO (.*)$/;
 async function printIfEcho(line: string) {
   const maybeMatch = reEcho.exec(line);
   if (maybeMatch) {
-    debugLogging(maybeMatch[1]);
+    debugLog(maybeMatch[1]);
   }
 }
 
