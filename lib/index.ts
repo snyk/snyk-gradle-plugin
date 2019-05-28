@@ -5,6 +5,10 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import {MissingSubProjectError} from './errors';
 import chalk from 'chalk';
+import debugModule = require('debug');
+
+// To enable debugging output, run the CLI as `DEBUG=snyk-gradle-plugin snyk ...`
+const debugLogging = debugModule('snyk-gradle-plugin');
 
 const packageFormatVersion = 'mvn:0.0.1';
 
@@ -236,6 +240,15 @@ async function getAllDepsAllProjects(root, targetFile, options): Promise<DepRoot
   });
 }
 
+const reEcho = /^SNYKECHO (.*)$/;
+
+async function printIfEcho(line: string) {
+  const maybeMatch = reEcho.exec(line);
+  if (maybeMatch) {
+    debugLogging(maybeMatch[1]);
+  }
+}
+
 async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | MultiRootsInspectOptions):
     Promise<JsonDepsScriptResult> {
   const args = buildArgs(root, targetFile, options.args);
@@ -291,7 +304,7 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
 
   const command = getCommand(root, targetFile);
   try {
-    const stdoutText = await subProcess.execute(command, args, {cwd: root});
+    const stdoutText = await subProcess.execute(command, args, {cwd: root}, printIfEcho);
     if (tmpInitGradle !== null) {
       tmpInitGradle.removeCallback();
     }

@@ -14,9 +14,11 @@ import groovy.json.JsonOutput
 // (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
 
 // Output format:
+//
 // Since Gradle is chatty and often prints a "Welcome" banner even with -q option,
-// the only output line that matters is prefixed with "JSONDEPS " and is a JSON representation
-// of the dependencies trees for all projects in the following format
+// the only output lines that matter are:
+// - prefixed "SNYKECHO ": should be immediately printed as debug information by the caller
+// - prefixed "JSONDEPS ": JSON representation of the dependencies trees for all projects in the following format
 
 // interface JsonDepsScriptResult {
 //   defaultProject: string;
@@ -50,6 +52,7 @@ allprojects { everyProj ->
         def onlyConf = project.hasProperty('configuration') ? configuration : null
 
         // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
+        // This function converts a Gradle dependency tree into DepTree structure used by Snyk CLI
         def depsToDict
         depsToDict = { Iterable deps, Set currentChain ->
             def res = [:]
@@ -70,14 +73,15 @@ allprojects { everyProj ->
         }
 
         doLast { task ->
-            def projectsDict = [:]
-            def defaultProjectName = task.project.name
-            def result = [
-                'defaultProject': defaultProjectName,
-                'projects': projectsDict,
-                'allSubProjectNames': allprojects.collect { it.name }
-            ]
             if (!snykMergedDepsConfExecuted) {
+                println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
+                def projectsDict = [:]
+                def defaultProjectName = task.project.name
+                def result = [
+                    'defaultProject': defaultProjectName,
+                    'projects': projectsDict,
+                    'allSubProjectNames': allprojects.collect { it.name }
+                ]
 
                 def shouldScanProject = {
                     onlyProj == null ||
@@ -86,6 +90,7 @@ allprojects { everyProj ->
                 }
 
                 allprojects.findAll(shouldScanProject).each { proj ->
+                    println('SNYKECHO processing project: ' + proj.name)
                     def snykConf = null
                     if (proj.configurations.size() > 0) {
                         if (onlyConf != null) {
@@ -101,6 +106,7 @@ allprojects { everyProj ->
                             // We create a new, "merged" configuration here. It has no attributes, which might be
                             // a problem for Android builds, where a resolution of a dependency "variant"
                             // is often dependent on configuration attributes (such as BuildType or Usage).
+                            println('SNYKECHO constructing merged configuration')
                             snykConf = proj.configurations.create('snykMergedDepsConf')
                             proj.configurations
                                 .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
@@ -108,9 +114,12 @@ allprojects { everyProj ->
                         }
                     }
                     if (snykConf != null) {
+                        println('SNYKECHO resolving configuration ' + snykConf.name)
+                        def gradleDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
+                        println('SNYKECHO converting the dependency graph to the DepTree format')
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
-                            'depDict': depsToDict(snykConf.resolvedConfiguration.firstLevelModuleDependencies, new HashSet())
+                            'depDict': depsToDict(gradleDeps, new HashSet())
                         ]
                     } else {
                         projectsDict[proj.name] = [
