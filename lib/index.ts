@@ -17,7 +17,6 @@ function debugLog(s: string) {
       debugModule.enable(process.env.DEBUG);
     }
     logger = debugModule('snyk-gradle-plugin');
-    console.log('debugger initialized ' + process.env.DEBUG);
   }
   logger(s);
 }
