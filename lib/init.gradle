@@ -1,4 +1,6 @@
 import groovy.json.JsonOutput
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 
 // This script does the following: for all the projects in the build file,
 // generate a merged configuration of all the available configurations,
@@ -10,8 +12,13 @@ import groovy.json.JsonOutput
 // CLI usages:
 // gradle -q -I init.gradle snykResolvedDepsJson
 // gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf -PonlySubProject=sub-project
+// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=confNameRegex -PconfAttr=buildtype:debug,usage:java-runtime
 
 // (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
+
+// confAttr is a comma-separated list of key:value pairs. The "key" is a case-insensitive substring
+// of the class name of the attribute (e.g. "buildtype" would match com.android.build.api.attributes.BuildTypeAttr),
+// the value should be a case-insensitive stringified value of the attribute
 
 // Output format:
 //
@@ -49,7 +56,15 @@ def snykMergedDepsConfExecuted = false
 allprojects { everyProj ->
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
-        def onlyConf = project.hasProperty('configuration') ? configuration : null
+
+        def confNameFilter = (project.hasProperty('configuration')
+            ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
+            : /.*/
+        )
+        def confAttrSpec = (project.hasProperty('confAttr')
+            ? confAttr.toLowerCase().split(',').collect { it.split(':') }
+            : null
+        )
 
         // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
         // This function converts a Gradle dependency tree into DepTree structure used by Snyk CLI
@@ -72,6 +87,28 @@ allprojects { everyProj ->
             return res
         }
 
+        def matchesAttributeFilter
+        matchesAttributeFilter = { conf ->
+            def matches = true
+            def attrs = conf.attributes
+            attrs.keySet().each({ attr ->
+                def attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
+                confAttrSpec.each({ keyValueFilter ->
+                    // attr.name is a class name, e.g. com.android.build.api.attributes.BuildTypeAttr
+                    if (attr.name.toLowerCase().contains(keyValueFilter[0])
+                            && attrValueAsString != keyValueFilter[1]) {
+                        matches = false
+                    }
+                })
+            })
+            return matches
+        }
+
+        def isMatchingConfiguration
+        isMatchingConfiguration = {
+            it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(conf)
+        }
+
         doLast { task ->
             if (!snykMergedDepsConfExecuted) {
                 println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
@@ -89,29 +126,69 @@ allprojects { everyProj ->
                     it.name == onlyProj
                 }
 
+                // First pass: scan all configurations that match the attribute filter and collect all attributes
+                // from them, to use unambiguous values of the attributes on the merged configuration.
+                //
+                // Why we need to scan all sub-projects: if a project A depends on B, and only B has some
+                // configurations with attribute C, we still might need attribute C in our configuration
+                // when resolving the project A, so that it selects a concrete variant of dependency B.
+                def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
+                def attributesAsStrings = [:] // Map<String, Set<string>>
                 allprojects.findAll(shouldScanProject).each { proj ->
                     println('SNYKECHO processing project: ' + proj.name)
-                    def snykConf = null
-                    if (proj.configurations.size() > 0) {
-                        if (onlyConf != null) {
-                            // We select one existing configuration, with its attributes.
-                            try {
-                                snykConf = proj.configurations.getByName(onlyConf)
-                            } catch (e) {
-                                throw new RuntimeException('Configuration not found: ' + onlyConf +
-                                    ', available configurations for project ' + proj + ': '
-                                     + proj.configurations.collect { it.name })
+                    proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && matchesAttributeFilter(it) }).each { conf ->
+                        def attrs = conf.attributes
+                        attrs.keySet().each({ attr ->
+                            def value = attrs.getAttribute(attr)
+                            if (!allConfigurationAttributes.containsKey(attr)) {
+                                allConfigurationAttributes[attr] = new HashSet()
+                                attributesAsStrings[attr.name] = new HashSet()
                             }
-                        } else if (proj.configurations.findAll({ it.name == 'snykMergedDepsConf'}).size() == 0) {
-                            // We create a new, "merged" configuration here. It has no attributes, which might be
-                            // a problem for Android builds, where a resolution of a dependency "variant"
-                            // is often dependent on configuration attributes (such as BuildType or Usage).
-                            println('SNYKECHO constructing merged configuration')
-                            snykConf = proj.configurations.create('snykMergedDepsConf')
-                            proj.configurations
-                                .findAll({ it.name != 'snykMergedDepsConf' && (onlyConf == null || it.name == onlyConf) })
-                                .each { snykConf.extendsFrom(it) }
-                        }
+                            allConfigurationAttributes[attr].add(value)
+                            attributesAsStrings[attr.name].add(value.toString())
+                        })
+                    }
+                }
+
+                // These will be used to suggest attribute filtering to the user if the scan fails
+                // due to ambiguous resolution of dependency variants
+                println("JSONATTRS " + JsonOutput.toJson(attributesAsStrings))
+
+                allprojects.findAll(shouldScanProject).each { proj ->
+                    def snykConf = null
+                    def mergeableConfs = proj.configurations
+                        .findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter })
+
+                    // Drop all the configrations that don't match the attribute filter
+                    if (confAttrSpec != null) {
+                        mergeableConfs = mergeableConfs.findAll(matchesAttributeFilter)
+                    }
+
+                    if (mergeableConfs.size() == 0 && proj.configurations.size() > 0) {
+
+                        throw new RuntimeException('Matching configurations not found: ' + confNameFilter +
+                                ', available configurations for project ' + proj + ': '
+                                + proj.configurations.collect { it.name })
+
+                    } else if (mergeableConfs.size() == 1) {
+
+                        // We use the only matching configuration, with its attributes.
+                        snykConf = mergeableConfs.first()
+
+                    } else if (mergeableConfs.size() > 1) {
+
+                        println('SNYKECHO constructing merged configuration from ' + mergeableConfs.collect { conf -> conf.name })
+                        // We create a new, "merged" configuration here.
+                        snykConf = proj.configurations.create('snykMergedDepsConf')
+
+                        mergeableConfs.each { snykConf.extendsFrom(it) }
+
+                        // Copy all the unambiguous build attributes into the merged configuration
+                        allConfigurationAttributes.each({ attr, valueSet ->
+                            if (valueSet.size() == 1) {
+                                snykConf.attributes.attribute(attr, valueSet.head())
+                            }
+                        })
                     }
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)
