@@ -203,6 +203,7 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   if (jsonLine === null) {
     throw new Error('No line prefixed with "JSONDEPS " was returned; full output:\n' + stdoutText);
   }
+  debugLog('The command produced JSONDEPS output of ' + jsonLine!.length + ' characters');
   return JSON.parse(jsonLine!);
 }
 
@@ -340,6 +341,8 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
   });
 
   const command = getCommand(root, targetFile);
+  const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
+  debugLog('Executing ' + fullCommandText);
   try {
     const stdoutText = await subProcess.execute(command, args, {cwd: root}, printIfEcho);
     if (tmpInitGradle !== null) {
@@ -420,7 +423,6 @@ to
     ${chalk.whiteBright("implementation project(path: ':mymodule', configuration: 'default')")}`;
     }
 
-    const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
     error.message = `${chalk.red.bold('Gradle Error (short):\n' + gradleErrorEssence)}
 
 ${blackOnYellow('===== DEBUG INFORMATION START =====')}
