@@ -328,11 +328,11 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
   args.push('-I ' + initGradlePath);
 
   // There might be a legacy --configuration option in 'args'.
-  // It has been superseded by --configurationMatching option for Snyk CLI (see buildArgs),
+  // It has been superseded by --configuration-matching option for Snyk CLI (see buildArgs),
   // but we are handling it to support the legacy setups.
   args.forEach((a, i) => {
     // Transform --configuration=foo
-    args[i] = a.replace(/^--configuration[= ]([a-zA-Z_])+/, `-Pconfiguration=${quot}^$1$$${quot}`);
+    args[i] = a.replace(/^--configuration[= ]([a-zA-Z_]+)/, `-Pconfiguration=${quot}^$1$$${quot}`);
     // Transform --configuration foo
     if (a === '--configuration') {
       args[i] = `-Pconfiguration=${quot}^${args[i + 1]}$${quot}`;
