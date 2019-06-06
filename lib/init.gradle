@@ -134,9 +134,8 @@ allprojects { everyProj ->
                 // when resolving the project A, so that it selects a concrete variant of dependency B.
                 def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
                 def attributesAsStrings = [:] // Map<String, Set<string>>
-                allprojects.findAll(shouldScanProject).each { proj ->
-                    println('SNYKECHO processing project: ' + proj.name)
-                    proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && matchesAttributeFilter(it) }).each { conf ->
+                rootProject.allprojects.findAll(shouldScanProject).each { proj ->
+                    proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
                         def attrs = conf.attributes
                         attrs.keySet().each({ attr ->
                             def value = attrs.getAttribute(attr)
@@ -154,7 +153,8 @@ allprojects { everyProj ->
                 // due to ambiguous resolution of dependency variants
                 println("JSONATTRS " + JsonOutput.toJson(attributesAsStrings))
 
-                allprojects.findAll(shouldScanProject).each { proj ->
+                rootProject.allprojects.findAll(shouldScanProject).each { proj ->
+                    println('SNYKECHO processing project: ' + proj.name)
                     def snykConf = null
                     def mergeableConfs = proj.configurations
                         .findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter })
