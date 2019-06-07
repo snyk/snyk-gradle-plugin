@@ -289,13 +289,37 @@ function leftPad(s: string, n: number) {
 async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | MultiRootsInspectOptions):
     Promise<JsonDepsScriptResult> {
 
+  const command = getCommand(root, targetFile);
+
+  let gradleVersionOutput = '[COULD NOT RUN gradle -v] ';
+  try {
+    gradleVersionOutput = await subProcess.execute(command, ['-v'], {cwd: root});
+  } catch (_) {
+    // intentionally empty
+  }
+
+  if (gradleVersionOutput.match(/Gradle 1/)) {
+    throw new Error('Gradle 1.x is not supported');
+  }
+
+  // path.join calls have to be exactly in this format, needed by "pkg" to build a standalone Snyk CLI binary:
+  // https://www.npmjs.com/package/pkg#detecting-assets-in-source-code
+  const assets = [
+    path.join(__dirname, '../lib/init-v2.gradle'),
+    path.join(__dirname, '../lib/init-v3plus.gradle'),
+  ];
+
+  const initGradleName = gradleVersionOutput.match(/Gradle 2/)
+    ? 'init-v2'
+    : 'init-v3plus';
+
   let initGradlePath: string | null = null;
   if (/index.js$/.test(__filename)) {
     // running from ./dist
-    initGradlePath = path.join(__dirname, '../lib/init.gradle');
+    initGradlePath = path.join(__dirname, `../lib/${initGradleName}.gradle`);
   } else if (/index.ts$/.test(__filename)) {
     // running from ./lib
-    initGradlePath = path.join(__dirname, 'init.gradle');
+    initGradlePath = path.join(__dirname, initGradleName + '.gradle');
   } else {
     throw new Error('Cannot locate Snyk init.gradle script');
   }
@@ -309,7 +333,7 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
   // Copying the injectable script into a temp file.
   let tmpInitGradle: tmp.SynchrounousResult | null = null;
   try {
-    tmpInitGradle = tmp.fileSync({postfix: '-init.gradle'});
+    tmpInitGradle = tmp.fileSync({postfix: `-${initGradleName}.gradle`});
     await fs.createReadStream(initGradlePath).pipe(fs.createWriteStream('', {fd: tmpInitGradle!.fd}));
     initGradlePath = tmpInitGradle.name;
   }  catch (error) {
@@ -318,7 +342,6 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
     throw error;
   }
 
-  const command = getCommand(root, targetFile);
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
   try {
@@ -332,15 +355,6 @@ async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | 
     const gradleErrorMarkers = /^\s*>\s.*$/;
     const gradleErrorEssence = error.message.split('\n').filter((l) => gradleErrorMarkers.test(l)).join('\n');
 
-    // It'd be nice to set it in the inner catch{} block below.
-    // However, it's not safe: the inner catch{} will be executed even it inner try{}
-    // succeeds. Seems like an async/await implementation problem.
-    let gradleVersionOutput = '[COULD NOT RUN gradle -v] ';
-    try {
-      gradleVersionOutput = await subProcess.execute(command, ['-v'], {cwd: root});
-    } catch (_) {
-      // intentionally empty
-    }
     const orange = chalk.rgb(255, 128, 0);
     const blackOnYellow = chalk.bgYellowBright.black;
     gradleVersionOutput = orange(gradleVersionOutput);
