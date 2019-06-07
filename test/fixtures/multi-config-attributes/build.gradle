@@ -11,19 +11,37 @@ repositories {
 }
 
 // See https://docs.gradle.org/current/userguide/dependency_management_attribute_based_matching.html
-def usageAttr = Attribute.of("org.gradle.usage", Usage)
 
-configurations {
-    apiConf {
-        attributes {
-            attribute(usageAttr, project.objects.named(Usage, "java-api"))
-        }
+if (project.hasProperty('objects')) {
+  def usageAttr = Attribute.of("org.gradle.usage", Usage)
+  // Gradle 4+
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-api"))
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-runtime"))
+          }
+      }
     }
-    runtimeConf {
-        attributes {
-            attribute(usageAttr, project.objects.named(Usage, "java-runtime"))
-        }
-    }
+} else {
+ // Gradle 3
+  def usageAttr = Attribute.of('usage', String)
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, "java-api")
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, "java-runtime")
+          }
+      }
+  }
 }
 
 dependencies {

@@ -2,6 +2,9 @@ import groovy.json.JsonOutput
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 
+// Snyk dependency resolution script for Gradle.
+// Tested on Gradle versions from 2.14 to 5.4.1
+
 // This script does the following: for all the projects in the build file,
 // generate a merged configuration of all the available configurations,
 // and then list the dependencies as a tree.
@@ -16,7 +19,9 @@ import java.util.regex.Matcher
 
 // (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
 
-// confAttr is a comma-separated list of key:value pairs. The "key" is a case-insensitive substring
+// confAttr parameter (supported only in Gradle 3+) is used to perform attribute-based dependency variant matching
+// (important for Android: https://developer.android.com/studio/build/dependencies#variant_aware)
+// Its value is a comma-separated list of key:value pairs. The "key" is a case-insensitive substring
 // of the class name of the attribute (e.g. "buildtype" would match com.android.build.api.attributes.BuildTypeAttr),
 // the value should be a case-insensitive stringified value of the attribute
 
@@ -72,16 +77,27 @@ allprojects { everyProj ->
         depsToDict = { Iterable deps, Set currentChain ->
             def res = [:]
             deps.each { d ->
-                def depName = "$d.moduleGroup:$d.moduleName"
+                def depName = d.moduleGroup + ':' + d.moduleName
                 if (!currentChain.contains(depName)) {
-                    def row = ['name': depName, 'version': d.moduleVersion]
+                    def row = ['name': depName, 'version': d.moduleVersion, 'conf': d.configuration]
                     currentChain.add(depName)
                     def subDeps = depsToDict(d.children, currentChain)
                     currentChain.remove(depName)
                     if (subDeps.size() > 0) {
                         row['dependencies'] = subDeps
                     }
-                    res[row['name']] = row
+                    // In Gradle 2, there can be several instances of the same dependency present at each level,
+                    // each for a different configuration. In this case, we need to merge the dependencies.
+                    if (res.containsKey(depName)) {
+                        if (subDeps.size() > 0) {
+                            if (!res[depName].containsKey('dependencies')) {
+                                res[depName]['dependencies'] = [:]
+                            }
+                            res[depName]['dependencies'].putAll(subDeps)
+                        }
+                    } else {
+                        res[depName] = row
+                    }
                 }
             }
             return res
@@ -89,6 +105,10 @@ allprojects { everyProj ->
 
         def matchesAttributeFilter
         matchesAttributeFilter = { conf ->
+            if (!conf.hasProperty('attributes')) {
+                // Gradle before version 3 does not support attributes
+                return true
+            }
             def matches = true
             def attrs = conf.attributes
             attrs.keySet().each({ attr ->
@@ -136,6 +156,10 @@ allprojects { everyProj ->
                 def attributesAsStrings = [:] // Map<String, Set<string>>
                 rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                     proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
+                        if (!conf.hasProperty('attributes')) {
+                           // Gradle before version 3 does not support attributes
+                            return
+                        }
                         def attrs = conf.attributes
                         attrs.keySet().each({ attr ->
                             def value = attrs.getAttribute(attr)
@@ -184,11 +208,14 @@ allprojects { everyProj ->
                         mergeableConfs.each { snykConf.extendsFrom(it) }
 
                         // Copy all the unambiguous build attributes into the merged configuration
-                        allConfigurationAttributes.each({ attr, valueSet ->
-                            if (valueSet.size() == 1) {
-                                snykConf.attributes.attribute(attr, valueSet.head())
-                            }
-                        })
+                        // Gradle before version 3 does not support attributes
+                        if (snykConf.hasProperty('attributes')) {
+                            allConfigurationAttributes.each({ attr, valueSet ->
+                                if (valueSet.size() == 1) {
+                                    snykConf.attributes.attribute(attr, valueSet.head())
+                                }
+                            })
+                        }
                     }
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)

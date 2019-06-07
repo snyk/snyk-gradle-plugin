@@ -21,7 +21,7 @@ test('failing inspect()', async (t) => {
   } catch (error) {
     t.match(error.message, 'Please ensure you are calling the `snyk` command with correct arguments',
       'proper error message');
-    t.match(error.message, /Gradle \d+\.\d+\.\d+/,
+    t.match(error.message, /Gradle \d+\.\d+(\.\d+)?/,
       'the error message has Gradle version');
   }
 });
