@@ -6,49 +6,70 @@ const isWin = /^win/.test(os.platform());
 const quot = isWin ? '"' : '\'';
 
 test('check build args with array (new configuration arg)', async (t) => {
-  const result = testableMethods.buildArgs(null, null, "confRegex", undefined, [
-    '--build-file',
-    'build.gradle',
-  ]);
+  const result = testableMethods.buildArgs(
+    '.',
+    null,
+    '/tmp/init.gradle',
+    {
+      'configuration-matching':'confRegex',
+      args: ['--build-file', 'build.gradle']
+    }
+  );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
     `-Pconfiguration=${quot}confRegex${quot}`,
     '--no-daemon',
     '-Dorg.gradle.parallel=',
+    '-PonlySubProject=.',
+    '-I /tmp/init.gradle',
     '--build-file',
     'build.gradle',
   ]);
 });
 
 test('check build args with array (legacy configuration arg)', async (t) => {
-  const result = testableMethods.buildArgs(null, null, undefined, undefined, [
-    '--build-file',
-    'build.gradle',
-    '--configuration',
-    'compile',
-  ]);
+  const result = testableMethods.buildArgs(
+    '.',
+    null,
+    '/tmp/init.gradle',
+    {
+      args: ['--build-file', 'build.gradle', '--configuration=compile']
+    }
+  );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
+    '-PonlySubProject=.',
+    '-I /tmp/init.gradle',
     '--build-file',
     'build.gradle',
-    '--configuration',
-    'compile',
+    `-Pconfiguration=${quot}^compile$${quot}`,
   ]);
 });
 
-test('check build args with string', async (t) => {
-  const result = testableMethods.buildArgs(null, null, undefined, undefined,
-    ['--build-file build.gradle --configuration compile']);
+test('check build args with scan all subprojects', async (t) => {
+  const result = testableMethods.buildArgs(
+    '.',
+    null,
+    '/tmp/init.gradle',
+    {
+      multiDepRoots: true,
+      args: ['--build-file', 'build.gradle', '--configuration', 'compile']
+    }
+  );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
-    '--build-file build.gradle --configuration compile',
+    '-I /tmp/init.gradle',
+    '--build-file',
+    'build.gradle',
+    `-Pconfiguration=${quot}^compile$${quot}`,
+    '', // this is a harmless artifact of argument transformation
   ]);
 });
 
