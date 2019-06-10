@@ -1,8 +1,8 @@
 import * as path from 'path';
 import {fixtureDir} from '../common';
 import {test} from 'tap';
-
 import {inspect} from '../../lib';
+import * as subProcess from '../../lib/sub-process';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 
@@ -87,20 +87,25 @@ test('multi-confg: only deps for specified conf are picked up (using legacy CLI 
   t.equal(Object.keys(result.package.dependencies!).length, 1, 'top level deps: 1');
 });
 
-if (!process.env.GRADLE_VERSION || !process.env.GRADLE_VERSION!.startsWith('3.')) {
-  test('multi-confg: only deps for specified conf are picked up (attribute match)', async (t) => {
-    const result = await inspect('.',
-      path.join(fixtureDir('multi-config-attributes'), 'build.gradle'),
-      {'configuration-attributes': 'usage:java-api'});
-    t.match(result.package.name, '.',
-      'returned project name is not sub-project');
-    t.notOk(result.package
-      .dependencies!['org.apache.commons:commons-lang3'],
-    'no runtime dep found');
-    t.equal(result.package
-      .dependencies!['commons-httpclient:commons-httpclient'].version,
-    '3.1',
-    'correct version of api dep found');
-    t.equal(Object.keys(result.package.dependencies!).length, 2, 'top level deps: 2'); // 1 with good attr, 1 with no attr
-  });
-}
+test('tests for Gradle 3+', async (t0) => {
+  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
+  const isGradle3Plus = parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1]) >= 3;
+  if (isGradle3Plus) {
+    t0.test('multi-confg: only deps for specified conf are picked up (attribute match)', async (t) => {
+
+      const result = await inspect('.',
+        path.join(fixtureDir('multi-config-attributes'), 'build.gradle'),
+        {'configuration-attributes': 'usage:java-api'});
+      t.match(result.package.name, '.',
+        'returned project name is not sub-project');
+      t.notOk(result.package
+        .dependencies!['org.apache.commons:commons-lang3'],
+      'no runtime dep found');
+      t.equal(result.package
+        .dependencies!['commons-httpclient:commons-httpclient'].version,
+      '3.1',
+      'correct version of api dep found');
+      t.equal(Object.keys(result.package.dependencies!).length, 2, 'top level deps: 2'); // 1 with good attr, 1 with no attr
+    });
+  }
+})

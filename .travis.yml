@@ -12,6 +12,9 @@ node_js:
   - "8"
   - "6"
 env:
+  - GRADLE_VERSION=2.14 JAVA_VERSION=openjdk8
+  # java 9 and gradle 2 not supported
+
   - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
   # java 9 and gradle 3 not supported
 
