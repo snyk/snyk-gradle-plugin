@@ -26,6 +26,12 @@ const packageFormatVersion = 'mvn:0.0.1';
 const isWin = /^win/.test(os.platform());
 const quot = isWin ? '"' : '\'';
 
+const cannotResolveVariantMarkers = [
+  'Cannot choose between the following',
+  'Could not select value from candidates',
+  'Unable to find a matching variant of project',
+];
+
 // TODO(kyegupov): the types below will be extracted to a common plugin interface library
 
 export interface BaseInspectOptions {
@@ -360,8 +366,7 @@ message from above, starting with ===== DEBUG INFORMATION START =====.`;
     // There are no automated tests for this yet (setting up Android SDK is quite problematic).
     // See test/manual/README.md
 
-    if (/Cannot choose between the following/.test(error.message)
-      || /Could not select value from candidates/.test(error.message)) {
+    if (cannotResolveVariantMarkers.find((m) => error.message.includes(m))) {
 
         // Extract attribute information via JSONATTRS marker:
         const jsonAttrs = JSON.parse(

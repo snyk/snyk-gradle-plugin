@@ -91,8 +91,8 @@ test('tests for Gradle 3+', async (t0) => {
   const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
   const isGradle3Plus = parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1]) >= 3;
   if (isGradle3Plus) {
-    t0.test('multi-confg: only deps for specified conf are picked up (attribute match)', async (t) => {
 
+    t0.test('multi-config: only deps for specified conf are picked up (attribute match)', async (t) => {
       const result = await inspect('.',
         path.join(fixtureDir('multi-config-attributes'), 'build.gradle'),
         {'configuration-attributes': 'usage:java-api'});
@@ -107,5 +107,25 @@ test('tests for Gradle 3+', async (t0) => {
       'correct version of api dep found');
       t.equal(Object.keys(result.package.dependencies!).length, 2, 'top level deps: 2'); // 1 with good attr, 1 with no attr
     });
+
+    t0.test('multi-config: only deps for specified conf are picked up (subproject variants)', async (t) => {
+      // This test is different from the previous because of specificAttr
+      // When constructing a merged configuration, it's important to scan all the subprojects and discover all the
+      // values of specificAttr to make sure the configuration
+      const result = await inspect('.',
+        path.join(fixtureDir('multi-config-attributes-subproject'), 'build.gradle'),
+        {'configuration-attributes': 'usage:java-api'}); // there's also specificAttr but it won't be picked up
+      t.match(result.package.name, '.',
+        'returned project name is not sub-project');
+      t.notOk(result.package
+        .dependencies!['org.apache.commons:commons-lang3'],
+      'no runtime dep found');
+      t.equal(result.package
+        .dependencies!['commons-httpclient:commons-httpclient'].version,
+      '3.1',
+      'correct version of api dep found');
+      t.equal(Object.keys(result.package.dependencies!).length, 3, 'top level deps: '); // 1 with good attr, 1 with no attr
+    });
+
   }
 })
