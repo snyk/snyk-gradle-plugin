@@ -1,0 +1,102 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'com.github.jitpack'
+
+sourceCompatibility = 1.8 // java 8
+targetCompatibility = 1.8
+
+repositories {
+  mavenCentral()
+}
+
+// See https://docs.gradle.org/current/userguide/dependency_management_attribute_based_matching.html
+
+def specificAttr = Attribute.of("specificAttr", String)
+def commonAttr = Attribute.of("specificAttr", String)
+def usageAttr = null
+
+if (project.hasProperty('objects')) {
+  usageAttr = Attribute.of("org.gradle.usage", Usage)
+  // Gradle 4+
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-api"))
+              attribute(specificAttr, "rootprojValue")
+              attribute(commonAttr, "common")
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-runtime"))
+              attribute(specificAttr, "rootprojValue")
+              attribute(commonAttr, "common")
+          }
+      }
+    }
+} else {
+ // Gradle 3
+  usageAttr = Attribute.of('usage', String)
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, "java-api")
+              attribute(specificAttr, "rootprojValue")
+              attribute(commonAttr, "common")
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, "java-runtime")
+              attribute(specificAttr, "rootprojValue")
+              attribute(commonAttr, "common")
+          }
+      }
+  }
+}
+
+dependencies.attributesSchema {
+    attribute(specificAttr)
+    attribute(usageAttr)
+
+    println('SNYKECHO compatchain ' + attribute(specificAttr).compatibilityRules)
+}
+
+
+dependencies {
+  compile 'com.google.guava:guava:18.0'
+  apiConf 'commons-httpclient:commons-httpclient:3.1'
+  runtimeConf 'org.apache.commons:commons-lang3:3.8.1'
+  compile project(':subproj')
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+// To specify a license in the pom:
+install {
+  repositories.mavenInstaller {
+    pom.project {
+      licenses {
+        license {
+          name 'The Apache Software License, Version 2.0'
+          url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          distribution 'repo'
+        }
+      }
+    }
+  }
+}

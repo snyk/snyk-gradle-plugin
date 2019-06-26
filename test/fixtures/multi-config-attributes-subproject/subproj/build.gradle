@@ -1,0 +1,60 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'com.github.jitpack'
+
+sourceCompatibility = 1.8 // java 8
+targetCompatibility = 1.8
+
+repositories {
+  mavenCentral()
+}
+
+def specificAttr = Attribute.of("specificAttr", String)
+def commonAttr = Attribute.of("specificAttr", String)
+def usageAttr = null
+
+if (project.hasProperty('objects')) {
+  usageAttr = Attribute.of("org.gradle.usage", Usage)
+  // Gradle 4+
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-api"))
+              attribute(specificAttr, "subproj1Value")
+              attribute(commonAttr, "common")
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, project.objects.named(Usage, "java-runtime"))
+              attribute(specificAttr, "subproj1Value")
+              attribute(commonAttr, "common")
+          }
+      }
+    }
+} else {
+ // Gradle 3
+  usageAttr = Attribute.of('usage', String)
+  configurations {
+      apiConf {
+          attributes {
+              attribute(usageAttr, "java-api")
+              attribute(specificAttr, "subproj1Value")
+              attribute(commonAttr, "common")
+          }
+      }
+      runtimeConf {
+          attributes {
+              attribute(usageAttr, "java-runtime")
+              attribute(specificAttr, "subproj2Value")
+              attribute(commonAttr, "common")
+          }
+      }
+  }
+}
+
+dependencies.attributesSchema {
+    attribute(specificAttr)
+    attribute(usageAttr)
+}

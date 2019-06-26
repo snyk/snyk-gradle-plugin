@@ -154,7 +154,7 @@ allprojects { everyProj ->
                 // when resolving the project A, so that it selects a concrete variant of dependency B.
                 def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
                 def attributesAsStrings = [:] // Map<String, Set<string>>
-                rootProject.allprojects.findAll(shouldScanProject).each { proj ->
+                rootProject.allprojects.each { proj ->
                     proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
                         if (!conf.hasProperty('attributes')) {
                            // Gradle before version 3 does not support attributes
