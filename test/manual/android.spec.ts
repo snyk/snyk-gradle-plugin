@@ -11,7 +11,7 @@ describe('android multi-variant build', () => {
       inspect(
         '.',
         path.join(fixtureDir('android-cannot-auto-resolve'), 'build.gradle'),
-        {multiDepRoots: true}
+        {allSubProjects: true}
       ),
     ).rejects.toThrowError(/Cannot choose between the following variants/);
   }, 90000);
@@ -20,8 +20,8 @@ describe('android multi-variant build', () => {
       let data = await inspect(
         '.',
         path.join(fixtureDir('android-cannot-auto-resolve'), 'build.gradle'),
-        {multiDepRoots: true, 'configuration-attributes': 'buildtype:release,usage:java-runtime,myflavor:local'}
+        {allSubProjects: true, 'configuration-attributes': 'buildtype:release,usage:java-runtime,myflavor:local'}
       );
-      expect(data.depRoots.length).toEqual(3);
+      expect(data.scannedProjects.length).toEqual(3);
   }, 90000);
 });

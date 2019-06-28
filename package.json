@@ -18,7 +18,7 @@
     "build": "tsc",
     "lint": "tslint --project tsconfig.json --format stylish",
     "prepare": "npm run build",
-    "test": "npm run lint && npm run test-functional && npm run test-system",
+    "test": "npm run lint && tsc -p tsconfig-test.json && npm run test-functional && npm run test-system",
     "test-functional": "tap -R spec ./test/functional/*.test.[tj]s",
     "test-system": "tap -R spec --timeout=180 ./test/system/*.test.[tj]s",
     "test-manual": "jest test/manual -b"
@@ -26,6 +26,7 @@
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@snyk/cli-interface": "^1.2.0",
     "@types/chalk": "^2.2.0",
     "@types/jest": "^24.0.13",
     "@types/node": "^4.9.1",

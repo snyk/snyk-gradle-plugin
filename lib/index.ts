@@ -6,8 +6,13 @@ import * as tmp from 'tmp';
 import {MissingSubProjectError} from './errors';
 import chalk from 'chalk';
 import debugModule = require('debug');
+import {
+  SingleSubprojectInspectOptions, MultiSubprojectInspectOptions, SinglePackageResult, MultiProjectResult,
+  PluginMetadata, InspectOptions, InspectResult, isMultiSubProject,
+} from '@snyk/cli-interface/dist/legacy/plugin';
+import { DepTree, ScannedProject } from '@snyk/cli-interface/dist/legacy/common';
 
-// To enable debugging output, run the CLI as `DEBUG=snyk-gradle-plugin snyk ...`
+// To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
 function debugLog(s: string) {
   if (logger === null) {
@@ -34,15 +39,14 @@ const cannotResolveVariantMarkers = [
 
 // TODO(kyegupov): the types below will be extracted to a common plugin interface library
 
-export interface BaseInspectOptions {
-  dev?: boolean;
-
+export interface GradleInspectOptions {
   // A regular expression (Java syntax, case-insensitive) to select Gradle configurations.
   // If only one configuration matches, its attributes will be used for dependency resolution;
   // otherwise, an artificial merged configuration will be created (see configuration-attributes
   // below).
   // Attributes are important for dependency resolution in Android builds (see
   // https://developer.android.com/studio/build/dependencies#variant_aware )
+  // This replaces legacy `-- --configuration=foo` argument specification.
   'configuration-matching'?: string;
 
   // A comma-separated list of key:value pairs, e.g. "buildtype=release,usage=java-runtime".
@@ -52,97 +56,31 @@ export interface BaseInspectOptions {
   // Attributes are important for dependency resolution in Android builds (see
   // https://developer.android.com/studio/build/dependencies#variant_aware )
   'configuration-attributes'?: string;
-
-  // Additional command line arguments to Gradle, supplied after "--" to the Snyk CLI.
-  // E.g. legacy --configuration=foo (see configuration-matching instead)
-  args?: string[];
-
 }
 
-// The return type of inspect() depends on the multiDepRoots flag.
+type Options = InspectOptions & GradleInspectOptions;
 
-export interface SingleRootInspectOptions extends BaseInspectOptions {
-  // Return the information not on the main project, but on the specific subproject defined in the build.
-  'gradle-sub-project'?: string;
-}
+// TODO: move everything to inspect.ts, and make index.ts just a re-export of `inspect` with a typecheck
+export async function inspect(
+  root: string,
+  targetFile: string,
+  options?: SingleSubprojectInspectOptions & GradleInspectOptions):
+  Promise<SinglePackageResult>;
+export async function inspect(
+  root: string,
+  targetFile: string,
+  options: MultiSubprojectInspectOptions & GradleInspectOptions):
+  Promise<MultiProjectResult>;
 
-export interface MultiRootsInspectOptions extends BaseInspectOptions {
-  // Return multiple "dependency roots" as a MultiDepRootsResult.
-  // Dep roots correspond to sub-projects in Gradle or projects in a Yark workspace.
-  // Eventually, this flag will be an implicit default.
-  // For now, plugins return SingleDepRootResult by default.
-
-  // TODO(kyegupov): this should be renamed to allSubProjects,
-  // see https://github.com/snyk/snyk-cli-interface/blob/master/lib/legacy/plugin.ts
-  multiDepRoots: true;
-}
-
-function isMultiSubProject(options: SingleRootInspectOptions | MultiRootsInspectOptions):
-    options is MultiRootsInspectOptions {
-  return (options as MultiRootsInspectOptions).multiDepRoots;
-}
-
-// Legacy result type. Will be deprecated soon.
-export interface SingleDepRootResult {
-  plugin: PluginMetadata;
-  package: DepTree;
-}
-
-export interface MultiDepRootsResult {
-  plugin: PluginMetadata;
-  depRoots: DepRoot[];
-}
-
-export interface PluginMetadata {
-  name: string;
-  runtime: string;
-
-  // TODO(BST-542): remove, DepRoot.targetFile to be used instead
-  // Note: can be missing, see targetFileFilteredForCompatibility
-  targetFile?: string;
-
-  // Plugin-specific metadata
-  meta?: {
-    // If we don't return the results for all dependency roots (subprojects),
-    // still record their names to warn the user about them not being scanned
-    allSubProjectNames?: string[];
-  };
-}
-
-export interface DepDict {
-  [name: string]: DepTree;
-}
-
-// TODO(BST-542): proper name should be decided.
-// This is essentially a "dependency root and associated dependency graph".
-// Possible name: DiscoveryResult, Inspectable, or maybe stick with DepRoot
-export interface DepRoot {
-  depTree: DepTree; // to be soon replaced with depGraph
-
-  // this will eventually become a structure (list) of "build" files,
-  // also known as "project roots".
-  // Note: can be missing, see targetFileFilteredForCompatibility
-  targetFile?: string;
-
-  meta?: any; // TODO(BST-542): decide on the format
-}
-
-export interface DepTree {
-  name: string;
-  version: string;
-  dependencies?: DepDict;
-  packageFormatVersion?: string;
-}
-
-export async function inspect(root, targetFile, options?: SingleRootInspectOptions): Promise<SingleDepRootResult>;
-export async function inspect(root, targetFile, options: MultiRootsInspectOptions): Promise<MultiDepRootsResult>;
-
-export async function inspect(root, targetFile, options?: SingleRootInspectOptions | MultiRootsInspectOptions):
-  Promise<SingleDepRootResult | MultiDepRootsResult> {
+export async function inspect(
+    root: string,
+    targetFile: string,
+    options?: Options,
+    ): Promise<InspectResult> {
   if (!options) {
     options = {dev: false};
   }
-  let subProject = options['gradle-sub-project'];
+  let subProject = (options as SingleSubprojectInspectOptions).subProject;
   if (subProject) {
     subProject = subProject.trim();
   }
@@ -150,6 +88,7 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
     name: 'bundled:gradle',
     runtime: 'unknown',
     targetFile: targetFileFilteredForCompatibility(targetFile),
+    meta: {},
   };
   if (isMultiSubProject(options)) {
     if (subProject) {
@@ -157,7 +96,7 @@ export async function inspect(root, targetFile, options?: SingleRootInspectOptio
     }
     return {
       plugin,
-      depRoots: await getAllDepsAllProjects(root, targetFile, options),
+      scannedProjects: await getAllDepsAllProjects(root, targetFile, options),
     };
   }
   const depTreeAndDepRootNames = await getAllDepsOneProject(root, targetFile, options, subProject);
@@ -180,7 +119,7 @@ function targetFileFilteredForCompatibility(targetFile: string): string | undefi
   return (path.basename(targetFile) === 'build.gradle.kts') ? targetFile : undefined;
 }
 
-interface JsonDepsScriptResult {
+export interface JsonDepsScriptResult {
   defaultProject: string;
   projects: ProjectsDict;
   allSubProjectNames: string[];
@@ -191,7 +130,7 @@ interface ProjectsDict {
 }
 
 interface GradleProjectInfo {
-  depDict: DepDict;
+  depDict: {[name: string]: DepTree};
   targetFile: string;
 }
 
@@ -213,12 +152,12 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
-async function getAllDepsOneProject(root, targetFile, options, subProject):
+async function getAllDepsOneProject(root: string, targetFile: string, options: Options, subProject?: string):
     Promise<{depTree: DepTree, allSubProjectNames: string[]}> {
   const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
-  let depDict = {} as DepDict;
+  let depDict = {};
   if (subProject) {
     return {
       depTree: getDepsSubProject(root, subProject, allProjectDeps),
@@ -241,9 +180,9 @@ async function getAllDepsOneProject(root, targetFile, options, subProject):
   };
 }
 
-function getDepsSubProject(root, subProject, allProjectDeps) {
+function getDepsSubProject(root: string, subProject: string, allProjectDeps: JsonDepsScriptResult) {
   const packageName = `${path.basename(root)}/${subProject}`;
-  let depDict = {} as DepDict;
+  let depDict = {};
 
   if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
     throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
@@ -260,7 +199,7 @@ function getDepsSubProject(root, subProject, allProjectDeps) {
     packageFormatVersion,
   };
 }
-async function getAllDepsAllProjects(root, targetFile, options): Promise<DepRoot[]> {
+async function getAllDepsAllProjects(root: string, targetFile: string, options: Options): Promise<ScannedProject[]> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const basePackageName = path.basename(root);
   const packageVersion = '0.0.0';
@@ -320,7 +259,7 @@ async function getInjectedScriptPath(): Promise<{injectedScripPath: string, clea
   }
 }
 
-async function getAllDeps(root, targetFile, options: SingleRootInspectOptions | MultiRootsInspectOptions):
+async function getAllDeps(root: string, targetFile: string, options: Options):
     Promise<JsonDepsScriptResult> {
 
   const command = getCommand(root, targetFile);
@@ -424,7 +363,7 @@ ${chalk.red.bold(mainErrorMessage)}`;
   }
 }
 
-function getCommand(root, targetFile) {
+function getCommand(root: string, targetFile: string) {
   const isWinLocal = /^win/.test(os.platform()); // local check, can be stubbed in tests
   const quotLocal = isWinLocal ? '"' : '\'';
   const wrapperScript = isWinLocal ? 'gradlew.bat' : './gradlew';
@@ -446,7 +385,7 @@ function buildArgs(
     root: string,
     targetFile: string | null,
     initGradlePath: string,
-    options: SingleRootInspectOptions | MultiRootsInspectOptions) {
+    options: Options) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
   if (targetFile) {
@@ -480,7 +419,7 @@ function buildArgs(
   args.push('-Dorg.gradle.parallel=');
 
   if (!isMultiSubProject(options)) {
-    args.push('-PonlySubProject=' + (options['gradle-sub-project'] || '.'));
+    args.push('-PonlySubProject=' + (options.subProject || '.'));
   }
 
   args.push('-I ' + initGradlePath);

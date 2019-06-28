@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-      "outDir": "./dist",
+      "outDir": "./dist-test",
       "pretty": true,
       "target": "es2015",
       "lib": [
@@ -15,6 +15,6 @@
       "typeRoots": ["./node_modules/@types", "./typings"],
   },
   "include": [
-      "./lib/**/*", "typings/tap/index.d.ts",
+      "./test/**/*",
   ]
 }

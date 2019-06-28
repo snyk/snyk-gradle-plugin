@@ -56,7 +56,7 @@ test('check build args with scan all subprojects', async (t) => {
     null,
     '/tmp/init.gradle',
     {
-      multiDepRoots: true,
+      allSubProjects: true,
       args: ['--build-file', 'build.gradle', '--configuration', 'compile']
     }
   );
@@ -78,7 +78,7 @@ test('extractJsonFromScriptOutput', async (t) => {
 la dee da, la dee da
 JSONDEPS {"hello": "world"}
 some other noise`);
-  t.deepEqual(result, {hello: 'world'});
+  t.deepEqual(result as any, {hello: 'world'});
 });
 
 test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {

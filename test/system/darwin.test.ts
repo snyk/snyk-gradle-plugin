@@ -1,7 +1,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import {fixtureDir} from '../common';
-import {test} from 'tap';
+import {test, Test} from 'tap';
 import {stub, SinonStub} from 'sinon';
 import * as subProcess from '../../lib/sub-process';
 import {inspect} from '../../lib';
@@ -51,7 +51,7 @@ test('darwin with wrapper in root', async (t) => {
   }
 });
 
-function stubPlatform(platform, t) {
+function stubPlatform(platform: string, t: Test) {
   stub(os, 'platform')
     .callsFake(() => {
       return platform;
@@ -59,7 +59,7 @@ function stubPlatform(platform, t) {
   t.teardown((os.platform as SinonStub).restore);
 }
 
-function stubSubProcessExec(t) {
+function stubSubProcessExec(t: Test) {
   stub(subProcess, 'execute')
     .callsFake(() => {
       return Promise.reject(new Error('abort'));

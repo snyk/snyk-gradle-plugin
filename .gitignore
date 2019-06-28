@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .gradle
 /dist
+/dist-test
 package-lock.json
 test/fixtures/**/build
 npm-debug.log

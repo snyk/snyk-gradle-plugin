@@ -1,13 +1,12 @@
 import * as path from 'path';
-import {fixtureDir, stubSubProcessExec} from '../common';
+import {fixtureDir} from '../common';
 import {test} from 'tap';
 
 import {inspect} from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 
-test('malformed build.gradle', (t) => {
-  t.plan(1);
+test('malformed build.gradle', async (t) => {
   t.rejects(inspect('.',
     path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
     {args: ['--configuration', 'compileOnly']}),
@@ -26,11 +25,10 @@ test('failing inspect()', async (t) => {
   }
 });
 
-test('multi-project: error on missing sub-project', (t) => {
+test('multi-project: error on missing sub-project', async (t) => {
   const options = {
-    'gradle-sub-project': 'non-existent',
+    subProject: 'non-existent',
   };
-  t.plan(1);
   t.rejects(
     inspect('.',
       path.join(fixtureDir('multi-project'), 'build.gradle'),
