@@ -1,9 +1,9 @@
 export class MissingSubProjectError extends Error {
   public name = 'MissingSubProjectError';
   public subProject: string;
-  public allProjects: string;
+  public allProjects: string[];
 
-  constructor(subProject, allProjects) {
+  constructor(subProject: string, allProjects: string[]) {
     super(`Specified sub-project not found: "${subProject}". ` +
     `Found these projects: ${allProjects.join(', ')}`);
     this.subProject = subProject;

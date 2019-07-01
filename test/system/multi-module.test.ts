@@ -1,7 +1,8 @@
 import * as path from 'path';
 import {fixtureDir} from '../common';
 import {test} from 'tap';
-import {inspect, MultiRootsInspectOptions} from '../../lib';
+import {inspect} from '../../lib';
+import { MultiSubprojectInspectOptions } from '@snyk/cli-interface/dist/legacy/plugin';
 
 test('multi-project, explicitly targeting a subproject build file', async (t) => {
   const result = await inspect('.',
@@ -58,7 +59,7 @@ test('multi-project, ran from a subproject directory', async (t) => {
 
 test('multi-project: only sub-project has deps and they are returned', async (t) => {
   const options = {
-    'gradle-sub-project': 'subproj',
+    subProject: 'subproj',
   };
   const result = await inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
@@ -104,7 +105,7 @@ test('multi-project: parallel is handled correctly', async (t) => {
 
 test('multi-project: only sub-project has deps and they are returned space needs trimming', async (t) => {
   const options = {
-    'gradle-sub-project': 'subproj ',
+    subProject: 'subproj ',
   };
   const result = await inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
@@ -125,12 +126,12 @@ test('multi-project: only sub-project has deps and they are returned space needs
   'correct version found');
 });
 
-test('multi-project: deps for both projects are returned with multiDepRoots flag', async (t) => {
+test('multi-project: deps for both projects are returned with allSubProjects flag', async (t) => {
   const result = await inspect('.',
-    path.join(fixtureDir('multi-project'), 'build.gradle'), {multiDepRoots: true});
+    path.join(fixtureDir('multi-project'), 'build.gradle'), {allSubProjects: true});
   // It's an array, so we have to scan
-  t.equal(result.depRoots.length, 2);
-  for (const p of result.depRoots) {
+  t.equal(result.scannedProjects.length, 2);
+  for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
@@ -154,22 +155,22 @@ test('multi-project: deps for both projects are returned with multiDepRoots flag
   }
 });
 
-test('single-project: array of one is returned with multiDepRoots flag', async (t) => {
+test('single-project: array of one is returned with allSubProjects flag', async (t) => {
   const result = await inspect('.',
-    path.join(fixtureDir('api-configuration'), 'build.gradle'), {multiDepRoots: true});
-  t.equal(result.depRoots.length, 1);
-  t.equal(result.depRoots[0].depTree.name, '.');
-  t.ok(result.depRoots[0].depTree.dependencies!['commons-httpclient:commons-httpclient']);
+    path.join(fixtureDir('api-configuration'), 'build.gradle'), {allSubProjects: true});
+  t.equal(result.scannedProjects.length, 1);
+  t.equal(result.scannedProjects[0].depTree.name, '.');
+  t.ok(result.scannedProjects[0].depTree.dependencies!['commons-httpclient:commons-httpclient']);
 });
 
-test('multi-project-some-unscannable: multiDepRoots fails', async (t) => {
+test('multi-project-some-unscannable: allSubProjects fails', async (t) => {
   t.rejects(inspect('.',
-    path.join(fixtureDir('multi-project-some-unscannable'), 'build.gradle'), {multiDepRoots: true}));
+    path.join(fixtureDir('multi-project-some-unscannable'), 'build.gradle'), {allSubProjects: true}));
 });
 
 test('multi-project-some-unscannable: gradle-sub-project for a good subproject works', async (t) => {
   const options = {
-    'gradle-sub-project': 'subproj ',
+    subProject: 'subproj ',
   };
   const result = await inspect('.',
     path.join(fixtureDir('multi-project-some-unscannable'), 'build.gradle'),
@@ -190,20 +191,19 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
   'correct version found');
 });
 
-test('multiDepRoots incompatible with gradle-sub-project', (t) => {
-  t.plan(1);
+test('allSubProjects incompatible with gradle-sub-project', async (t) => {
   t.rejects(inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
-    {'multiDepRoots': true, 'gradle-sub-project': true} as MultiRootsInspectOptions));
+    {allSubProjects: true, subProject: true} as MultiSubprojectInspectOptions));
 });
 
-test('multi-project: parallel with multiDepRoots produces multiple results with different names', async (t) => {
+test('multi-project: parallel with allSubProjects produces multiple results with different names', async (t) => {
   // Note: Gradle has to be run from the directory with `gradle.properties` to pick that one up
-  const result = await inspect(fixtureDir('multi-project-parallel'), 'build.gradle', {multiDepRoots: true});
-  t.equal(result.depRoots.length, 6);
+  const result = await inspect(fixtureDir('multi-project-parallel'), 'build.gradle', {allSubProjects: true});
+  t.equal(result.scannedProjects.length, 6);
   const names = new Set<string>();
-  for (const p of result.depRoots) {
-    names.add(p.depTree.name);
+  for (const p of result.scannedProjects) {
+    names.add(p.depTree.name!);
   }
   t.deepEqual(names, new Set<string>([
     'multi-project-parallel',
@@ -214,12 +214,12 @@ test('multi-project: parallel with multiDepRoots produces multiple results with 
     'multi-project-parallel/subproj4']));
 });
 
-test('multi-project: multiDepRoots + configuration', async (t) => {
+test('multi-project: allSubProjects + configuration', async (t) => {
   const result = await inspect('.',
-    path.join(fixtureDir('multi-project'), 'build.gradle'), {multiDepRoots: true, args: ['--configuration', 'compileOnly']});
+    path.join(fixtureDir('multi-project'), 'build.gradle'), {allSubProjects: true, args: ['--configuration', 'compileOnly']});
   // It's an array, so we have to scan
-  t.equal(result.depRoots.length, 2);
-  for (const p of result.depRoots) {
+  t.equal(result.scannedProjects.length, 2);
+  for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
@@ -274,10 +274,10 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
 test('multi-project-dependency-cycle: scanning all subprojects works fine', async (t) => {
   const result = await inspect('.',
     path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
-    {multiDepRoots: true});
+    {allSubProjects: true});
   // It's an array, so we have to scan
-  t.equal(result.depRoots.length, 2);
-  for (const p of result.depRoots) {
+  t.equal(result.scannedProjects.length, 2);
+  for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.equal(p.depTree
         .dependencies!['com.github.jitpack:subproj']

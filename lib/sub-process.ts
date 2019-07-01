@@ -31,7 +31,7 @@ export function execute(
       stderr = stderr + data;
     });
 
-    proc.on('close', (code) => {
+    proc.on('close', (code: number) => {
       if (code !== 0) {
         const fullCommand = command + ' ' + args.join(' ');
         return reject(new Error(`
