@@ -60,23 +60,25 @@ export interface GradleInspectOptions {
 
 type Options = InspectOptions & GradleInspectOptions;
 
-// TODO: move everything to inspect.ts, and make index.ts just a re-export of `inspect` with a typecheck
+// Overload type definitions, so that when you call inspect() with an `options` literal (e.g. in tests),
+// you will get a result of a specific corresponding type.
 export async function inspect(
   root: string,
   targetFile: string,
-  options?: SingleSubprojectInspectOptions & GradleInspectOptions):
-  Promise<SinglePackageResult>;
+  options?: SingleSubprojectInspectOptions & GradleInspectOptions,
+): Promise<SinglePackageResult>;
 export async function inspect(
   root: string,
   targetFile: string,
-  options: MultiSubprojectInspectOptions & GradleInspectOptions):
-  Promise<MultiProjectResult>;
+  options: MultiSubprojectInspectOptions & GradleInspectOptions,
+): Promise<MultiProjectResult>;
 
+// General implementation. The result type depends on the runtime type of `options`.
 export async function inspect(
-    root: string,
-    targetFile: string,
-    options?: Options,
-    ): Promise<InspectResult> {
+  root: string,
+  targetFile: string,
+  options?: Options,
+): Promise<InspectResult> {
   if (!options) {
     options = {dev: false};
   }
