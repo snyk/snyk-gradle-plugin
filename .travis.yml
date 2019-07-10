@@ -1,50 +1,111 @@
-os:
-  - linux
+dist: trusty
 sudo: false
 notifications:
   email: false
 language: node_js
-jdk:
-  - openjdk8
-  - oraclejdk9
+
 node_js:
-  - "10"
   - "8"
-  - "6"
-env:
-  - GRADLE_VERSION=2.14 JAVA_VERSION=openjdk8
-  # java 9 and gradle 2 not supported
-
-  - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
-  # java 9 and gradle 3 not supported
-
-  - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk8
-  - GRADLE_VERSION=4.10.3 JAVA_VERSION=oraclejdk9
-
-  - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk8
-  - GRADLE_VERSION=5.3.1 JAVA_VERSION=oraclejdk9
 
 cache:
   directories:
     - node_modules
     - $HOME/.gradle
     - .gradle
-before_install:
+before_script:
   # sdkman helps to install different gradle versions
   - curl -s "https://get.sdkman.io" | bash
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
-script:
-  - sdk install gradle $GRADLE_VERSION
-  - jdk_switcher use $JAVA_VERSION
-  - npm test
+  # install jdk is needed for JDK10+
+  - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 jobs:
   include:
-    - stage: npm release
-      node_js: "8" # This *has* to be the "build leader"
-      script: skip
-      after_success:
-        - npx semantic-release
-branches:
-  only:
-    - master
+  - stage: Node versions + actual Gradle version
+    node_js: 6
+    env: GRADLE_VERSION=5.3.1 JDK=9 
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    node_js: 8
+    env: GRADLE_VERSION=5.3.1 JDK=10
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    node_js: 10
+    env: GRADLE_VERSION=5.3.1 JDK=11
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+
+  - stage: Older Gradle versions
+    # java 9 and gradle 2 not supported
+    env: GRADLE_VERSION=2.14 JDK=8
+    script:
+      - jdk_switcher use openjdk8
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  - 
+    # java 9 and gradle 3 not supported
+    env: GRADLE_VERSION=3.5.1 JDK=8
+    script:
+      - jdk_switcher use openjdk8
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  - 
+    env: GRADLE_VERSION=4.10.3 JDK=8
+    script:
+      - jdk_switcher use openjdk8
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    env: GRADLE_VERSION=4.10.3 JDK=9
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    env: GRADLE_VERSION=4.10.3 JDK=10
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    env: GRADLE_VERSION=4.10.3 JDK=11
+    script:
+      - source install-jdk.sh --feature $JDK
+      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  - 
+    env: GRADLE_VERSION=5.3.1 JDK=8
+    script:
+      - jdk_switcher use openjdk8
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  - stage: npm release
+    if: branch = master
+    node_js: "8" # This *has* to be the "build leader"
+    script: skip
+    after_success:
+      - npx semantic-release
