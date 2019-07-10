@@ -1,28 +1,34 @@
-os:
-  - linux
+dist: trusty
 sudo: false
 notifications:
   email: false
 language: node_js
 jdk:
-  - openjdk8
-  - oraclejdk9
+  # - openjdk8
+  # - oraclejdk9
+  - openjdk10
+  - openjdk11
+
 node_js:
   - "10"
   - "8"
   - "6"
 env:
-  - GRADLE_VERSION=2.14 JAVA_VERSION=openjdk8
+  # - GRADLE_VERSION=2.14 JAVA_VERSION=openjdk8
   # java 9 and gradle 2 not supported
 
-  - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
+  # - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
   # java 9 and gradle 3 not supported
 
-  - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk8
-  - GRADLE_VERSION=4.10.3 JAVA_VERSION=oraclejdk9
+  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk8
+  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=oraclejdk9
+  - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk10
+  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk11
 
-  - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk8
-  - GRADLE_VERSION=5.3.1 JAVA_VERSION=oraclejdk9
+  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk8
+  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=oraclejdk9
+  - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk10
+  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk11
 
 cache:
   directories:
@@ -36,7 +42,11 @@ before_install:
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
 script:
   - sdk install gradle $GRADLE_VERSION
+  # - $TRAVIS_BUILD_DIR/install-jdk.sh --install openjdk10 --target openjdk10
+  # - $TRAVIS_BUILD_DIR/install-jdk.sh --install openjdk11 --target openjdk11
+  - export JAVA_HOME=$HOME/$JAVA_VERSION
   - jdk_switcher use $JAVA_VERSION
+  - java -version
   - npm test
 jobs:
   include:
