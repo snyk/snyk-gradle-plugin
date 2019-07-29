@@ -3,33 +3,27 @@ sudo: false
 notifications:
   email: false
 language: node_js
-jdk:
-  # - openjdk8
-  # - oraclejdk9
-  - openjdk10
-  - openjdk11
 
 node_js:
   - "10"
   - "8"
   - "6"
 env:
-  # - GRADLE_VERSION=2.14 JAVA_VERSION=openjdk8
+  - GRADLE_VERSION=2.14 JDK=8
   # java 9 and gradle 2 not supported
 
-  # - GRADLE_VERSION=3.5.1 JAVA_VERSION=openjdk8
+  - GRADLE_VERSION=3.5.1 JDK=8
   # java 9 and gradle 3 not supported
 
-  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk8
-  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=oraclejdk9
-  - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk10
-  # - GRADLE_VERSION=4.10.3 JAVA_VERSION=openjdk11
+  - GRADLE_VERSION=4.10.3 JDK=8
+  - GRADLE_VERSION=4.10.3 JDK=9
+  - GRADLE_VERSION=4.10.3 JDK=10
+  - GRADLE_VERSION=4.10.3 JDK=11
 
-  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk8
-  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=oraclejdk9
-  - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk10
-  # - GRADLE_VERSION=5.3.1 JAVA_VERSION=openjdk11
-
+  - GRADLE_VERSION=5.3.1 JDK=8
+  - GRADLE_VERSION=5.3.1 JDK=9
+  - GRADLE_VERSION=5.3.1 JDK=10
+  - GRADLE_VERSION=5.3.1 JDK=11
 cache:
   directories:
     - node_modules
@@ -40,12 +34,12 @@ before_install:
   - curl -s "https://get.sdkman.io" | bash
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
+  # install jdk is needed for JDK10+
+  - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 script:
   - sdk install gradle $GRADLE_VERSION
-  # - $TRAVIS_BUILD_DIR/install-jdk.sh --install openjdk10 --target openjdk10
-  # - $TRAVIS_BUILD_DIR/install-jdk.sh --install openjdk11 --target openjdk11
-  - export JAVA_HOME=$HOME/$JAVA_VERSION
-  - jdk_switcher use $JAVA_VERSION
+  - export JAVA_HOME=$HOME/JDK-$JDK
+  - source install-jdk.sh --feature $JDK --target $JAVA_HOME
   - java -version
   - npm test
 jobs:
