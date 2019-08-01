@@ -2,7 +2,7 @@ import * as path from 'path';
 import {fixtureDir} from '../common';
 import {test} from 'tap';
 import {inspect} from '../../lib';
-import { MultiSubprojectInspectOptions } from '@snyk/cli-interface/dist/legacy/plugin';
+import { legacyPlugin as api } from '@snyk/cli-interface';
 
 test('multi-project, explicitly targeting a subproject build file', async (t) => {
   const result = await inspect('.',
@@ -194,7 +194,7 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
 test('allSubProjects incompatible with gradle-sub-project', async (t) => {
   t.rejects(inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
-    {allSubProjects: true, subProject: true} as MultiSubprojectInspectOptions));
+    {allSubProjects: true, subProject: true} as api.MultiSubprojectInspectOptions));
 });
 
 test('multi-project: parallel with allSubProjects produces multiple results with different names', async (t) => {
