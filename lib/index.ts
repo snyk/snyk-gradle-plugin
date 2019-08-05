@@ -6,11 +6,9 @@ import * as tmp from 'tmp';
 import {MissingSubProjectError} from './errors';
 import chalk from 'chalk';
 import debugModule = require('debug');
-import {
-  SingleSubprojectInspectOptions, MultiSubprojectInspectOptions, SinglePackageResult, MultiProjectResult,
-  PluginMetadata, InspectOptions, InspectResult, isMultiSubProject,
-} from '@snyk/cli-interface/dist/legacy/plugin';
-import { DepTree, ScannedProject } from '@snyk/cli-interface/dist/legacy/common';
+import { legacyPlugin as api, legacyCommon } from '@snyk/cli-interface';
+type DepTree = legacyCommon.DepTree;
+type ScannedProject = legacyCommon.ScannedProject;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
@@ -58,41 +56,41 @@ export interface GradleInspectOptions {
   'configuration-attributes'?: string;
 }
 
-type Options = InspectOptions & GradleInspectOptions;
+type Options = api.InspectOptions & GradleInspectOptions;
 
 // Overload type definitions, so that when you call inspect() with an `options` literal (e.g. in tests),
 // you will get a result of a specific corresponding type.
 export async function inspect(
   root: string,
   targetFile: string,
-  options?: SingleSubprojectInspectOptions & GradleInspectOptions,
-): Promise<SinglePackageResult>;
+  options?: api.SingleSubprojectInspectOptions & GradleInspectOptions,
+): Promise<api.SinglePackageResult>;
 export async function inspect(
   root: string,
   targetFile: string,
-  options: MultiSubprojectInspectOptions & GradleInspectOptions,
-): Promise<MultiProjectResult>;
+  options: api.MultiSubprojectInspectOptions & GradleInspectOptions,
+): Promise<api.MultiProjectResult>;
 
 // General implementation. The result type depends on the runtime type of `options`.
 export async function inspect(
   root: string,
   targetFile: string,
   options?: Options,
-): Promise<InspectResult> {
+): Promise<api.InspectResult> {
   if (!options) {
     options = {dev: false};
   }
-  let subProject = (options as SingleSubprojectInspectOptions).subProject;
+  let subProject = (options as api.SingleSubprojectInspectOptions).subProject;
   if (subProject) {
     subProject = subProject.trim();
   }
-  const plugin: PluginMetadata = {
+  const plugin: api.PluginMetadata = {
     name: 'bundled:gradle',
     runtime: 'unknown',
     targetFile: targetFileFilteredForCompatibility(targetFile),
     meta: {},
   };
-  if (isMultiSubProject(options)) {
+  if (api.isMultiSubProject(options)) {
     if (subProject) {
       throw new Error('gradle-sub-project flag is incompatible with multiDepRoots');
     }
@@ -420,7 +418,7 @@ function buildArgs(
   // Not `=false` to be compatible with 3.5.x: https://github.com/gradle/gradle/issues/1827
   args.push('-Dorg.gradle.parallel=');
 
-  if (!isMultiSubProject(options)) {
+  if (!api.isMultiSubProject(options)) {
     args.push('-PonlySubProject=' + (options.subProject || '.'));
   }
 
