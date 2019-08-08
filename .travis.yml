@@ -1,4 +1,4 @@
-dist: trusty
+dist: bionic
 sudo: false
 notifications:
   email: false
@@ -17,13 +17,13 @@ before_script:
   - curl -s "https://get.sdkman.io" | bash
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
-  # install jdk is needed for JDK10+
+  # install jdk is needed for JDK9+
   - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 jobs:
   include:
   - stage: Node versions + actual Gradle version
     node_js: 6
-    env: GRADLE_VERSION=5.3.1 JDK=9 
+    env: GRADLE_VERSION=5.3.1 JDK=9
     script:
       - source install-jdk.sh --feature $JDK
       - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
@@ -53,22 +53,22 @@ jobs:
     # java 9 and gradle 2 not supported
     env: GRADLE_VERSION=2.14 JDK=8
     script:
-      - jdk_switcher use openjdk8
+      - sdk use java 8.0.222.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
-  - 
+  -
     # java 9 and gradle 3 not supported
     env: GRADLE_VERSION=3.5.1 JDK=8
     script:
-      - jdk_switcher use openjdk8
+      - sdk use java 8.0.222.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
-  - 
+  -
     env: GRADLE_VERSION=4.10.3 JDK=8
     script:
-      - jdk_switcher use openjdk8
+      - sdk use java 8.0.222.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -96,10 +96,10 @@ jobs:
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
-  - 
+  -
     env: GRADLE_VERSION=5.3.1 JDK=8
     script:
-      - jdk_switcher use openjdk8
+      - sdk use java 8.0.222.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
