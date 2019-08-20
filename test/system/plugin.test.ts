@@ -129,3 +129,28 @@ test('tests for Gradle 3+', async (t0) => {
 
   }
 })
+
+test('custom dependency resolution via configurations.all is supported', async (t) => {
+  const result = await inspect('.', path.join(fixtureDir('custom-resolution-strategy-via-all'), 'build.gradle'));
+  t.equal(result.package
+    .dependencies!['com.android.tools.build:builder']
+    .dependencies!['com.android.tools:sdklib']
+    .dependencies!['com.android.tools:repository']
+    .dependencies!['com.android.tools:common']
+    .dependencies!['com.android.tools:annotations'].version,
+  '25.2.0', // forced, normally 25.3.0
+  'overridden version found');
+});
+
+test('custom dependency resolution via configurations* is NOT suppored (known problem)', async (t) => {
+  // See the test case for more details
+  const result = await inspect('.', path.join(fixtureDir('custom-resolution-strategy-via-asterisk'), 'build.gradle'));
+  t.equal(result.package
+    .dependencies!['com.android.tools.build:builder']
+    .dependencies!['com.android.tools:sdklib']
+    .dependencies!['com.android.tools:repository']
+    .dependencies!['com.android.tools:common']
+    .dependencies!['com.android.tools:annotations'].version,
+  '25.3.0', // 25.2.0 in NOT forced
+  'original version found');
+});
