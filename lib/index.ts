@@ -5,8 +5,9 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import {MissingSubProjectError} from './errors';
 import chalk from 'chalk';
+import {legacyCommon, legacyPlugin as api} from '@snyk/cli-interface';
 import debugModule = require('debug');
-import { legacyPlugin as api, legacyCommon } from '@snyk/cli-interface';
+
 type DepTree = legacyCommon.DepTree;
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -94,9 +95,11 @@ export async function inspect(
     if (subProject) {
       throw new Error('gradle-sub-project flag is incompatible with multiDepRoots');
     }
+    const scannedProjects = await getAllDepsAllProjects(root, targetFile, options);
+    plugin.meta = plugin.meta || {};
     return {
       plugin,
-      scannedProjects: await getAllDepsAllProjects(root, targetFile, options),
+      scannedProjects,
     };
   }
   const depTreeAndDepRootNames = await getAllDepsOneProject(root, targetFile, options, subProject);
@@ -107,6 +110,9 @@ export async function inspect(
   return {
     plugin,
     package: depTreeAndDepRootNames.depTree,
+    meta: {
+      gradleProjectName: depTreeAndDepRootNames.gradleProjectName,
+    },
   };
 }
 
@@ -153,20 +159,21 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
 }
 
 async function getAllDepsOneProject(root: string, targetFile: string, options: Options, subProject?: string):
-    Promise<{depTree: DepTree, allSubProjectNames: string[]}> {
+    Promise<{depTree: DepTree, allSubProjectNames: string[], gradleProjectName: string}> {
   const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
-  let depDict = {};
   if (subProject) {
+    const {depTree, meta} = getDepsSubProject(root, subProject, allProjectDeps);
     return {
-      depTree: getDepsSubProject(root, subProject, allProjectDeps),
+      depTree,
       allSubProjectNames,
+      gradleProjectName: meta.gradleProjectName,
     };
   }
 
-  depDict = allProjectDeps.projects[allProjectDeps.defaultProject].depDict;
-
+  const {projects, defaultProject} = allProjectDeps;
+  const {depDict} = projects[defaultProject];
   return {
     depTree: {
       dependencies: depDict,
@@ -177,26 +184,33 @@ async function getAllDepsOneProject(root: string, targetFile: string, options: O
       packageFormatVersion,
     },
     allSubProjectNames,
+    gradleProjectName: defaultProject,
   };
 }
 
-function getDepsSubProject(root: string, subProject: string, allProjectDeps: JsonDepsScriptResult) {
+function getDepsSubProject(root: string, subProject: string, allProjectDeps: JsonDepsScriptResult):
+    {depTree: DepTree, meta: any} {
   const packageName = `${path.basename(root)}/${subProject}`;
-  let depDict = {};
+  const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
 
   if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
     throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
   }
 
-  depDict = allProjectDeps.projects[subProject].depDict;
+  const depDict = allProjectDeps.projects[subProject].depDict;
 
   return {
-    dependencies: depDict,
-    name: packageName,
-    // TODO: extract from project
-    // https://snyksec.atlassian.net/browse/BST-558
-    version: '0.0.0',
-    packageFormatVersion,
+    depTree: {
+      dependencies: depDict,
+      name: packageName,
+      // TODO: extract from project
+      // https://snyksec.atlassian.net/browse/BST-558
+      version: '0.0.0',
+      packageFormatVersion,
+    },
+    meta: {
+      gradleProjectName,
+    },
   };
 }
 async function getAllDepsAllProjects(root: string, targetFile: string, options: Options): Promise<ScannedProject[]> {
@@ -204,9 +218,14 @@ async function getAllDepsAllProjects(root: string, targetFile: string, options: 
   const basePackageName = path.basename(root);
   const packageVersion = '0.0.0';
   return Object.keys(allProjectDeps.projects).map((proj) => {
-    const packageName = proj === allProjectDeps.defaultProject ? basePackageName : basePackageName + '/' + proj;
+    const packageName = proj === allProjectDeps.defaultProject ? basePackageName : `${basePackageName}/${proj}`;
+    const defaultProject = allProjectDeps.defaultProject;
+    const gradleProjectName = proj === defaultProject ? defaultProject : `${defaultProject}/${proj}`;
     return {
       targetFile: targetFileFilteredForCompatibility(allProjectDeps.projects[proj].targetFile),
+      meta: {
+        gradleProjectName,
+      },
       depTree: {
         dependencies: allProjectDeps.projects[proj].depDict,
         name: packageName,

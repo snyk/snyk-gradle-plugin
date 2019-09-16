@@ -26,7 +26,6 @@
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@snyk/cli-interface": "^2.0.1",
     "@types/chalk": "^2.2.0",
     "@types/jest": "^24.0.13",
     "@types/node": "^4.9.1",
@@ -41,6 +40,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
+    "@snyk/cli-interface": "^2.1.0",
     "@types/debug": "^4.1.4",
     "chalk": "^2.4.2",
     "clone-deep": "^0.3.0",
