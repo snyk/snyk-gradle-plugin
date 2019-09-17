@@ -8,7 +8,9 @@ test('multi-project, explicitly targeting a subproject build file', async (t) =>
   const result = await inspect('.',
     path.join(fixtureDir('multi-project'), 'subproj', 'build.gradle'));
   t.equals(result.package.name, '.',
-    'root project is "."');
+      'root project is "."');
+  t.equals(result.meta!.gradleProjectName, 'subproj',
+    'root project is "subproj"');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   t.equal(result.package
@@ -27,6 +29,8 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
     'subproj/build.gradle');
   t.equals(result.package.name, 'multi-project',
     'root project is "multi-project"');
+  t.equals(result.meta!.gradleProjectName, 'subproj',
+      'new root project is "subproj"');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   t.equal(result.package
@@ -83,6 +87,8 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     path.join(fixtureDir('multi-project'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
+  t.match(result.meta!.gradleProjectName, 'root-proj',
+      'returned new project name is not sub-project');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
@@ -92,6 +98,8 @@ test('multi-project: using gradle via wrapper', async (t) => {
     path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
+  t.match(result.meta!.gradleProjectName, 'root-proj',
+      'returned project name is not sub-project');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
@@ -100,6 +108,8 @@ test('multi-project: parallel is handled correctly', async (t) => {
   // Note: Gradle has to be run from the directory with `gradle.properties` to pick that one up
   const result = await inspect(fixtureDir('multi-project-parallel'), 'build.gradle');
   t.match(result.package.name, 'multi-project-parallel', 'expected project name');
+  t.match(result.meta!.gradleProjectName, 'root-proj',
+      'expected new project name');
   t.ok(result.package.dependencies);
 });
 
@@ -133,6 +143,7 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
   t.equal(result.scannedProjects.length, 2);
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
+      t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
       t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
@@ -140,6 +151,8 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
     } else {
       t.equal(p.depTree.name, './subproj',
         'sub project name is included in the root pkg name');
+      t.equal(p.meta!.gradleProjectName, 'root-proj/subproj',
+        'new sub project name is included in the root pkg name');
       t.equal(p.depTree
         .dependencies!['com.android.tools.build:builder']
         .dependencies!['com.android.tools:sdklib']
@@ -160,6 +173,7 @@ test('single-project: array of one is returned with allSubProjects flag', async 
     path.join(fixtureDir('api-configuration'), 'build.gradle'), {allSubProjects: true});
   t.equal(result.scannedProjects.length, 1);
   t.equal(result.scannedProjects[0].depTree.name, '.');
+  t.equal(result.scannedProjects[0].meta!.gradleProjectName, 'api-configuration');
   t.ok(result.scannedProjects[0].depTree.dependencies!['commons-httpclient:commons-httpclient']);
 });
 
@@ -202,8 +216,10 @@ test('multi-project: parallel with allSubProjects produces multiple results with
   const result = await inspect(fixtureDir('multi-project-parallel'), 'build.gradle', {allSubProjects: true});
   t.equal(result.scannedProjects.length, 6);
   const names = new Set<string>();
+  const newNames = new Set<string>();
   for (const p of result.scannedProjects) {
     names.add(p.depTree.name!);
+    newNames.add(p.meta!.gradleProjectName);
   }
   t.deepEqual(names, new Set<string>([
     'multi-project-parallel',
@@ -212,6 +228,13 @@ test('multi-project: parallel with allSubProjects produces multiple results with
     'multi-project-parallel/subproj2',
     'multi-project-parallel/subproj3',
     'multi-project-parallel/subproj4']));
+  t.deepEqual(newNames, new Set<string>([
+    'root-proj',
+    'root-proj/subproj0',
+    'root-proj/subproj1',
+    'root-proj/subproj2',
+    'root-proj/subproj3',
+    'root-proj/subproj4']));
 });
 
 test('multi-project: allSubProjects + configuration', async (t) => {
@@ -221,6 +244,7 @@ test('multi-project: allSubProjects + configuration', async (t) => {
   t.equal(result.scannedProjects.length, 2);
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
+      t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
       t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
@@ -228,6 +252,8 @@ test('multi-project: allSubProjects + configuration', async (t) => {
     } else {
       t.equal(p.depTree.name, './subproj',
         'sub project name is included in the root pkg name');
+      t.equal(p.meta!.gradleProjectName, 'root-proj/subproj',
+          'new sub project name is included in the root pkg name');
       t.equal(p.depTree
         .dependencies!['axis:axis'].version,
       '1.3',
@@ -247,12 +273,13 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
     path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
     {});
   t.equal(result.package.name, '.', 'root project name is "."');
+  t.equal(result.meta!.gradleProjectName, 'root-proj', 'new root project name is "root-proj"');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
   t.equal(result.package
     .dependencies!['com.github.jitpack:subproj']
     .dependencies!['com.github.jitpack:root-proj'].version,
-  "unspecified",
+  'unspecified',
   'dependency cycle is returned in the results');
 
   t.notOk(result.package
@@ -279,16 +306,17 @@ test('multi-project-dependency-cycle: scanning all subprojects works fine', asyn
   t.equal(result.scannedProjects.length, 2);
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
+      t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
       t.equal(p.depTree
         .dependencies!['com.github.jitpack:subproj']
         .dependencies!['com.github.jitpack:root-proj'].version,
-      "unspecified",
+      'unspecified',
       'dependency cycle is returned for the main');
     } else {
       t.equal(p.depTree
         .dependencies!['com.github.jitpack:root-proj']
         .dependencies!['com.github.jitpack:subproj'].version,
-      "unspecified",
+      'unspecified',
       'dependency cycle is returned for the subproj');
     }
   }

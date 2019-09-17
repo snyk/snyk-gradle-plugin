@@ -11,6 +11,8 @@ test('build.gradle.kts files are supported', {timeout: 150000}, async (t) => {
     path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'));
   t.match(result.package.name, '.',
     'returned project name is not sub-project');
+  t.match(result.meta!.gradleProjectName, 'gradle-kts',
+      'returned new project name is not sub-project');
   t.equal(result.package
     .dependencies!['org.jetbrains.kotlin:kotlin-stdlib-jdk8']
     .dependencies!['org.jetbrains.kotlin:kotlin-stdlib']
