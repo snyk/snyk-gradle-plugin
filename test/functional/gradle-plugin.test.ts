@@ -11,9 +11,9 @@ test('check build args with array (new configuration arg)', async (t) => {
     null,
     '/tmp/init.gradle',
     {
-      'configuration-matching':'confRegex',
-      args: ['--build-file', 'build.gradle']
-    }
+      'configuration-matching': 'confRegex',
+      'args': ['--build-file', 'build.gradle'],
+    },
   );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
@@ -34,8 +34,8 @@ test('check build args with array (legacy configuration arg)', async (t) => {
     null,
     '/tmp/init.gradle',
     {
-      args: ['--build-file', 'build.gradle', '--configuration=compile']
-    }
+      args: ['--build-file', 'build.gradle', '--configuration=compile'],
+    },
   );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
@@ -57,8 +57,8 @@ test('check build args with scan all subprojects', async (t) => {
     '/tmp/init.gradle',
     {
       allSubProjects: true,
-      args: ['--build-file', 'build.gradle', '--configuration', 'compile']
-    }
+      args: ['--build-file', 'build.gradle', '--configuration', 'compile'],
+    },
   );
   t.deepEqual(result, [
     'snykResolvedDepsJson',
@@ -83,7 +83,7 @@ some other noise`);
 
 test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {
   const output = 'something else entirely';
-  try{
+  try {
     testableMethods.extractJsonFromScriptOutput(output);
     t.fail('Error expected');
   } catch (e) {
@@ -94,7 +94,7 @@ test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {
 
 test('extractJsonFromScriptOutput throws on multiple JSONDEPS', async (t) => {
   const output = 'JSONDEPS {"hello": "world"}\nJSONDEPS ["one more thing"]';
-  try{
+  try {
     testableMethods.extractJsonFromScriptOutput(output);
     t.fail('Error expected');
   } catch (e) {
