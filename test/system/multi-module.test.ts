@@ -100,6 +100,7 @@ test('multi-project: using gradle via wrapper', async (t) => {
     'returned project name is not sub-project');
   t.match(result.meta!.gradleProjectName, 'root-proj',
       'returned project name is not sub-project');
+  t.equal(result.meta!.versionBuildInfo!.gradleVersion, '5.4.1');
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
   t.notOk(result.package.dependencies);
 });
@@ -220,6 +221,7 @@ test('multi-project: parallel with allSubProjects produces multiple results with
   for (const p of result.scannedProjects) {
     names.add(p.depTree.name!);
     newNames.add(p.meta!.gradleProjectName);
+    t.ok(p.meta!.versionBuildInfo.gradleVersion !== null);
   }
   t.deepEqual(names, new Set<string>([
     'multi-project-parallel',

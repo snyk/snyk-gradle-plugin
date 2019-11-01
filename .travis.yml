@@ -53,7 +53,7 @@ jobs:
     # java 9 and gradle 2 not supported
     env: GRADLE_VERSION=2.14 JDK=8
     script:
-      - sdk use java 8.0.222.hs-adpt
+      - sdk use java 8.0.232.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -61,14 +61,14 @@ jobs:
     # java 9 and gradle 3 not supported
     env: GRADLE_VERSION=3.5.1 JDK=8
     script:
-      - sdk use java 8.0.222.hs-adpt
+      - sdk use java 8.0.232.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=4.10.3 JDK=8
     script:
-      - sdk use java 8.0.222.hs-adpt
+      - sdk use java 8.0.232.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -99,7 +99,7 @@ jobs:
   -
     env: GRADLE_VERSION=5.3.1 JDK=8
     script:
-      - sdk use java 8.0.222.hs-adpt
+      - sdk use java 8.0.232.hs-adpt
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
