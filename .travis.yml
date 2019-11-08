@@ -19,6 +19,7 @@ before_script:
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
   # install jdk is needed for JDK9+
   - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
+  - unset JAVA_HOME
 jobs:
   include:
   - stage: Node versions + actual Gradle version
@@ -53,7 +54,7 @@ jobs:
     # java 9 and gradle 2 not supported
     env: GRADLE_VERSION=2.14 JDK=8
     script:
-      - sdk use java 8.0.232.hs-adpt
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -61,14 +62,14 @@ jobs:
     # java 9 and gradle 3 not supported
     env: GRADLE_VERSION=3.5.1 JDK=8
     script:
-      - sdk use java 8.0.232.hs-adpt
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=4.10.3 JDK=8
     script:
-      - sdk use java 8.0.232.hs-adpt
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -99,7 +100,7 @@ jobs:
   -
     env: GRADLE_VERSION=5.3.1 JDK=8
     script:
-      - sdk use java 8.0.232.hs-adpt
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
