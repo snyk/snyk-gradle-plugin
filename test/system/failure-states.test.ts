@@ -7,7 +7,7 @@ import {inspect} from '../../lib';
 const rootNoWrapper = fixtureDir('no wrapper');
 
 test('malformed build.gradle', async (t) => {
-  t.rejects(inspect('.',
+  await t.rejects(inspect('.',
     path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
     {args: ['--configuration', 'compileOnly']}),
     /unexpected token/);
@@ -29,8 +29,7 @@ test('multi-project: error on missing sub-project', async (t) => {
   const options = {
     subProject: 'non-existent',
   };
-  t.rejects(
-    inspect('.',
+  await t.rejects(inspect('.',
       path.join(fixtureDir('multi-project'), 'build.gradle'),
       options),
     /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,

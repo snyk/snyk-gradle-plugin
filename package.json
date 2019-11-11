@@ -20,7 +20,7 @@
     "prepare": "npm run build",
     "test": "npm run lint && tsc -p tsconfig-test.json && npm run test-functional && npm run test-system",
     "test-functional": "tap --node-arg=-r --node-arg=ts-node/register -R spec ./test/functional/*.test.[tj]s",
-    "test-system": "tap --node-arg=-r --node-arg=ts-node/register -R spec --timeout=180 ./test/system/*.test.[tj]s",
+    "test-system": "tap --node-arg=-r --node-arg=ts-node/register -R spec --timeout=240 ./test/system/*.test.[tj]s",
     "test-manual": "jest test/manual -b"
   },
   "author": "snyk.io",
