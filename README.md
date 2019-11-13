@@ -15,35 +15,37 @@ This plugin provides dependency metadata for Gradle projects that use `gradle` a
 
 # Support
 
-❓No issues expected but test not updated yet to verify
-✅Supported and verified with tests
+❌ Not supported
+❓ No issues expected but not regularly tested
+✅ Supported and verified with tests
 
 ## Supported OS
 
-| OS  |  Supported |
-|---|---|
-| Windows  | ✅|
-| Linux  | ✅|
-| OSX  | ✅|
+| OS     |  Supported |
+|--------|------------|
+| Windows| ✅          |
+| Linux  | ✅          |
+| OSX    | ️✅          |
 
 ## Supported Node versions
 
 | Node  |  Supported |
-|---|---|
-| 6  | ✅|
-| 8  | ✅|
-| 10  | ✅|
-| 12  | ❓|
+|-------|------------|
+| 6     | ✅          |
+| 8     | ✅          |
+| 10    | ✅          |
+| 12    | ✅          |
 
 ## Supported Java & Gradle versions
 
-| Java / Gradle  | 2.*  | 3.*  |  4.* | 5.*  |
-|---|---|---|---|---|
-| 8  |  ✅ |  ✅ |  ✅ | ✅  |
-| 9  | ✅  | ✅  |  ✅ | ✅  |
-| 10  |  ✅ | ✅  |  ✅ |  ✅ |
-| 11  |  ✅ |  ✅ |  ✅ | ✅  |
-| 13  |  ❓ |  ❓ |  ❓ | ❓  |
+| Java / Gradle  |2.*|3.*|4.*|5.*|6.0|
+|----------------|---|---|---|---|---|
+| 8 (LTS)        | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 9              | ❌ | ❌ | ❓ | ❓ | ❓ |
+| 10             | ❌ | ❌ | ❓ | ❓ | ❓ |
+| 11 (LTS)       | ❌ | ❌ | ✅ | ✅ | ✅ |
+| 12             | ❌ | ❌ | ❓ | ✅ | ️✅ |
+| 13             | ❌ | ❌ | ✅ | ❌ | ✅ |
 
 
 # Supported Snyk command line arguments:

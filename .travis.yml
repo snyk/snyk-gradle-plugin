@@ -17,41 +17,50 @@ before_script:
   - curl -s "https://get.sdkman.io" | bash
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
-  # install jdk is needed for JDK9+
-  - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
   - unset JAVA_HOME
 jobs:
   include:
-  - stage: Node versions + actual Gradle version
+  - stage: Different Node/Java versions + most recent Gradle version
+    # We support Node 6+, Java 8+, Gradle 2.14+
+    # Tested Java versions are usually: 8 (LTS), 11 (LTS), 13 (latest)
+    # (see https://www.oracle.com/technetwork/java/java-se-support-roadmap.html)
+    # LTS version are also the most popular ones: https://www.baeldung.com/java-in-2019
+    # We use sdkman to install Java. 
+    # AdoptOpenJDK distibution with HotSpot VM is chosen as the most "classic" option.
     node_js: 6
-    env: GRADLE_VERSION=5.3.1 JDK=9
+    env: GRADLE_VERSION=6.0 JDK=8 Node.js=6
     script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     node_js: 8
-    env: GRADLE_VERSION=5.3.1 JDK=10
+    env: GRADLE_VERSION=6.0 JDK=11 Node.js=8
     script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     node_js: 10
-    env: GRADLE_VERSION=5.3.1 JDK=11
+    env: GRADLE_VERSION=6.0 JDK=12 Node.js=10
     script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    node_js: 12
+    env: GRADLE_VERSION=6.0 JDK=13 Node.js=12
+    script:
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
 
   - stage: Older Gradle versions
-    # java 9 and gradle 2 not supported
+    # java 9+ and gradle 2 not supported
     env: GRADLE_VERSION=2.14 JDK=8
     script:
       - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
@@ -59,7 +68,7 @@ jobs:
       - java -version
       - npm test
   -
-    # java 9 and gradle 3 not supported
+    # java 9+ and gradle 3 not supported
     env: GRADLE_VERSION=3.5.1 JDK=8
     script:
       - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
@@ -74,26 +83,16 @@ jobs:
       - java -version
       - npm test
   -
-    env: GRADLE_VERSION=4.10.3 JDK=9
-    script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
-      - sdk install gradle $GRADLE_VERSION
-      - java -version
-      - npm test
-  -
-    env: GRADLE_VERSION=4.10.3 JDK=10
-    script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
-      - sdk install gradle $GRADLE_VERSION
-      - java -version
-      - npm test
-  -
     env: GRADLE_VERSION=4.10.3 JDK=11
     script:
-      - source install-jdk.sh --feature $JDK
-      - ln -sf /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    env: GRADLE_VERSION=4.10.3 JDK=13
+    script:
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -104,6 +103,23 @@ jobs:
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
+  - 
+    env: GRADLE_VERSION=5.3.1 JDK=11
+    script:
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+  -
+    # Gradle 5 is not compatible with JDK 13
+    # https://github.com/gradle/gradle/issues/8681
+    env: GRADLE_VERSION=5.6.4 JDK=12
+    script:
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install gradle $GRADLE_VERSION
+      - java -version
+      - npm test
+
   - stage: npm release
     if: branch = master
     node_js: "8" # This *has* to be the "build leader"

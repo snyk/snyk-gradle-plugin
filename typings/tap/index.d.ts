@@ -25,6 +25,7 @@ declare module 'tap' {
     // plan(n: number): void;
 
     fail(message: string): void;
+    pass(message: string): void;
 
     // Assertions, see https://node-tap.org/docs/api/asserts/
     ok(value: any, message?: string): void;
@@ -34,6 +35,8 @@ declare module 'tap' {
     same<T>(actual: T, expected: T, message: string): void;
     deepEqual<T>(actual: T, expected: T, message?: string): void;
     match(actual: string | undefined, expected: string | RegExp, message: string): void;
-    rejects<T>(p: Promise<T>, matcher?: RegExp, message?: string): void;
+    throws(fn: () => any, errorMatcher?: RegExp, message?: string): void;
+    // Note: rejects must be awaited upon!
+    rejects<T>(p: Promise<T>, errorMatcher?: RegExp, message?: string): Promise<void>;
   }
 }

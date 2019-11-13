@@ -93,17 +93,29 @@ test('multi-project: only sub-project has deps, none returned for main', async (
   t.notOk(result.package.dependencies);
 });
 
-test('multi-project: using gradle via wrapper', async (t) => {
-  const result = await inspect('.',
-    path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'));
-  t.match(result.package.name, '.',
-    'returned project name is not sub-project');
-  t.match(result.meta!.gradleProjectName, 'root-proj',
+let wrapperIsCompatibleWithJvm = true;
+let JDK = process.env.JDK;
+if (JDK) {
+  let major = parseInt(JDK.split(".")[0]);
+  if (major >= 13) {
+    // see https://github.com/gradle/gradle/issues/8681
+    wrapperIsCompatibleWithJvm = false;
+  }
+}
+
+if (wrapperIsCompatibleWithJvm) {
+  test('multi-project: using gradle via wrapper', async (t) => {
+      const result = await inspect('.',
+      path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'));
+    t.match(result.package.name, '.',
       'returned project name is not sub-project');
-  t.equal(result.meta!.versionBuildInfo!.gradleVersion, '5.4.1');
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
-  t.notOk(result.package.dependencies);
-});
+    t.match(result.meta!.gradleProjectName, 'root-proj',
+        'returned project name is not sub-project');
+    t.equal(result.meta!.versionBuildInfo!.gradleVersion, '5.4.1');
+    t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
+    t.notOk(result.package.dependencies);
+  });
+}
 
 test('multi-project: parallel is handled correctly', async (t) => {
   // Note: Gradle has to be run from the directory with `gradle.properties` to pick that one up
@@ -179,7 +191,7 @@ test('single-project: array of one is returned with allSubProjects flag', async 
 });
 
 test('multi-project-some-unscannable: allSubProjects fails', async (t) => {
-  t.rejects(inspect('.',
+  await t.rejects(inspect('.',
     path.join(fixtureDir('multi-project-some-unscannable'), 'build.gradle'), {allSubProjects: true}));
 });
 
@@ -207,7 +219,7 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
 });
 
 test('allSubProjects incompatible with gradle-sub-project', async (t) => {
-  t.rejects(inspect('.',
+  await t.rejects(inspect('.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
     {allSubProjects: true, subProject: true} as api.MultiSubprojectInspectOptions));
 });
