@@ -498,6 +498,11 @@ function buildArgs(
   // Not `=false` to be compatible with 3.5.x: https://github.com/gradle/gradle/issues/1827
   args.push('-Dorg.gradle.parallel=');
 
+  // Since version 4.3.0+ Gradle uses different console output mechanism. Default mode is 'auto',
+  // if Gradle is attached to a terminal. It means build output will use ANSI control characters
+  // to generate the rich output, therefore JSON cannot be parsed.
+  args.push('-Dorg.gradle.console=plain');
+
   if (!api.isMultiSubProject(options)) {
     args.push('-PonlySubProject=' + (options.subProject || '.'));
   }

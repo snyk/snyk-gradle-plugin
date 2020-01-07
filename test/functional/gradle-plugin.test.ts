@@ -21,6 +21,7 @@ test('check build args with array (new configuration arg)', async (t) => {
     `-Pconfiguration=${quot}confRegex${quot}`,
     '--no-daemon',
     '-Dorg.gradle.parallel=',
+    '-Dorg.gradle.console=plain',
     '-PonlySubProject=.',
     '-I /tmp/init.gradle',
     '--build-file',
@@ -42,6 +43,7 @@ test('check build args with array (legacy configuration arg)', async (t) => {
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
+    '-Dorg.gradle.console=plain',
     '-PonlySubProject=.',
     '-I /tmp/init.gradle',
     '--build-file',
@@ -65,6 +67,7 @@ test('check build args with scan all subprojects', async (t) => {
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
+    '-Dorg.gradle.console=plain',
     '-I /tmp/init.gradle',
     '--build-file',
     'build.gradle',
@@ -101,4 +104,22 @@ test('extractJsonFromScriptOutput throws on multiple JSONDEPS', async (t) => {
     t.match(e.message, 'More than one line with "JSONDEPS " prefix was returned', 'expected error message');
     t.match(e.message, output, 'error message contains output');
   }
+});
+
+test('check build args (plain console output)', async (t) => {
+  const result = testableMethods.buildArgs(
+    '.',
+    null,
+    '/tmp/init.gradle',
+    {},
+  );
+  t.deepEqual(result, [
+    'snykResolvedDepsJson',
+    '-q',
+    '--no-daemon',
+    '-Dorg.gradle.parallel=',
+     '-Dorg.gradle.console=plain',
+    '-PonlySubProject=.',
+    '-I /tmp/init.gradle',
+  ]);
 });
