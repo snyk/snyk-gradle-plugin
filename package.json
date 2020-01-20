@@ -43,7 +43,6 @@
     "@snyk/cli-interface": "2.3.0",
     "@types/debug": "^4.1.4",
     "chalk": "^2.4.2",
-    "clone-deep": "^0.3.0",
     "debug": "^4.1.1",
     "tmp": "0.0.33",
     "tslib": "^1.9.3"
