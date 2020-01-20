@@ -25,7 +25,7 @@ jobs:
     # Tested Java versions are usually: 8 (LTS), 11 (LTS), 13 (latest)
     # (see https://www.oracle.com/technetwork/java/java-se-support-roadmap.html)
     # LTS version are also the most popular ones: https://www.baeldung.com/java-in-2019
-    # We use sdkman to install Java. 
+    # We use sdkman to install Java.
     # AdoptOpenJDK distibution with HotSpot VM is chosen as the most "classic" option.
     node_js: 6
     env: GRADLE_VERSION=6.0 JDK=8 Node.js=6
@@ -103,7 +103,7 @@ jobs:
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
-  - 
+  -
     env: GRADLE_VERSION=5.3.1 JDK=11
     script:
       - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
@@ -122,7 +122,7 @@ jobs:
 
   - stage: npm release
     if: branch = master
-    node_js: "8" # This *has* to be the "build leader"
+    node_js: 10
     script: skip
     after_success:
       - npx semantic-release
