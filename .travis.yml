@@ -18,6 +18,7 @@ before_script:
   - source "$HOME/.sdkman/bin/sdkman-init.sh"
   - echo sdkman_auto_answer=true > ~/.sdkman/etc/config
   - unset JAVA_HOME
+  - export GRADLE_OPTS=-Dorg.gradle.console=verbose
 jobs:
   include:
   - stage: Different Node/Java versions + most recent Gradle version
@@ -25,8 +26,9 @@ jobs:
     # Tested Java versions are usually: 8 (LTS), 11 (LTS), 13 (latest)
     # (see https://www.oracle.com/technetwork/java/java-se-support-roadmap.html)
     # LTS version are also the most popular ones: https://www.baeldung.com/java-in-2019
+
     # We use sdkman to install Java.
-    # AdoptOpenJDK distibution with HotSpot VM is chosen as the most "classic" option.
+    # AdoptOpenJDK distribution with HotSpot VM is chosen as the most "classic" option.
     node_js: 6
     env: GRADLE_VERSION=6.0 JDK=8 Node.js=6
     script:
