@@ -82,7 +82,6 @@ allprojects { everyProj ->
                     def row = ['name': depName, 'version': d.moduleVersion, 'conf': d.configuration]
                     currentChain.add(depName)
                     def subDeps = depsToDict(d.children, currentChain)
-                    currentChain.remove(depName)
                     if (subDeps.size() > 0) {
                         row['dependencies'] = subDeps
                     }
