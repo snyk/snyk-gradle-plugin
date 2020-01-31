@@ -1,4 +1,4 @@
-import { parseTree } from './parse-gradle'
+import { parseTree } from './parse-gradle';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as  path from 'path';
@@ -355,8 +355,8 @@ async function getAllDeps(root: string, targetFile: string, options: Options):
       cleanupCallback();
     }
     const extractedJson = extractJsonFromScriptOutput(stdoutText);
-    const parseResult = parseTree(stdoutText, options.dev)
-    extractedJson.projects = parseResult.data
+    const parseResult = parseTree(stdoutText, options.dev);
+    extractedJson.projects = parseResult.data;
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
