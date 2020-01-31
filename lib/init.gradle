@@ -1,4 +1,6 @@
 import groovy.json.JsonOutput
+import groovy.transform.Canonical
+import groovy.transform.EqualsAndHashCode
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 
@@ -13,9 +15,9 @@ import java.util.regex.Matcher
 // interested in from the results.
 
 // CLI usages:
-// gradle -q -I init.gradle snykResolvedDepsJson
-// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf -PonlySubProject=sub-project
-// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=confNameRegex -PconfAttr=buildtype:debug,usage:java-runtime
+// gradle -q -I init.gradle snykResolvedDeps
+// gradle -q -I init.gradle snykResolvedDeps -Pconfiguration=specificConf -PonlySubProject=sub-project
+// gradle -q -I init.gradle snykResolvedDeps -Pconfiguration=confNameRegex -PconfAttr=buildtype:debug,usage:java-runtime
 
 // (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
 
@@ -57,9 +59,26 @@ import java.util.regex.Matcher
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
+
+@Canonical
+@EqualsAndHashCode
+class Artifact {
+    String group
+    String name
+    String version
+    String configuration
+
+    Artifact(ResolvedDependency dependency) {
+        this.group = dependency.moduleGroup
+        this.name = dependency.moduleName
+        this.version = dependency.moduleVersion
+        this.configuration = dependency.configuration
+    }
+}
+
 def snykMergedDepsConfExecuted = false
 allprojects { everyProj ->
-    task snykResolvedDepsJson {
+    task snykResolvedDeps {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
 
         def confNameFilter = (project.hasProperty('configuration')
@@ -71,36 +90,22 @@ allprojects { everyProj ->
             : null
         )
 
-        // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
-        // This function converts a Gradle dependency tree into DepTree structure used by Snyk CLI
-        def depsToDict
-        depsToDict = { Iterable deps, Set currentChain ->
-            def res = [:]
-            deps.each { d ->
-                def depName = d.moduleGroup + ':' + d.moduleName
-                if (!currentChain.contains(depName)) {
-                    def row = ['name': depName, 'version': d.moduleVersion, 'conf': d.configuration]
-                    currentChain.add(depName)
-                    def subDeps = depsToDict(d.children, currentChain)
-                    currentChain.remove(depName)
-                    if (subDeps.size() > 0) {
-                        row['dependencies'] = subDeps
+        def printGraph
+        printGraph = { Set<Artifact> artifacts, ResolvedDependency root, Iterable<ResolvedDependency> dependencies ->
+            dependencies.each { dependency ->
+                if (artifacts.add(new Artifact(dependency))) {
+                    String rootExt = "jar"
+                    if (root.moduleArtifacts.size() > 0) {
+                        rootExt = root.moduleArtifacts[0].extension
                     }
-                    // In Gradle 2, there can be several instances of the same dependency present at each level,
-                    // each for a different configuration. In this case, we need to merge the dependencies.
-                    if (res.containsKey(depName)) {
-                        if (subDeps.size() > 0) {
-                            if (!res[depName].containsKey('dependencies')) {
-                                res[depName]['dependencies'] = [:]
-                            }
-                            res[depName]['dependencies'].putAll(subDeps)
-                        }
-                    } else {
-                        res[depName] = row
+                    String dependencyExt = "jar"
+                    if (dependency.moduleArtifacts.size() > 0) {
+                        dependencyExt = dependency.moduleArtifacts[0].extension
                     }
+                    println("SNYKDEPS  \"${root.moduleGroup}:${root.moduleName}:${rootExt}:${root.moduleVersion}${root.configuration ? ":" + root.configuration : ""}\" -> \"${dependency.moduleGroup}:${dependency.moduleName}:${dependencyExt}:${dependency.moduleVersion}${dependency.configuration ? ":" + dependency.configuration : ""}\" ;")
+                    printGraph(artifacts, dependency, dependency.children)
                 }
             }
-            return res
         }
 
         def matchesAttributeFilter
@@ -126,12 +131,12 @@ allprojects { everyProj ->
 
         def isMatchingConfiguration
         isMatchingConfiguration = {
-            it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(conf)
+            it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(it)
         }
 
         doLast { task ->
             if (!snykMergedDepsConfExecuted) {
-                println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
+                println('SNYKECHO snykResolvedDeps task is executing via doLast')
                 def projectsDict = [:]
                 def defaultProjectName = task.project.name
                 def result = [
@@ -217,18 +222,37 @@ allprojects { everyProj ->
                             })
                         }
                     }
+                    projectsDict[proj.name] = [
+                        'targetFile': proj.buildFile.toString()
+                    ]
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)
                         def gradleDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
-                        println('SNYKECHO converting the dependency graph to the DepTree format')
-                        projectsDict[proj.name] = [
-                            'targetFile': findProject(proj.path).buildFile.toString(),
-                            'depDict': depsToDict(gradleDeps, new HashSet())
-                        ]
-                    } else {
-                        projectsDict[proj.name] = [
-                            'targetFile': findProject(proj.path).buildFile.toString()
-                        ]
+                        println('SNYKECHO converting the dependency graph to the digraph format')
+                        def root = [
+                            getModuleGroup: { project.group },
+                            getModuleName: { project.name },
+                            getModuleVersion: { project.version },
+                            getModuleArtifacts: { 
+                                [[
+                                    getExtension: { 
+                                        if (project.plugins.hasPlugin("ear")) {
+                                            return "ear"
+                                        } else if (project.plugins.hasPlugin("war")) {
+                                            return "war"
+                                        } else if (project.plugins.hasPlugin("distribution")) {
+                                            return "zip"
+                                        }
+                                        return "jar"
+                                    }
+                                ] as ResolvedArtifact] as Set<ResolvedArtifact>
+                            },
+                            getConfiguration: { null }
+                        ] as ResolvedDependency
+                        println("SNYKDEPS digraph \"${root.moduleGroup}:${root.moduleName}:${root.moduleArtifacts[0].extension}:${root.moduleVersion}\" {")
+                        Set<Artifact> artifacts = []
+                        printGraph(artifacts, root, gradleDeps)
+                        println("SNYKDEPS }")
                     }
                 }
                 println("JSONDEPS " + JsonOutput.toJson(result))

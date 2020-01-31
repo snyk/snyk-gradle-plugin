@@ -16,7 +16,7 @@ test('check build args with array (new configuration arg)', async (t) => {
     },
   );
   t.deepEqual(result, [
-    'snykResolvedDepsJson',
+    'snykResolvedDeps',
     '-q',
     `-Pconfiguration=${quot}confRegex${quot}`,
     '--no-daemon',
@@ -39,7 +39,7 @@ test('check build args with array (legacy configuration arg)', async (t) => {
     },
   );
   t.deepEqual(result, [
-    'snykResolvedDepsJson',
+    'snykResolvedDeps',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
@@ -63,7 +63,7 @@ test('check build args with scan all subprojects', async (t) => {
     },
   );
   t.deepEqual(result, [
-    'snykResolvedDepsJson',
+    'snykResolvedDeps',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
@@ -114,7 +114,7 @@ test('check build args (plain console output)', async (t) => {
     {},
   );
   t.deepEqual(result, [
-    'snykResolvedDepsJson',
+    'snykResolvedDeps',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
