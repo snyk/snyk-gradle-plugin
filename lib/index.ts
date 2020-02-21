@@ -55,6 +55,11 @@ export interface GradleInspectOptions {
   // Attributes are important for dependency resolution in Android builds (see
   // https://developer.android.com/studio/build/dependencies#variant_aware )
   'configuration-attributes'?: string;
+
+  // For some reason, `--no-daemon` is not required for Unix, but on Windows, without this flag, apparently,
+  // Gradle process just never exits, from the Node's standpoint.
+  // Leaving default usage `--no-daemon`, because of backwards compatibility
+  daemon?: boolean;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -489,9 +494,9 @@ function buildArgs(
     args.push(`-PconfAttr=${quot}${options['configuration-attributes']}${quot}`);
   }
 
-  // For some reason, this is not required for Unix, but on Windows, without this flag, apparently,
-  // Gradle process just never exits, from the Node's standpoint.
-  args.push('--no-daemon');
+  if (!options.daemon) {
+    args.push('--no-daemon');
+  }
 
   // Parallel builds can cause race conditions and multiple JSONDEPS lines in the output
   // Gradle 4.3.0+ has `--no-parallel` flag, but we want to support older versions.
