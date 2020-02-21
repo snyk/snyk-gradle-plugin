@@ -7,10 +7,35 @@ const quot = isWin ? '"' : '\'';
 
 test('check build args with array (new configuration arg)', async (t) => {
   const result = testableMethods.buildArgs(
+      '.',
+      null,
+      '/tmp/init.gradle',
+      {
+        'configuration-matching': 'confRegex',
+        'args': ['--build-file', 'build.gradle'],
+      },
+  );
+  t.deepEqual(result, [
+    'snykResolvedDepsJson',
+    '-q',
+    `-Pconfiguration=${quot}confRegex${quot}`,
+    '--no-daemon',
+    '-Dorg.gradle.parallel=',
+    '-Dorg.gradle.console=plain',
+    '-PonlySubProject=.',
+    '-I /tmp/init.gradle',
+    '--build-file',
+    'build.gradle',
+  ]);
+});
+
+test('check build args with array (new configuration arg) with --deamon', async (t) => {
+  const result = testableMethods.buildArgs(
     '.',
     null,
     '/tmp/init.gradle',
     {
+      'daemon': true,
       'configuration-matching': 'confRegex',
       'args': ['--build-file', 'build.gradle'],
     },
@@ -19,7 +44,6 @@ test('check build args with array (new configuration arg)', async (t) => {
     'snykResolvedDepsJson',
     '-q',
     `-Pconfiguration=${quot}confRegex${quot}`,
-    '--no-daemon',
     '-Dorg.gradle.parallel=',
     '-Dorg.gradle.console=plain',
     '-PonlySubProject=.',
