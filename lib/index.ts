@@ -1,3 +1,4 @@
+import { parseTree } from './parse-gradle';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as  path from 'path';
@@ -359,6 +360,8 @@ async function getAllDeps(root: string, targetFile: string, options: Options):
       cleanupCallback();
     }
     const extractedJson = extractJsonFromScriptOutput(stdoutText);
+    const parseResult = parseTree(stdoutText, options.dev);
+    extractedJson.projects = parseResult.data;
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
@@ -472,7 +475,7 @@ function buildArgs(
     initGradlePath: string,
     options: Options) {
   const args: string[] = [];
-  args.push('snykResolvedDepsJson', '-q');
+  args.push('snykResolvedDeps', '-q');
   if (targetFile) {
     if (!fs.existsSync(path.resolve(root, targetFile))) {
       throw new Error('File not found: "' + targetFile + '"');
