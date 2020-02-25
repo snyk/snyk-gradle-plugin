@@ -7,8 +7,6 @@ const digraph = /digraph([\s\S]*?)}/g;
 // Parse the output from 'gradlew snykResolvedDeps'
 export function parseTree(text: string, withDev: boolean) {
 
-  console.log(text);
-
   // clear all labels
   text = text.replace(logLabel, '');
 

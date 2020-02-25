@@ -135,7 +135,7 @@ export interface JsonDepsScriptResult {
   versionBuildInfo: VersionBuildInfo;
 }
 
-interface ProjectsDict {
+export interface ProjectsDict {
   [project: string]: GradleProjectInfo;
 }
 
