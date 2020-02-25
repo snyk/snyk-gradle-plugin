@@ -1,22 +1,24 @@
 import { legacyCommon } from '@snyk/cli-interface';
-import * as os from 'os';
 
 const newline = /[\r\n]+/g;
 const logLabel = /^SNYKDEPS\s*/gm;
-const digraph = /digraph([\s\S]*?)\}/g;
+const digraph = /digraph([\s\S]*?)}/g;
 
 // Parse the output from 'gradlew snykResolvedDeps'
-export function parseTree(text: string, withDev) {
-    // clear all labels
-    text = text.replace(logLabel, '');
+export function parseTree(text: string, withDev: boolean) {
 
-    // extract deps
-    const data = getRootProject(text, withDev);
+  console.log(text);
 
-    return { ok: true, data };
+  // clear all labels
+  text = text.replace(logLabel, '');
+
+  // extract deps
+  const data = getRootProject(text, withDev);
+
+  return { ok: true, data };
 }
 
-function getRootProject(text, withDev) {
+function getRootProject(text: string, withDev: boolean) {
   const projects = text.match(digraph);
   if (!projects) {
     throw new Error('Cannot find dependency information.');
@@ -37,8 +39,8 @@ function getRootProject(text, withDev) {
   // Add any subsequent projects to the root as dependencies
   for (let i = 1; i < projects.length; i++) {
     const project: legacyCommon.DepTree | null = getProject(
-      projects[i],
-      withDev,
+        projects[i],
+        withDev,
     );
     if (project && project.name) {
       root.dependencies = {};
@@ -48,10 +50,10 @@ function getRootProject(text, withDev) {
   return root;
 }
 
-function getProject(projectDump, withDev) {
+function getProject(projectDump: string, withDev: boolean) {
   const lines = projectDump.split(newline);
   const identity = dequote(lines[0]);
-  const deps = {};
+  const deps = {} as any;
   for (let i = 1; i < lines.length - 1; i++) {
     const line = lines[i];
     const nodes = line.trim().split('->');
@@ -64,15 +66,15 @@ function getProject(projectDump, withDev) {
 }
 
 function assemblePackage(
-  source,
-  projectDeps,
-  withDev,
+    source: string,
+    projectDeps: any,
+    withDev: boolean,
 ): legacyCommon.DepTree | null {
   const sourcePackage: legacyCommon.DepTree = createPackage(source);
   if (
-    sourcePackage.labels &&
-    sourcePackage.labels.scope === 'test' &&
-    !withDev
+      sourcePackage.labels &&
+      sourcePackage.labels.scope === 'test' &&
+      !withDev
   ) {
     // skip a test dependency if it's not asked for
     return null;
@@ -82,9 +84,9 @@ function assemblePackage(
     sourcePackage.dependencies = {};
     for (const dep of sourceDeps) {
       const pkg: legacyCommon.DepTree | null = assemblePackage(
-        dep,
-        projectDeps,
-        withDev,
+          dep,
+          projectDeps,
+          withDev,
       );
       if (pkg && pkg.name) {
         sourcePackage.dependencies[pkg.name] = pkg;
@@ -94,7 +96,7 @@ function assemblePackage(
   return sourcePackage;
 }
 
-function createPackage(pkgStr) {
+function createPackage(pkgStr: string) {
   const range = getConstraint(pkgStr);
 
   if (range) {
@@ -118,11 +120,11 @@ function createPackage(pkgStr) {
   return result;
 }
 
-function dequote(str) {
+function dequote(str: string) {
   return str.slice(str.indexOf('"') + 1, str.lastIndexOf('"'));
 }
 
-function getConstraint(str) {
+function getConstraint(str: string) {
   const index = str.indexOf('selected from constraint');
   if (index === -1) {
     return null;

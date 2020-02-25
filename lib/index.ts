@@ -5,7 +5,7 @@ import * as  path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import {MissingSubProjectError} from './errors';
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import {legacyCommon, legacyPlugin as api} from '@snyk/cli-interface';
 import debugModule = require('debug');
 
@@ -56,34 +56,29 @@ export interface GradleInspectOptions {
   // Attributes are important for dependency resolution in Android builds (see
   // https://developer.android.com/studio/build/dependencies#variant_aware )
   'configuration-attributes'?: string;
-
-  // For some reason, `--no-daemon` is not required for Unix, but on Windows, without this flag, apparently,
-  // Gradle process just never exits, from the Node's standpoint.
-  // Leaving default usage `--no-daemon`, because of backwards compatibility
-  daemon?: boolean;
 }
 
-type Options = api.InspectOptions & GradleInspectOptions;
+export type Options = api.InspectOptions & GradleInspectOptions;
 type VersionBuildInfo = api.VersionBuildInfo;
 
 // Overload type definitions, so that when you call inspect() with an `options` literal (e.g. in tests),
 // you will get a result of a specific corresponding type.
 export async function inspect(
-  root: string,
-  targetFile: string,
-  options?: api.SingleSubprojectInspectOptions & GradleInspectOptions,
+    root: string,
+    targetFile: string,
+    options?: api.SingleSubprojectInspectOptions & GradleInspectOptions,
 ): Promise<api.SinglePackageResult>;
 export async function inspect(
-  root: string,
-  targetFile: string,
-  options: api.MultiSubprojectInspectOptions & GradleInspectOptions,
+    root: string,
+    targetFile: string,
+    options: api.MultiSubprojectInspectOptions & GradleInspectOptions,
 ): Promise<api.MultiProjectResult>;
 
 // General implementation. The result type depends on the runtime type of `options`.
 export async function inspect(
-  root: string,
-  targetFile: string,
-  options?: Options,
+    root: string,
+    targetFile: string,
+    options?: Options,
 ): Promise<api.InspectResult> {
   if (!options) {
     options = {dev: false};
@@ -151,7 +146,7 @@ interface GradleProjectInfo {
 
 function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   const lines = stdoutText.split('\n');
-  let jsonLine: string | null = null;
+  let jsonLine: string | any;
   lines.forEach((l) => {
     if (/^JSONDEPS /.test(l)) {
       if (jsonLine !== null) {
@@ -160,10 +155,10 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
       jsonLine = l.substr(9);
     }
   });
-  if (jsonLine === null) {
+  if (!jsonLine) {
     throw new Error('No line prefixed with "JSONDEPS " was returned; full output:\n' + stdoutText);
   }
-  debugLog('The command produced JSONDEPS output of ' + jsonLine!.length + ' characters');
+  debugLog('The command produced JSONDEPS output of ' + jsonLine?.length + ' characters');
   return JSON.parse(jsonLine!);
 }
 
@@ -173,7 +168,7 @@ async function getAllDepsOneProject(root: string, targetFile: string, options: O
       allSubProjectNames: string[],
       gradleProjectName: string,
       versionBuildInfo: VersionBuildInfo,
-  }> {
+    }> {
   const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
@@ -290,7 +285,7 @@ async function getInjectedScriptPath(): Promise<{injectedScripPath: string, clea
     return { injectedScripPath: tmpInitGradle.name, cleanupCallback: tmpInitGradle.removeCallback };
   }  catch (error) {
     error.message = error.message + '\n\n' +
-      'Failed to create a temporary file to host Snyk init script for Gradle build analysis.';
+        'Failed to create a temporary file to host Snyk init script for Gradle build analysis.';
     throw error;
   }
 }
@@ -321,8 +316,8 @@ function getVersionBuildInfo(gradleVersionOutput: string): VersionBuildInfo | un
       const metaBuildVersion: { [index: string]: string } = {};
       // Select the lines in "Attribute: value format"
       versionMetaInformation.filter((value) => value && value.length > 0 && value.includes(': '))
-      .map((value) => value.split(/(.*): (.*)/))
-      .forEach((splitValue) => metaBuildVersion[toCamelCase(splitValue[1].trim())] = splitValue[2].trim());
+          .map((value) => value.split(/(.*): (.*)/))
+          .forEach((splitValue) => metaBuildVersion[toCamelCase(splitValue[1].trim())] = splitValue[2].trim());
       return {
         gradleVersion,
         metaBuildVersion,
@@ -360,8 +355,8 @@ async function getAllDeps(root: string, targetFile: string, options: Options):
       cleanupCallback();
     }
     const extractedJson = extractJsonFromScriptOutput(stdoutText);
-    const parseResult = parseTree(stdoutText, options.dev);
-    extractedJson.projects = parseResult.data;
+    const parseResult = parseTree(stdoutText, options.dev as boolean);
+    extractedJson.projects = parseResult.data as ProjectsDict;
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
@@ -388,16 +383,16 @@ message from above, starting with ===== DEBUG INFORMATION START =====.`;
 
     if (cannotResolveVariantMarkers.find((m) => error.message.includes(m))) {
 
-        // Extract attribute information via JSONATTRS marker:
-        const jsonAttrs = JSON.parse(
+      // Extract attribute information via JSONATTRS marker:
+      const jsonAttrs = JSON.parse(
           (error.message as string).split('\n').filter((line) => /^JSONATTRS /.test(line))[0].substr(10),
-        );
-        const attrNameWidth = Math.max(...Object.keys(jsonAttrs).map((name) => name.length));
-        const jsonAttrsPretty = Object.keys(jsonAttrs).map(
+      );
+      const attrNameWidth = Math.max(...Object.keys(jsonAttrs).map((name) => name.length));
+      const jsonAttrsPretty = Object.keys(jsonAttrs).map(
           (name) => chalk.whiteBright(leftPad(name, attrNameWidth)) + ': ' + chalk.gray(jsonAttrs[name].join(', ')),
-        ).join('\n');
+      ).join('\n');
 
-        mainErrorMessage = `Error running Gradle dependency analysis.
+      mainErrorMessage = `Error running Gradle dependency analysis.
 
 It seems like you are scanning an Android build with ambiguous dependency variants.
 We cannot automatically resolve dependencies for such builds.
@@ -457,7 +452,7 @@ function getCommand(root: string, targetFile: string) {
   const wrapperScript = isWinLocal ? 'gradlew.bat' : './gradlew';
   // try to find a sibling wrapper script first
   let pathToWrapper = path.resolve(
-    root, path.dirname(targetFile), wrapperScript);
+      root, path.dirname(targetFile), wrapperScript);
   if (fs.existsSync(pathToWrapper)) {
     return quotLocal + pathToWrapper + quotLocal;
   }
@@ -497,9 +492,9 @@ function buildArgs(
     args.push(`-PconfAttr=${quot}${options['configuration-attributes']}${quot}`);
   }
 
-  if (!options.daemon) {
-    args.push('--no-daemon');
-  }
+  // For some reason, this is not required for Unix, but on Windows, without this flag, apparently,
+  // Gradle process just never exits, from the Node's standpoint.
+  args.push('--no-daemon');
 
   // Parallel builds can cause race conditions and multiple JSONDEPS lines in the output
   // Gradle 4.3.0+ has `--no-parallel` flag, but we want to support older versions.

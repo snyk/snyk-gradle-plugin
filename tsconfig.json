@@ -5,6 +5,7 @@
       "target": "es2015",
       "lib": [
         "es2015",
+        "es2017"
       ],
       "module": "commonjs",
       "allowJs": false,
@@ -15,6 +16,6 @@
       "typeRoots": ["./node_modules/@types", "./typings"],
   },
   "include": [
-      "./lib/**/*", "typings/tap/index.d.ts",
+      "./lib/**/*", "typings/tap/index.d.ts"
   ]
 }
