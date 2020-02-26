@@ -4,7 +4,7 @@ import {DepTree} from '@snyk/cli-interface/legacy/common';
 const LOG_LABEL = /^SNYKDEPS\s*/gm;
 const DIGRAPH_SEGMENT = /digraph\W([\s\S]*?)/;
 const GRADLE_DEP = /(.+):(.+):(.+):(.+)/m;
-const ARROW_SEPARATOR = /->/g;
+const ARROW_SEPARATOR = '->';
 const BASE_PROJECT = {
     name: 'no-name',
     version: '0.0.0',
@@ -13,34 +13,52 @@ const BASE_PROJECT = {
 };
 
 function depTreeFromGradleString(s: string): DepTree {
-    const projectMeta: RegExpMatchArray | null = s.match(GRADLE_DEP);
-    return {
-        name: projectMeta![1] + ':' + projectMeta![3],
-        version: projectMeta![4],
-        dependencies: {},
-    } as DepTree;
-}
-
-function extractProject(projectString: string): DepTree {
-
-    const project: DepTree = depTreeFromGradleString(projectString
-        .substring(0, projectString.indexOf('{')));
-
-    const projectDeps = projectString
-        .substring(projectString.indexOf('{') + 1, projectString.indexOf('}'));
-    const projectRows: string[] = projectString
-        .split('\n')
-        .map((t) => t.trim())
-        .filter(Boolean);
+    const pkgMeta: RegExpMatchArray | null = s.match(GRADLE_DEP);
 
     // 0 -> package name
     // 1 -> also package name?
     // 2 -> just "jar" string
     // 3 -> version
     // 4 -> just "runtime" string
-    // const projectMeta: RegExpMatchArray | null = projectRows[0]
-    //     .match(GRADLE_DEP);
 
+    return  {
+            name: pkgMeta![1] + ':' + pkgMeta![2],
+            version: pkgMeta![4],
+            dependencies: {},
+        } as DepTree;
+}
+
+function extractProject(projectString: string): DepTree {
+
+    // Grade project struct looks like "<project meta> { ..... }"
+    // So we want the " .... "
+    const depsStart = projectString.indexOf('{');
+    const depsEnd =  projectString.indexOf('}');
+    const project: DepTree = depTreeFromGradleString(projectString
+        .substring(0, depsStart));
+
+    const projectDepsAsRows = projectString
+        .substring( depsStart + 1, depsEnd)
+        .split('\n')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+    // console.log({projectDepsAsRows});
+    const depTrees = projectDepsAsRows
+        .map((row) => row.split(ARROW_SEPARATOR).map((t) => t.trim()))
+        .reduce((acc, dep) => {
+        console.log(dep);
+        return acc;
+    }, {});
+    // const deps = projectDepsAsRows
+    //     .map((depRow) => {
+    //         const innerDeps = depRow
+    //             .split(ARROW_SEPARATOR);
+    //         // console.log({innerDeps});
+    //     });
+    // project.dependencies = deps;
+
+    // console.log({deps});
     return project;
 
 }
@@ -59,7 +77,7 @@ function parseGradle(gradleOutput: string, withDev: boolean): DepTree {
 
     projectsSplit
         .forEach((projectString: string) => {
-            const pkg: DepTree = {};
+            const pkg: DepTree = extractProject(projectString);
             if (pkg && pkg.name) {
                 root.dependencies![pkg.name] = pkg;
             }
