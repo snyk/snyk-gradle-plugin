@@ -12,19 +12,20 @@ const BASE_PROJECT = {
     packageFormatVersion: 'mvn:0.0.1',
 };
 
-function extractProject(projectString: string): DepTree {
-
-    const projectMeta: RegExpMatchArray | null = projectString
-        .substring(0, projectString.indexOf('{'))
-        .match(GRADLE_DEP);
-
-    const pkg: DepTree = {
+function depTreeFromGradleString(s: string): DepTree {
+    const projectMeta: RegExpMatchArray | null = s.match(GRADLE_DEP);
+    return {
         name: projectMeta![1] + ':' + projectMeta![3],
         version: projectMeta![4],
         dependencies: {},
-    };
+    } as DepTree;
+}
 
-    console.log(pkg);
+function extractProject(projectString: string): DepTree {
+
+    const project: DepTree = depTreeFromGradleString(projectString
+        .substring(0, projectString.indexOf('{')));
+
     const projectDeps = projectString
         .substring(projectString.indexOf('{') + 1, projectString.indexOf('}'));
     const projectRows: string[] = projectString
@@ -40,7 +41,7 @@ function extractProject(projectString: string): DepTree {
     // const projectMeta: RegExpMatchArray | null = projectRows[0]
     //     .match(GRADLE_DEP);
 
-    return pkg;
+    return project;
 
 }
 
