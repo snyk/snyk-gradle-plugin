@@ -1,5 +1,5 @@
 import {ProjectsDict} from './index';
-import {DepTree} from '@snyk/cli-interface/legacy/common';
+import {DepTree, DepTreeDep} from '@snyk/cli-interface/legacy/common';
 
 const LOG_LABEL = /^SNYKDEPS\s*/gm;
 const DIGRAPH_SEGMENT = /digraph\W([\s\S]*?)/;
@@ -12,7 +12,7 @@ const BASE_PROJECT = {
     packageFormatVersion: 'mvn:0.0.1',
 };
 
-function depTreeFromGradleString(s: string): DepTree {
+function depTreeFromGradleString(s: string): DepTreeDep {
     const pkgMeta: RegExpMatchArray | string[] = s.match(GRADLE_DEP) || [];
 
     // 0 matches
@@ -28,7 +28,7 @@ function depTreeFromGradleString(s: string): DepTree {
     } as DepTree;
 }
 
-function extractProject(projectString: string): DepTree {
+function extractProject(projectString: string): DepTreeDep {
 
     // Grade project struct looks like "<project meta> { ..... }"
     // So we want the " .... "
@@ -49,10 +49,13 @@ function extractProject(projectString: string): DepTree {
             .split(ARROW_SEPARATOR)
             .map((t) => t.trim())
             .map(depTreeFromGradleString)
+            .reverse()
             .reduce((tree, curr) => {
-                console.log({curr});
-                return tree;
-            }));
+                if (!tree) { return tree; }
+                curr.dependencies![tree.name!] = tree;
+                return curr;
+            }), {});
+    console.log(depTrees);
     // .reduce((acc, dep) => {
     //     console.log(dep);
     //     return acc;
