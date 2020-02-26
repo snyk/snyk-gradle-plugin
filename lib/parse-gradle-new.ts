@@ -43,34 +43,23 @@ function extractProject(projectString: string): DepTreeDep {
         .map((t) => t.trim())
         .filter(Boolean);
 
-    // console.log({projectDepsAsRows});
-    const depTrees = projectDepsAsRows
+    projectDepsAsRows
         .map((row) => row
             .split(ARROW_SEPARATOR)
             .map((t) => t.trim())
             .map(depTreeFromGradleString)
             .reverse()
             .reduce((tree, curr) => {
-                if (!tree) { return tree; }
+                if (!tree) {
+                    return tree;
+                }
                 curr.dependencies![tree.name!] = tree;
                 return curr;
-            }), {});
-    console.log(depTrees);
-    // .reduce((acc, dep) => {
-    //     console.log(dep);
-    //     return acc;
-    // }, {});
-    // const deps = projectDepsAsRows
-    //     .map((depRow) => {
-    //         const innerDeps = depRow
-    //             .split(ARROW_SEPARATOR);
-    //         // console.log({innerDeps});
-    //     });
-    // project.dependencies = deps;
-
-    // console.log({deps});
+            }), {})
+        .forEach((tree) => {
+            project.dependencies![tree.name!] = tree;
+        });
     return project;
-
 }
 
 function parseGradle(gradleOutput: string, withDev: boolean): DepTree {
