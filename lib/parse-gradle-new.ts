@@ -5,12 +5,6 @@ const LOG_LABEL = /^SNYKDEPS\s*/gm;
 const DIGRAPH_SEGMENT = /digraph\W([\s\S]*?)/;
 const GRADLE_DEP = /([^:]+):([^:]+):([^:]+):([^:]+)(?:([^:]+))?/m;
 const ARROW_SEPARATOR = '->';
-const BASE_PROJECT = {
-    name: 'no-name',
-    version: '0.0.0',
-    dependencies: {},
-    packageFormatVersion: 'mvn:0.0.1',
-};
 
 function depTreeFromGradleString(s: string): DepTreeDep {
     const pkgMeta: RegExpMatchArray | string[] = s.match(GRADLE_DEP) || [];
@@ -46,11 +40,10 @@ function extractProject(projectString: string): DepTreeDep {
     projectDepsAsRows
         .map((row) => row
             .split(ARROW_SEPARATOR)
-            .map((t) => t.trim())
             .map(depTreeFromGradleString)
-            .reverse()
+            .reverse() // We reverse the order to build it bottom-up
             .reduce((tree, curr) => {
-                if (!tree) {
+                if (!tree) { // first case we return the tree, other-wise his parent
                     return tree;
                 }
                 curr.dependencies![tree.name!] = tree;
@@ -62,12 +55,12 @@ function extractProject(projectString: string): DepTreeDep {
     return project;
 }
 
-function parseGradle(gradleOutput: string, withDev: boolean): DepTree {
+function parseGradle(gradleOutput: string): DepTree {
     const projectsSplit: string[] = gradleOutput
         .replace(LOG_LABEL, '')
         .replace(/[;"]/g, '')
         .split(DIGRAPH_SEGMENT)
-        .filter((t: string = '') => t.trim().length);
+        .filter((t= '') => t.trim().length);
 
     if (!projectsSplit.length) {
         throw Error('No projects found');
@@ -77,16 +70,14 @@ function parseGradle(gradleOutput: string, withDev: boolean): DepTree {
     projectsSplit
         .forEach((projectString: string) => {
             const pkg: DepTree = extractProject(projectString);
-            if (pkg && pkg.name) {
-                root.dependencies![pkg.name] = pkg;
-            }
+            root.dependencies![pkg.name!] = pkg;
         });
     return root;
 }
 
-export function parseTree(gradleOutput: string, withDev: boolean): { ok: boolean, data: ProjectsDict } {
+export function parseTree(gradleOutput: string): { ok: boolean, data: ProjectsDict } {
     return {
         ok: true,
-        data: parseGradle(gradleOutput, withDev) as ProjectsDict,
+        data: parseGradle(gradleOutput) as ProjectsDict,
     };
 }
