@@ -3,7 +3,7 @@ import {DepTree, DepTreeDep} from '@snyk/cli-interface/legacy/common';
 
 const LOG_LABEL = /^SNYKDEPS\s*/gm;
 const DIGRAPH_SEGMENT = /digraph\W([\s\S]*?)/;
-const GRADLE_DEP = /(.+):(.+):(.+):(.+):(.+)?/m;
+const GRADLE_DEP = /([^:]+):([^:]+):([^:]+):([^:]+)(?:([^:]+))?/m;
 const ARROW_SEPARATOR = '->';
 const BASE_PROJECT = {
     name: 'no-name',
