@@ -3,7 +3,7 @@ import {DepTree} from '@snyk/cli-interface/legacy/common';
 
 const LOG_LABEL = /^SNYKDEPS\s*/gm;
 const DIGRAPH_SEGMENT = /digraph\W([\s\S]*?)/;
-const GRADLE_DEP = /(.+):(.+):(.+):(.+)/m;
+const GRADLE_DEP = /(.+):(.+):(.+):(.+):(.+)?/m;
 const ARROW_SEPARATOR = '->';
 const BASE_PROJECT = {
     name: 'no-name',
@@ -13,19 +13,19 @@ const BASE_PROJECT = {
 };
 
 function depTreeFromGradleString(s: string): DepTree {
-    const pkgMeta: RegExpMatchArray | null = s.match(GRADLE_DEP);
+    const pkgMeta: RegExpMatchArray | string[] = s.match(GRADLE_DEP) || [];
 
-    // 0 -> package name
-    // 1 -> also package name?
-    // 2 -> just "jar" string
-    // 3 -> version
-    // 4 -> just "runtime" string
-
-    return  {
-            name: pkgMeta![1] + ':' + pkgMeta![2],
-            version: pkgMeta![4],
-            dependencies: {},
-        } as DepTree;
+    // 0 matches
+    // 1 -> package name
+    // 2 -> also package name?
+    // 3 -> just "jar" string
+    // 4 -> version
+    // 5 -> just "runtime" string
+    return {
+        name: pkgMeta![1] + ':' + pkgMeta![2],
+        version: pkgMeta![4],
+        dependencies: {},
+    } as DepTree;
 }
 
 function extractProject(projectString: string): DepTree {
@@ -33,23 +33,30 @@ function extractProject(projectString: string): DepTree {
     // Grade project struct looks like "<project meta> { ..... }"
     // So we want the " .... "
     const depsStart = projectString.indexOf('{');
-    const depsEnd =  projectString.indexOf('}');
+    const depsEnd = projectString.indexOf('}');
     const project: DepTree = depTreeFromGradleString(projectString
         .substring(0, depsStart));
 
     const projectDepsAsRows = projectString
-        .substring( depsStart + 1, depsEnd)
+        .substring(depsStart + 1, depsEnd)
         .split('\n')
         .map((t) => t.trim())
         .filter(Boolean);
 
     // console.log({projectDepsAsRows});
     const depTrees = projectDepsAsRows
-        .map((row) => row.split(ARROW_SEPARATOR).map((t) => t.trim()))
-        .reduce((acc, dep) => {
-        console.log(dep);
-        return acc;
-    }, {});
+        .map((row) => row
+            .split(ARROW_SEPARATOR)
+            .map((t) => t.trim())
+            .map(depTreeFromGradleString)
+            .reduce((tree, curr) => {
+                console.log({curr});
+                return tree;
+            }));
+    // .reduce((acc, dep) => {
+    //     console.log(dep);
+    //     return acc;
+    // }, {});
     // const deps = projectDepsAsRows
     //     .map((depRow) => {
     //         const innerDeps = depRow
