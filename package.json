@@ -40,7 +40,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@snyk/cli-interface": "2.3.1",
+    "@snyk/cli-interface": "2.3.2",
     "@types/debug": "^4.1.4",
     "chalk": "^2.4.2",
     "debug": "^4.1.1",
