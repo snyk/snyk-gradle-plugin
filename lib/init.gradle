@@ -137,7 +137,8 @@ allprojects { everyProj ->
                 def result = [
                     'defaultProject': defaultProjectName,
                     'projects': projectsDict,
-                    'allSubProjectNames': allprojects.collect { it.name }
+                    'allSubProjectNames': allprojects.collect { it.path == ':' ? it.name : it.path }
+//                     'allSubProjectNames': allprojects.collect { it.name }
                 ]
 
                 def shouldScanProject = {
@@ -221,12 +222,12 @@ allprojects { everyProj ->
                         println('SNYKECHO resolving configuration ' + snykConf.name)
                         def gradleDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
                         println('SNYKECHO converting the dependency graph to the DepTree format')
-                        projectsDict[proj.name] = [
+                        projectsDict[proj.path] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
                             'depDict': depsToDict(gradleDeps, new HashSet())
                         ]
                     } else {
-                        projectsDict[proj.name] = [
+                        projectsDict[proj.path] = [
                             'targetFile': findProject(proj.path).buildFile.toString()
                         ]
                     }

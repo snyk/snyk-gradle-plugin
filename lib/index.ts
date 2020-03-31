@@ -102,6 +102,7 @@ export async function inspect(
       throw new Error('gradle-sub-project flag is incompatible with multiDepRoots');
     }
     const scannedProjects = await getAllDepsAllProjects(root, targetFile, options);
+    // console.log('scannedProjects',{scannedProjects});
     plugin.meta = plugin.meta || {};
     return {
       plugin,
@@ -228,12 +229,14 @@ function getDepsSubProject(root: string, subProject: string, allProjectDeps: Jso
     },
   };
 }
+
 async function getAllDepsAllProjects(root: string, targetFile: string, options: Options): Promise<ScannedProject[]> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const basePackageName = path.basename(root);
   const packageVersion = '0.0.0';
-  return Object.keys(allProjectDeps.projects).map((proj) => {
-    const packageName = proj === allProjectDeps.defaultProject ? basePackageName : `${basePackageName}/${proj}`;
+  return Object.keys(allProjectDeps.projects)
+      .map((proj) => {
+    const packageName = proj === allProjectDeps.defaultProject ? basePackageName : `${basePackageName}${proj}`;
     const defaultProject = allProjectDeps.defaultProject;
     const gradleProjectName = proj === defaultProject ? defaultProject : `${defaultProject}/${proj}`;
     return {
@@ -354,6 +357,8 @@ async function getAllDeps(root: string, targetFile: string, options: Options):
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
   try {
+    console.log('command === \n', command, '\n');
+    console.log('args === \n', args.join(' '), '\n');
     const stdoutText = await subProcess.execute(command, args, {cwd: root}, printIfEcho);
     if (cleanupCallback) {
       cleanupCallback();
@@ -363,6 +368,8 @@ async function getAllDeps(root: string, targetFile: string, options: Options):
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
     }
+    console.log('keys extractedJson.projects', Object.keys(extractedJson.projects));
+    console.log('extractedJson.allSubProjectNames', extractedJson.allSubProjectNames);
     return extractedJson;
   } catch (error0) {
     const error: Error = error0;
