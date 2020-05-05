@@ -4,8 +4,10 @@ export class MissingSubProjectError extends Error {
   public allProjects: string[];
 
   constructor(subProject: string, allProjects: string[]) {
-    super(`Specified sub-project not found: "${subProject}". ` +
-    `Found these projects: ${allProjects.join(', ')}`);
+    super(
+      `Specified sub-project not found: "${subProject}". ` +
+        `Found these projects: ${allProjects.join(', ')}`,
+    );
     this.subProject = subProject;
     this.allProjects = allProjects;
     Error.captureStackTrace(this, MissingSubProjectError);

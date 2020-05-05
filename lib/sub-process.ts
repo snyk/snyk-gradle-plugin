@@ -7,10 +7,10 @@ const debugLogging = debugModule('snyk-gradle-plugin');
 export function execute(
   command: string,
   args: string[],
-  options: {cwd?: string},
+  options: { cwd?: string },
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
-  const spawnOptions: childProcess.SpawnOptions = {shell: true};
+  const spawnOptions: childProcess.SpawnOptions = { shell: true };
   if (options && options.cwd) {
     spawnOptions.cwd = options.cwd;
   }
@@ -34,17 +34,21 @@ export function execute(
     proc.on('close', (code: number) => {
       if (code !== 0) {
         const fullCommand = command + ' ' + args.join(' ');
-        return reject(new Error(`
+        return reject(
+          new Error(`
 >>> command: ${fullCommand}
 >>> exit code: ${code}
 >>> stdout:
 ${stdout}
 >>> stderr:
 ${stderr}
-`));
+`),
+        );
       }
       if (stderr) {
-        debugLogging('subprocess exit code = 0, but stderr was not empty: ' + stderr);
+        debugLogging(
+          'subprocess exit code = 0, but stderr was not empty: ' + stderr,
+        );
       }
 
       resolve(stdout);

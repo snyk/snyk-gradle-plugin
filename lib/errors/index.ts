@@ -1,1 +1,1 @@
-export {MissingSubProjectError} from './missing-sub-project-error';
+export { MissingSubProjectError } from './missing-sub-project-error';

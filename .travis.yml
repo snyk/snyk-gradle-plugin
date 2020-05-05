@@ -21,6 +21,12 @@ before_script:
   - export GRADLE_OPTS=-Dorg.gradle.console=verbose
 jobs:
   include:
+  - stage: Run lint on Node v10
+    node_js: 10
+    env: Node.js=10
+    script:
+      - npm run lint
+
   - stage: Different Node/Java versions + most recent Gradle version
     # We support Node 6+, Java 8+, Gradle 2.14+
     # Tested Java versions are usually: 8 (LTS), 11 (LTS), 13 (latest)

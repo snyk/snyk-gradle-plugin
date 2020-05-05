@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .gradle
+.eslintcache
 /dist
 /dist-test
 package-lock.json
