@@ -1,10 +1,10 @@
 import * as os from 'os';
 import * as path from 'path';
-import {fixtureDir} from '../common';
-import {test, Test} from 'tap';
-import {stub, SinonStub} from 'sinon';
+import { fixtureDir } from '../common';
+import { test, Test } from 'tap';
+import { stub, SinonStub } from 'sinon';
 import * as subProcess from '../../lib/sub-process';
-import {inspect} from '../../lib';
+import { inspect } from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
@@ -46,23 +46,21 @@ test('darwin with wrapper in root', async (t) => {
     t.fail('Expected failure');
   } catch {
     const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = "'" + path.join(subWithWrapper, "gradlew") + "'";
+    const expectedCmd = "'" + path.join(subWithWrapper, 'gradlew') + "'";
     t.same(cmd, expectedCmd, 'invokes wrapper script');
   }
 });
 
 function stubPlatform(platform: string, t: Test) {
-  stub(os, 'platform')
-    .callsFake(() => {
-      return platform;
-    });
+  stub(os, 'platform').callsFake(() => {
+    return platform;
+  });
   t.teardown((os.platform as SinonStub).restore);
 }
 
 function stubSubProcessExec(t: Test) {
-  stub(subProcess, 'execute')
-    .callsFake(() => {
-      return Promise.reject(new Error('abort'));
-    });
+  stub(subProcess, 'execute').callsFake(() => {
+    return Promise.reject(new Error('abort'));
+  });
   t.teardown((subProcess.execute as SinonStub).restore);
 }

@@ -1,20 +1,15 @@
-import {test} from 'tap';
-import {exportsForTests as testableMethods} from '../../lib';
+import { test } from 'tap';
+import { exportsForTests as testableMethods } from '../../lib';
 import * as os from 'os';
 
 const isWin = /^win/.test(os.platform());
-const quot = isWin ? '"' : '\'';
+const quot = isWin ? '"' : "'";
 
 test('check build args with array (new configuration arg)', async (t) => {
-  const result = testableMethods.buildArgs(
-      '.',
-      null,
-      '/tmp/init.gradle',
-      {
-        'configuration-matching': 'confRegex',
-        'args': ['--build-file', 'build.gradle'],
-      },
-  );
+  const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
+    'configuration-matching': 'confRegex',
+    args: ['--build-file', 'build.gradle'],
+  });
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
@@ -30,16 +25,11 @@ test('check build args with array (new configuration arg)', async (t) => {
 });
 
 test('check build args with array (new configuration arg) with --deamon', async (t) => {
-  const result = testableMethods.buildArgs(
-    '.',
-    null,
-    '/tmp/init.gradle',
-    {
-      'daemon': true,
-      'configuration-matching': 'confRegex',
-      'args': ['--build-file', 'build.gradle'],
-    },
-  );
+  const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
+    daemon: true,
+    'configuration-matching': 'confRegex',
+    args: ['--build-file', 'build.gradle'],
+  });
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
@@ -54,14 +44,9 @@ test('check build args with array (new configuration arg) with --deamon', async 
 });
 
 test('check build args with array (legacy configuration arg)', async (t) => {
-  const result = testableMethods.buildArgs(
-    '.',
-    null,
-    '/tmp/init.gradle',
-    {
-      args: ['--build-file', 'build.gradle', '--configuration=compile'],
-    },
-  );
+  const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
+    args: ['--build-file', 'build.gradle', '--configuration=compile'],
+  });
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
@@ -77,15 +62,10 @@ test('check build args with array (legacy configuration arg)', async (t) => {
 });
 
 test('check build args with scan all subprojects', async (t) => {
-  const result = testableMethods.buildArgs(
-    '.',
-    null,
-    '/tmp/init.gradle',
-    {
-      allSubProjects: true,
-      args: ['--build-file', 'build.gradle', '--configuration', 'compile'],
-    },
-  );
+  const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
+    allSubProjects: true,
+    args: ['--build-file', 'build.gradle', '--configuration', 'compile'],
+  });
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
@@ -105,7 +85,7 @@ test('extractJsonFromScriptOutput', async (t) => {
 la dee da, la dee da
 JSONDEPS {"hello": "world"}
 some other noise`);
-  t.deepEqual(result as any, {hello: 'world'});
+  t.deepEqual(result as any, { hello: 'world' });
 });
 
 test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {
@@ -114,7 +94,11 @@ test('extractJsonFromScriptOutput throws on no JSONDEPS', async (t) => {
     testableMethods.extractJsonFromScriptOutput(output);
     t.fail('Error expected');
   } catch (e) {
-    t.match(e.message, 'No line prefixed with "JSONDEPS " was returned', 'expected error message');
+    t.match(
+      e.message,
+      'No line prefixed with "JSONDEPS " was returned',
+      'expected error message',
+    );
     t.match(e.message, output, 'error message contains output');
   }
 });
@@ -125,24 +109,23 @@ test('extractJsonFromScriptOutput throws on multiple JSONDEPS', async (t) => {
     testableMethods.extractJsonFromScriptOutput(output);
     t.fail('Error expected');
   } catch (e) {
-    t.match(e.message, 'More than one line with "JSONDEPS " prefix was returned', 'expected error message');
+    t.match(
+      e.message,
+      'More than one line with "JSONDEPS " prefix was returned',
+      'expected error message',
+    );
     t.match(e.message, output, 'error message contains output');
   }
 });
 
 test('check build args (plain console output)', async (t) => {
-  const result = testableMethods.buildArgs(
-    '.',
-    null,
-    '/tmp/init.gradle',
-    {},
-  );
+  const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {});
   t.deepEqual(result, [
     'snykResolvedDepsJson',
     '-q',
     '--no-daemon',
     '-Dorg.gradle.parallel=',
-     '-Dorg.gradle.console=plain',
+    '-Dorg.gradle.console=plain',
     '-PonlySubProject=.',
     '-I /tmp/init.gradle',
   ]);
