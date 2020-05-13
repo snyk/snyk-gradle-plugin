@@ -2,6 +2,7 @@ import * as path from 'path';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
 import { inspect } from '../../lib';
+import * as subProcess from '../../lib/sub-process';
 import { legacyPlugin as api } from '@snyk/cli-interface';
 
 test('multi-project, explicitly targeting a subproject build file', async (t) => {
@@ -19,8 +20,10 @@ test('multi-project, explicitly targeting a subproject build file', async (t) =>
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -48,8 +51,10 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -68,8 +73,10 @@ test('multi-project, ran from a subproject directory', async (t) => {
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -96,8 +103,10 @@ test('multi-project: only sub-project has deps and they are returned', async (t)
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -118,7 +127,9 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     'returned new project name is not sub-project',
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
-  t.notOk(result.package.dependencies);
+  if (result.package.dependencies) {
+    t.ok(Object.keys(result.package.dependencies).length === 0);
+  }
 });
 
 let wrapperIsCompatibleWithJvm = true;
@@ -152,7 +163,9 @@ if (wrapperIsCompatibleWithJvm) {
       'root-proj',
       'subproj',
     ]);
-    t.notOk(result.package.dependencies);
+    if (result.package.dependencies) {
+      t.ok(Object.keys(result.package.dependencies).length === 0);
+    }
   });
 }
 
@@ -195,8 +208,10 @@ test('multi-project: only sub-project has deps and they are returned space needs
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -216,7 +231,12 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
+      if (p.depTree.dependencies) {
+        t.ok(
+          Object.keys(p.depTree.dependencies).length === 0,
+          'no dependencies for the main depRoot',
+        );
+      }
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
@@ -233,11 +253,12 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
       );
       t.equal(
         p.depTree.dependencies!['com.android.tools.build:builder']
-          .dependencies!['com.android.tools:sdklib'].dependencies![
-          'com.android.tools:repository'
-        ].dependencies!['com.android.tools:common'].dependencies![
-          'com.android.tools:annotations'
-        ].version,
+          .dependencies!['com.android.tools.build:manifest-merger']
+          .dependencies!['com.android.tools:sdk-common'].dependencies![
+          'com.android.tools.build:builder-test-api'
+        ].dependencies!['com.android.tools.ddms:ddmlib'].dependencies![
+          'com.android.tools:common'
+        ].dependencies!['com.android.tools:annotations'].version,
         '25.3.0',
         'correct version found',
       );
@@ -301,8 +322,10 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
 
   t.equal(
     result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -370,7 +393,12 @@ test('multi-project: allSubProjects + configuration', async (t) => {
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      t.notOk(p.depTree.dependencies, 'no dependencies for the main depRoot');
+      if (p.depTree.dependencies) {
+        t.ok(
+          Object.keys(p.depTree.dependencies).length === 0,
+          'no dependencies for the main depRoot',
+        );
+      }
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
@@ -415,26 +443,28 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
-  t.equal(
-    result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
-      'com.github.jitpack:root-proj'
-    ].version,
-    'unspecified',
-    'dependency cycle is returned in the results',
-  );
+  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
+  const isGradle3Plus =
+    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) >=
+    3;
 
-  t.notOk(
-    result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
-      'com.github.jitpack:root-proj'
-    ].dependencies,
-    'dependency cycle is terminated',
-  );
+  // TODO @anthogez, once gradle v2 will be supported on new gradle task, drop this v3+ check
+  if (isGradle3Plus) {
+    t.notOk(
+      result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
+        'com.github.jitpack:root-proj'
+      ],
+      'dependency cycle for sub-project is not returned in results',
+    );
+  }
 
   t.equal(
     result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
       'com.android.tools.build:builder'
-    ].dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
+    ].dependencies!['com.android.tools.build:manifest-merger'].dependencies![
+      'com.android.tools:sdk-common'
+    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
+      'com.android.tools.ddms:ddmlib'
     ].dependencies!['com.android.tools:common'].dependencies![
       'com.android.tools:annotations'
     ].version,
@@ -454,20 +484,11 @@ test('multi-project-dependency-cycle: scanning all subprojects works fine', asyn
   for (const p of result.scannedProjects) {
     if (p.depTree.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      t.equal(
+      t.ok(
         p.depTree.dependencies!['com.github.jitpack:subproj'].dependencies![
-          'com.github.jitpack:root-proj'
-        ].version,
-        'unspecified',
-        'dependency cycle is returned for the main',
-      );
-    } else {
-      t.equal(
-        p.depTree.dependencies!['com.github.jitpack:root-proj'].dependencies![
-          'com.github.jitpack:subproj'
-        ].version,
-        'unspecified',
-        'dependency cycle is returned for the subproj',
+          'com.android.tools.build:builder'
+        ],
+        'dependency cycle is not returned for the main',
       );
     }
   }

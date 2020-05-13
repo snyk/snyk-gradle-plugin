@@ -20,7 +20,7 @@ test('run inspect()', async (t) => {
   );
 });
 
-test('multi-confg: both compile and runtime deps picked up by default', async (t) => {
+test('multi-config: both compile and runtime deps picked up by default', async (t) => {
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
