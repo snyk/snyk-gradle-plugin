@@ -27,7 +27,6 @@
   "author": "snyk.io",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/chalk": "^2.2.0",
     "@types/jest": "^24.0.13",
     "@types/node": "^4.9.1",
     "@types/sinon": "^7.0.10",
@@ -48,7 +47,7 @@
   "dependencies": {
     "@snyk/cli-interface": "2.3.2",
     "@types/debug": "^4.1.4",
-    "chalk": "^2.4.2",
+    "chalk": "^3.0.0",
     "debug": "^4.1.1",
     "tmp": "0.2.1",
     "tslib": "^1.9.3"
