@@ -28,20 +28,13 @@ jobs:
       - npm run lint
 
   - stage: Different Node/Java versions + most recent Gradle version
-    # We support Node 6+, Java 8+, Gradle 2.14+
+    # We support Node 8+, Java 8+, Gradle 2.14+
     # Tested Java versions are usually: 8 (LTS), 11 (LTS), 13 (latest)
     # (see https://www.oracle.com/technetwork/java/java-se-support-roadmap.html)
     # LTS version are also the most popular ones: https://www.baeldung.com/java-in-2019
 
     # We use sdkman to install Java.
     # AdoptOpenJDK distribution with HotSpot VM is chosen as the most "classic" option.
-    node_js: 6
-    env: GRADLE_VERSION=6.0 JDK=8 Node.js=6
-    script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
-      - sdk install gradle $GRADLE_VERSION
-      - java -version
-      - npm test
   -
     node_js: 8
     env: GRADLE_VERSION=6.0 JDK=11 Node.js=8

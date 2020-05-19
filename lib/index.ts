@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import { MissingSubProjectError } from './errors';
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import debugModule = require('debug');
 
