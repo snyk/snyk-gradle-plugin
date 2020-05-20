@@ -411,7 +411,7 @@ async function getAllDeps(
       cwd: root,
     });
   } catch (_) {
-    // intentionally empty
+    //// intentionally empty
   }
 
   if (gradleVersionOutput.match(/Gradle 1/)) {
