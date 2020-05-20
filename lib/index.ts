@@ -433,12 +433,12 @@ async function getAllDeps(
     if (cleanupCallback) {
       cleanupCallback();
     }
-    const extractedJson = extractJsonFromScriptOutput(stdoutText);
+    const jsonFromGradle = extractJsonFromScriptOutput(stdoutText);
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
-      extractedJson.versionBuildInfo = versionBuildInfo;
+      jsonFromGradle.versionBuildInfo = versionBuildInfo;
     }
-    return extractedJson;
+    return jsonFromGradle;
   } catch (error0) {
     const error: Error = error0;
     const gradleErrorMarkers = /^\s*>\s.*$/;
