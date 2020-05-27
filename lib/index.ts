@@ -389,13 +389,13 @@ async function getInjectedScriptPath(): Promise<{
     // https://www.npmjs.com/package/pkg#detecting-assets-in-source-code
     initGradleAsset = path.join(__dirname, '../lib/init.gradle');
     if (!isGradle3Plus) {
-      initGradleAsset = path.join(__dirname, '../lib/legacy-init.gradle');
+      initGradleAsset = path.join(__dirname, '../lib/legacy.init.gradle');
     }
   } else if (/index.ts$/.test(__filename)) {
     // running from ./lib
     initGradleAsset = path.join(__dirname, 'init.gradle');
     if (!isGradle3Plus) {
-      initGradleAsset = path.join(__dirname, 'legacy-init.gradle');
+      initGradleAsset = path.join(__dirname, 'legacy.init.gradle');
     }
   } else {
     throw new Error('Cannot locate Snyk init.gradle script');
@@ -405,7 +405,10 @@ async function getInjectedScriptPath(): Promise<{
   // The Node filesystem in that case is not real: https://github.com/zeit/pkg#snapshot-filesystem
   // Copying the injectable script into a temp file.
   try {
-    const tmpInitGradle = tmp.fileSync({ postfix: '-init.gradle' });
+    let tmpInitGradle = tmp.fileSync({ postfix: '-init.gradle' });
+    if (!isGradle3Plus) {
+      tmpInitGradle = tmp.fileSync({ postfix: '-legacy.init.gradle' });
+    }
     fs.createReadStream(initGradleAsset).pipe(
       fs.createWriteStream('', { fd: tmpInitGradle!.fd }),
     );
