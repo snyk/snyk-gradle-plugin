@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    "lib/init.gradle"
+    "lib/init.gradle",
+    "lib/legacy.init.gradle"
   ],
   "scripts": {
     "build": "tsc",
