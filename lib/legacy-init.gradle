@@ -54,72 +54,6 @@ import java.util.regex.Matcher
 //   dependencies?: DepDict;
 // }
 
-class SnykGraph {
-   def keys
-   def nodes
-   SnykGraph() {
-       this.keys = []
-       this.nodes = [:] 
-   }
-   def setNode(key, value) {
-       if(!key) {
-           return
-       }
-       if(this.nodes.get(key)) {
-           return this.nodes.get(key)
-       }
-       if(!value) {
-           return
-       }
-       def vertex = ['name': value.name, 'version': value.version, 'parentNames': []]
-       this.nodes.put(key, vertex)
-       this.keys.push(key)
-       return vertex
-   }
-
-   def setEdge(parentName, childName) {
-       if(!parentName || !childName || parentName == childName) {
-           return
-       }
-       // root-node will be the graphlib root that first-level deps will be attached to
-       if(parentName != 'root-node') {
-            def parentNode = this.setNode(parentName, null)
-            if(!parentNode) {
-                return
-            }
-            // avoids cyclic
-            if(parentNode && parentNode.parentNames.find { it == childName } == childName) {
-                return
-            }
-       }
-       def childNode = this.setNode(childName, null)
-       if(!childNode) {
-           return
-       }
-       childNode.parentNames.push(parentName)
-   }
-}
-
-def loadGraph(Iterable deps, SnykGraph graph, parentName) {
-        deps.each { d -> 
-            def childName= "${d.moduleGroup}:${d.moduleName}"
-            if(!graph.nodes.get(childName)) {
-                def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
-                graph.setNode(childName, childDependency)
-                loadGraph(d.children, graph, childName)
-            } 
-            if(parentName) {
-                graph.setEdge(parentName, childName)
-            }
-        }
-    }
-
-def getSnykGraph(Iterable deps) {
-    def graph = new SnykGraph()
-    loadGraph(deps, graph, 'root-node') 
-    return graph.nodes
-}
-
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
@@ -136,6 +70,38 @@ allprojects { everyProj ->
             ? confAttr.toLowerCase().split(',').collect { it.split(':') }
             : null
         )
+
+        // currentChain is a protection against dependency cycles, which are perfectly normal in Java/Gradle world
+        // This function converts a Gradle dependency tree into DepTree structure used by Snyk CLI
+        def depsToDict
+        depsToDict = { Iterable deps, Set currentChain ->
+            def res = [:]
+            deps.each { d ->
+                def depName = d.moduleGroup + ':' + d.moduleName
+                if (!currentChain.contains(depName)) {
+                    def row = ['name': depName, 'version': d.moduleVersion, 'conf': d.configuration]
+                    currentChain.add(depName)
+                    def subDeps = depsToDict(d.children, currentChain)
+                    currentChain.remove(depName)
+                    if (subDeps.size() > 0) {
+                        row['dependencies'] = subDeps
+                    }
+                    // In Gradle 2, there can be several instances of the same dependency present at each level,
+                    // each for a different configuration. In this case, we need to merge the dependencies.
+                    if (res.containsKey(depName)) {
+                        if (subDeps.size() > 0) {
+                            if (!res[depName].containsKey('dependencies')) {
+                                res[depName]['dependencies'] = [:]
+                            }
+                            res[depName]['dependencies'].putAll(subDeps)
+                        }
+                    } else {
+                        res[depName] = row
+                    }
+                }
+            }
+            return res
+        }
 
         def matchesAttributeFilter
         matchesAttributeFilter = { conf ->
@@ -234,6 +200,7 @@ allprojects { everyProj ->
                         snykConf = mergeableConfs.first()
 
                     } else if (mergeableConfs.size() > 1) {
+
                         println('SNYKECHO constructing merged configuration from ' + mergeableConfs.collect { conf -> conf.name })
                         // We create a new, "merged" configuration here.
                         snykConf = proj.configurations.create('snykMergedDepsConf')
@@ -252,11 +219,11 @@ allprojects { everyProj ->
                     }
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)
-                        def gradleFirstLevelDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
+                        def gradleDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
                         println('SNYKECHO converting the dependency graph to the DepTree format')
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
-                            'depDict': getSnykGraph(gradleFirstLevelDeps)
+                            'depDict': depsToDict(gradleDeps, new HashSet())
                         ]
                     } else {
                         projectsDict[proj.name] = [

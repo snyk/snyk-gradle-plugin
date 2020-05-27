@@ -5,6 +5,7 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
+import { DepGraphBuilder, PkgManager, DepGraph, legacy } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import debugModule = require('debug');
 
@@ -191,6 +192,67 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
+async function depsFromGraph(graphData: any) {
+  if (!graphData || Object.keys(graphData).length === 0) {
+    return {};
+  }
+
+  const pkgManager: PkgManager = { name: 'gradle' };
+  const builder = new DepGraphBuilder(pkgManager, {
+    name: 'root',
+    version: '1.0.0',
+  });
+
+  for (const key of Object.keys(graphData)) {
+    const { name, version } = graphData[key];
+    const nodeId = name;
+    // adding nodes
+    builder.addPkgNode(
+      {
+        name,
+        version,
+      },
+      nodeId,
+    );
+  }
+
+  for (const key of Object.keys(graphData)) {
+    const { name, parentNames } = graphData[key];
+    const nodeId = name;
+    // adding edges
+    if (parentNames && parentNames.length > 0) {
+      for (const parentName of parentNames) {
+        builder.connectDep(parentName, nodeId);
+      }
+    } else {
+      builder.connectDep('root-node', nodeId);
+    }
+  }
+
+  const depGraph = builder.build();
+  const depTree: legacy.DepTree = await convertDepGraphToDepTree(
+    depGraph,
+    'gradle',
+  );
+  return depTree.dependencies as any;
+}
+
+export async function convertDepGraphToDepTree(
+  depGraph: DepGraph,
+  type: legacyCommon.SupportedPackageManagers,
+  pruneGraph = false,
+): Promise<legacy.DepTree> {
+  try {
+    const depTree = (await legacy.graphToDepTree(depGraph, type, {
+      deduplicateWithinTopLevelDeps: pruneGraph,
+    })) as DepTree;
+    return depTree;
+  } catch (e) {
+    const errorMessage = 'Failed converting depGraph to depTree';
+    throw new Error(errorMessage);
+  }
+}
+
 async function getAllDepsOneProject(
   root: string,
   targetFile: string,
@@ -317,14 +379,24 @@ async function getInjectedScriptPath(): Promise<{
   cleanupCallback?: () => void;
 }> {
   let initGradleAsset: string | null = null;
+  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
+  const isGradle3Plus =
+    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) >=
+    3;
   if (/index.js$/.test(__filename)) {
     // running from ./dist
     // path.join call has to be exactly in this format, needed by "pkg" to build a standalone Snyk CLI binary:
     // https://www.npmjs.com/package/pkg#detecting-assets-in-source-code
     initGradleAsset = path.join(__dirname, '../lib/init.gradle');
+    if (!isGradle3Plus) {
+      initGradleAsset = path.join(__dirname, '../lib/legacy-init.gradle');
+    }
   } else if (/index.ts$/.test(__filename)) {
     // running from ./lib
     initGradleAsset = path.join(__dirname, 'init.gradle');
+    if (!isGradle3Plus) {
+      initGradleAsset = path.join(__dirname, 'legacy-init.gradle');
+    }
   } else {
     throw new Error('Cannot locate Snyk init.gradle script');
   }
@@ -437,6 +509,17 @@ async function getAllDeps(
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
+    }
+    const { gradleVersion } = extractedJson?.versionBuildInfo;
+    // gradleVersion can be e.g. 6.4.1, below we are taking first number and validating.
+    const isGradle3Plus = gradleVersion && +gradleVersion?.substring(0, 1) >= 3;
+    // only gradle v3+ will begin with graph support while scanning projects with gradle task
+    if (isGradle3Plus) {
+      for (const projectId in extractedJson.projects) {
+        extractedJson.projects[projectId].depDict = await depsFromGraph(
+          extractedJson.projects[projectId].depDict,
+        );
+      }
     }
     return extractedJson;
   } catch (error0) {
