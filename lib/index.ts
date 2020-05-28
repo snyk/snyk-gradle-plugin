@@ -374,15 +374,14 @@ function leftPad(s: string, n: number) {
   return ' '.repeat(Math.max(n - s.length, 0)) + s;
 }
 
-async function getInjectedScriptPath(): Promise<{
+async function getInjectedScriptPath(
+  isGradle3Plus: boolean,
+): Promise<{
   injectedScripPath: string;
   cleanupCallback?: () => void;
 }> {
   let initGradleAsset: string | null = null;
-  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
-  const isGradle3Plus =
-    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) >=
-    3;
+
   if (/index.js$/.test(__filename)) {
     // running from ./dist
     // path.join call has to be exactly in this format, needed by "pkg" to build a standalone Snyk CLI binary:
@@ -493,7 +492,16 @@ async function getAllDeps(
     throw new Error('Gradle 1.x is not supported');
   }
 
-  const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath();
+  let isGradle3Plus = true;
+  const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
+  if (versionBuildInfo && versionBuildInfo.gradleVersion) {
+    // gradleVersion can be e.g. 6.4.1, below we are taking first number and validating.
+    isGradle3Plus = +versionBuildInfo.gradleVersion?.substring(0, 1) >= 3;
+  }
+
+  const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath(
+    isGradle3Plus,
+  );
   const args = buildArgs(root, targetFile, injectedScripPath, options);
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
@@ -513,9 +521,7 @@ async function getAllDeps(
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
     }
-    const { gradleVersion } = extractedJson?.versionBuildInfo;
-    // gradleVersion can be e.g. 6.4.1, below we are taking first number and validating.
-    const isGradle3Plus = gradleVersion && +gradleVersion?.substring(0, 1) >= 3;
+
     // only gradle v3+ will begin with graph support while scanning projects with gradle task
     if (isGradle3Plus) {
       for (const projectId in extractedJson.projects) {
