@@ -2,7 +2,6 @@ import * as path from 'path';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
 import { inspect } from '../../lib';
-import * as subProcess from '../../lib/sub-process';
 import { legacyPlugin as api } from '@snyk/cli-interface';
 
 test('multi-project, explicitly targeting a subproject build file', async (t) => {
@@ -443,20 +442,12 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
-  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
-  const isGradle3Plus =
-    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) >=
-    3;
-
-  // TODO @anthogez, once gradle v2 will be supported on new gradle task, drop this v3+ check
-  if (isGradle3Plus) {
-    t.notOk(
-      result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
-        'com.github.jitpack:root-proj'
-      ],
-      'dependency cycle for sub-project is not returned in results',
-    );
-  }
+  t.notOk(
+    result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
+      'com.github.jitpack:root-proj'
+    ],
+    'dependency cycle for sub-project is not returned in results',
+  );
 
   t.equal(
     result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
