@@ -205,7 +205,7 @@ async function depsFromGraph(graphData: any) {
 
   for (const key of Object.keys(graphData)) {
     const { name, version } = graphData[key];
-    const nodeId = name;
+    const nodeId = `${name}@${version}`;
     // adding nodes
     builder.addPkgNode(
       {
@@ -217,12 +217,12 @@ async function depsFromGraph(graphData: any) {
   }
 
   for (const key of Object.keys(graphData)) {
-    const { name, parentNames } = graphData[key];
-    const nodeId = name;
+    const { name, version, parentIds } = graphData[key];
+    const nodeId = `${name}@${version}`;
     // adding edges
-    if (parentNames && parentNames.length > 0) {
-      for (const parentName of parentNames) {
-        builder.connectDep(parentName, nodeId);
+    if (parentIds && parentIds.length > 0) {
+      for (const parentId of parentIds) {
+        builder.connectDep(parentId, nodeId);
       }
     } else {
       builder.connectDep('root-node', nodeId);
