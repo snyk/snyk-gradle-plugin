@@ -55,12 +55,13 @@ import java.util.regex.Matcher
 // }
 
 class SnykGraph {
-   def keys
    def nodes
-   SnykGraph() {
-       this.keys = []
-       this.nodes = [:] 
+   def rootId
+   SnykGraph(rootId) { 
+       this.nodes = [:]
+       this.rootId = rootId
    }
+   
    def setNode(key, value) {
        if(!key) {
            return
@@ -71,52 +72,56 @@ class SnykGraph {
        if(!value) {
            return
        }
-       def vertex = ['name': value.name, 'version': value.version, 'parentNames': []]
+       def vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
        this.nodes.put(key, vertex)
-       this.keys.push(key)
        return vertex
    }
 
-   def setEdge(parentName, childName) {
-       if(!parentName || !childName || parentName == childName) {
+   def setEdge(parentId, childId) {
+       if(!parentId || !childId || parentId == childId) {
            return
        }
        // root-node will be the graphlib root that first-level deps will be attached to
-       if(parentName != 'root-node') {
-            def parentNode = this.setNode(parentName, null)
+       if(parentId != this.rootId) {
+            def parentNode = this.setNode(parentId, null)
             if(!parentNode) {
                 return
             }
             // avoids cyclic
-            if(parentNode && parentNode.parentNames.find { it == childName } == childName) {
+            if(parentNode && parentNode.parentIds.contains(childId)) {
                 return
             }
        }
-       def childNode = this.setNode(childName, null)
-       if(!childNode) {
+       def childNode = this.setNode(childId, null)
+       if(!childNode || childNode.parentIds.contains(parentId)) {
            return
        }
-       childNode.parentNames.push(parentName)
+       childNode.parentIds.add(parentId)
    }
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentName) {
+def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
         deps.each { d -> 
-            def childName= "${d.moduleGroup}:${d.moduleName}"
-            if(!graph.nodes.get(childName)) {
+            def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+            if(!graph.nodes.get(childId)) {
                 def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
-                graph.setNode(childName, childDependency)
-                loadGraph(d.children, graph, childName)
-            } 
-            if(parentName) {
-                graph.setEdge(parentName, childName)
+                graph.setNode(childId, childDependency)
             }
+            //  In Gradle 2, there can be several instances of the same dependency present at each level,
+            //  each for a different configuration. In this case, we need to merge the dependencies.
+            if(!currentChain.contains(childId) && d.children) {
+                currentChain.add(childId)
+                loadGraph(d.children, graph, childId, currentChain)
+            }
+            graph.setEdge(parentId, childId)
         }
     }
 
 def getSnykGraph(Iterable deps) {
-    def graph = new SnykGraph()
-    loadGraph(deps, graph, 'root-node') 
+    def rootId = 'root-node'
+    def graph = new SnykGraph(rootId)
+    def currentChain = new HashSet()
+    loadGraph(deps, graph, rootId, currentChain) 
     return graph.nodes
 }
 

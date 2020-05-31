@@ -205,7 +205,7 @@ async function depsFromGraph(graphData: any) {
 
   for (const key of Object.keys(graphData)) {
     const { name, version } = graphData[key];
-    const nodeId = name;
+    const nodeId = `${name}@${version}`;
     // adding nodes
     builder.addPkgNode(
       {
@@ -217,12 +217,12 @@ async function depsFromGraph(graphData: any) {
   }
 
   for (const key of Object.keys(graphData)) {
-    const { name, parentNames } = graphData[key];
-    const nodeId = name;
+    const { name, version, parentIds } = graphData[key];
+    const nodeId = `${name}@${version}`;
     // adding edges
-    if (parentNames && parentNames.length > 0) {
-      for (const parentName of parentNames) {
-        builder.connectDep(parentName, nodeId);
+    if (parentIds && parentIds.length > 0) {
+      for (const parentId of parentIds) {
+        builder.connectDep(parentId, nodeId);
       }
     } else {
       builder.connectDep('root-node', nodeId);
@@ -374,9 +374,7 @@ function leftPad(s: string, n: number) {
   return ' '.repeat(Math.max(n - s.length, 0)) + s;
 }
 
-async function getInjectedScriptPath(
-  isGradle3Plus: boolean,
-): Promise<{
+async function getInjectedScriptPath(): Promise<{
   injectedScripPath: string;
   cleanupCallback?: () => void;
 }> {
@@ -387,15 +385,9 @@ async function getInjectedScriptPath(
     // path.join call has to be exactly in this format, needed by "pkg" to build a standalone Snyk CLI binary:
     // https://www.npmjs.com/package/pkg#detecting-assets-in-source-code
     initGradleAsset = path.join(__dirname, '../lib/init.gradle');
-    if (!isGradle3Plus) {
-      initGradleAsset = path.join(__dirname, '../lib/legacy.init.gradle');
-    }
   } else if (/index.ts$/.test(__filename)) {
     // running from ./lib
     initGradleAsset = path.join(__dirname, 'init.gradle');
-    if (!isGradle3Plus) {
-      initGradleAsset = path.join(__dirname, 'legacy.init.gradle');
-    }
   } else {
     throw new Error('Cannot locate Snyk init.gradle script');
   }
@@ -404,10 +396,7 @@ async function getInjectedScriptPath(
   // The Node filesystem in that case is not real: https://github.com/zeit/pkg#snapshot-filesystem
   // Copying the injectable script into a temp file.
   try {
-    let tmpInitGradle = tmp.fileSync({ postfix: '-init.gradle' });
-    if (!isGradle3Plus) {
-      tmpInitGradle = tmp.fileSync({ postfix: '-legacy.init.gradle' });
-    }
+    const tmpInitGradle = tmp.fileSync({ postfix: '-init.gradle' });
     fs.createReadStream(initGradleAsset).pipe(
       fs.createWriteStream('', { fd: tmpInitGradle!.fd }),
     );
@@ -492,16 +481,7 @@ async function getAllDeps(
     throw new Error('Gradle 1.x is not supported');
   }
 
-  let isGradle3Plus = true;
-  const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
-  if (versionBuildInfo && versionBuildInfo.gradleVersion) {
-    // gradleVersion can be e.g. 6.4.1, below we are taking first number and validating.
-    isGradle3Plus = +versionBuildInfo.gradleVersion?.substring(0, 1) >= 3;
-  }
-
-  const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath(
-    isGradle3Plus,
-  );
+  const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath();
   const args = buildArgs(root, targetFile, injectedScripPath, options);
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
@@ -522,14 +502,13 @@ async function getAllDeps(
       extractedJson.versionBuildInfo = versionBuildInfo;
     }
 
-    // only gradle v3+ will begin with graph support while scanning projects with gradle task
-    if (isGradle3Plus) {
-      for (const projectId in extractedJson.projects) {
-        extractedJson.projects[projectId].depDict = await depsFromGraph(
-          extractedJson.projects[projectId].depDict,
-        );
-      }
+    // processing snykGraph from gradle task to depGraph
+    for (const projectId in extractedJson.projects) {
+      extractedJson.projects[projectId].depDict = await depsFromGraph(
+        extractedJson.projects[projectId].depDict,
+      );
     }
+
     return extractedJson;
   } catch (error0) {
     const error: Error = error0;
