@@ -42,16 +42,14 @@ import java.util.regex.Matcher
 // }
 
 // interface GradleProjectInfo {
-//   depDict: DepDict;
+//   depGraph: DepGraph;
+//   snykGraph: { [name: string]: SnykGraph };
 //   targetFile: string;
 // }
-// export interface DepDict {
-//   [name: string]: DepTree;
-// }
-// interface DepTree {
+// export interface SnykGraph {
 //   name: string;
 //   version: string;
-//   dependencies?: DepDict;
+//   parentIds: string[];
 // }
 
 class SnykGraph {
@@ -258,10 +256,10 @@ allprojects { everyProj ->
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)
                         def gradleFirstLevelDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
-                        println('SNYKECHO converting the dependency graph to the DepTree format')
+                        println('SNYKECHO converting gradle graph to snyk-graph format')
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
-                            'depDict': getSnykGraph(gradleFirstLevelDeps)
+                            'snykGraph': getSnykGraph(gradleFirstLevelDeps)
                         ]
                     } else {
                         projectsDict[proj.name] = [

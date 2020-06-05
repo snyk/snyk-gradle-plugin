@@ -5,11 +5,10 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
-import { DepGraphBuilder, PkgManager, DepGraph, legacy } from '@snyk/dep-graph';
+import { DepGraphBuilder, PkgManager, DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import debugModule = require('debug');
 
-type DepTree = legacyCommon.DepTree;
 type ScannedProject = legacyCommon.ScannedProject;
 
 // To enable debugging output, use `snyk -d`
@@ -25,8 +24,6 @@ function debugLog(s: string) {
   }
   logger(s);
 }
-
-const packageFormatVersion = 'mvn:0.0.1';
 
 const isWin = /^win/.test(os.platform());
 const quot = isWin ? '"' : "'";
@@ -115,22 +112,24 @@ export async function inspect(
       scannedProjects,
     };
   }
-  const depTreeAndDepRootNames = await getAllDepsOneProject(
+  const depGraphAndDepRootNames = await getAllDepsOneProject(
     root,
     targetFile,
     options,
     subProject,
   );
-  if (depTreeAndDepRootNames.allSubProjectNames) {
+  if (depGraphAndDepRootNames.allSubProjectNames) {
     plugin.meta = plugin.meta || {};
-    plugin.meta.allSubProjectNames = depTreeAndDepRootNames.allSubProjectNames;
+    plugin.meta.allSubProjectNames = depGraphAndDepRootNames.allSubProjectNames;
   }
+
   return {
     plugin,
-    package: depTreeAndDepRootNames.depTree,
+    package: null, //TODO @boost: delete me once cli-interface makes it optional
+    dependencyGraph: depGraphAndDepRootNames.depGraph,
     meta: {
-      gradleProjectName: depTreeAndDepRootNames.gradleProjectName,
-      versionBuildInfo: depTreeAndDepRootNames.versionBuildInfo,
+      gradleProjectName: depGraphAndDepRootNames.gradleProjectName,
+      versionBuildInfo: depGraphAndDepRootNames.versionBuildInfo,
     },
   };
 }
@@ -155,12 +154,19 @@ export interface JsonDepsScriptResult {
   versionBuildInfo: VersionBuildInfo;
 }
 
+interface SnykGraph {
+  name: string;
+  version: string;
+  parentIds: string[];
+}
+
 interface ProjectsDict {
   [project: string]: GradleProjectInfo;
 }
 
 interface GradleProjectInfo {
-  depDict: { [name: string]: DepTree };
+  depGraph: DepGraph;
+  snykGraph: { [name: string]: SnykGraph }; // snykGraph from gradle task
   targetFile: string;
 }
 
@@ -192,22 +198,28 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
-async function depsFromGraph(graphData: any) {
-  if (!graphData || Object.keys(graphData).length === 0) {
-    return {};
-  }
-
+async function buildGraph(
+  snykGraph: { [dependencyId: string]: SnykGraph },
+  projectName: string,
+) {
   const pkgManager: PkgManager = { name: 'gradle' };
-  const builder = new DepGraphBuilder(pkgManager, {
-    name: 'root',
-    version: '1.0.0',
+  const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
+
+  const depGraphBuilder = new DepGraphBuilder(pkgManager, {
+    name: projectName,
+    version: '0.0.0',
   });
 
-  for (const key of Object.keys(graphData)) {
-    const { name, version } = graphData[key];
+  if (isEmptyGraph) {
+    return depGraphBuilder.build();
+  }
+
+  // prepare nodes
+  for (const key of Object.keys(snykGraph)) {
+    const { name, version } = snykGraph[key];
     const nodeId = `${name}@${version}`;
     // adding nodes
-    builder.addPkgNode(
+    depGraphBuilder.addPkgNode(
       {
         name,
         version,
@@ -216,41 +228,45 @@ async function depsFromGraph(graphData: any) {
     );
   }
 
-  for (const key of Object.keys(graphData)) {
-    const { name, version, parentIds } = graphData[key];
+  const connectionsChain = new Set();
+
+  // prepare edges
+  for (const key of Object.keys(snykGraph)) {
+    // avoid duplicated values
+    snykGraph[key].parentIds = Array.from(
+      new Set(snykGraph[key].parentIds).values(),
+    );
+
+    const { name, version, parentIds } = snykGraph[key];
     const nodeId = `${name}@${version}`;
+
     // adding edges
     if (parentIds && parentIds.length > 0) {
-      for (const parentId of parentIds) {
-        builder.connectDep(parentId, nodeId);
+      for (let parentId of parentIds) {
+        // case of missing assign version
+        if (!parentId.includes('@') && snykGraph[parentId]) {
+          const { name, version } = snykGraph[parentId];
+          parentId = `${name}@${version}`;
+        }
+        const isSameDependency: boolean = parentId === nodeId;
+        const existsConnection: boolean =
+          connectionsChain.has(`${parentId}|${nodeId}`) &&
+          connectionsChain.has(`${nodeId}|${parentId}`);
+
+        if (isSameDependency || existsConnection) {
+          continue;
+        }
+        depGraphBuilder.connectDep(parentId, nodeId);
+        // avoid cycles
+        connectionsChain.add(`${parentId}|${nodeId}`);
+        connectionsChain.add(`${nodeId}|${parentId}`);
       }
     } else {
-      builder.connectDep('root-node', nodeId);
+      depGraphBuilder.connectDep('root-node', nodeId);
     }
   }
-
-  const depGraph = builder.build();
-  const depTree: legacy.DepTree = await convertDepGraphToDepTree(
-    depGraph,
-    'gradle',
-  );
-  return depTree.dependencies as any;
-}
-
-export async function convertDepGraphToDepTree(
-  depGraph: DepGraph,
-  type: legacyCommon.SupportedPackageManagers,
-  pruneGraph = false,
-): Promise<legacy.DepTree> {
-  try {
-    const depTree = (await legacy.graphToDepTree(depGraph, type, {
-      deduplicateWithinTopLevelDeps: pruneGraph,
-    })) as DepTree;
-    return depTree;
-  } catch (e) {
-    const errorMessage = 'Failed converting depGraph to depTree';
-    throw new Error(errorMessage);
-  }
+  connectionsChain.clear();
+  return depGraphBuilder.build();
 }
 
 async function getAllDepsOneProject(
@@ -259,22 +275,17 @@ async function getAllDepsOneProject(
   options: Options,
   subProject?: string,
 ): Promise<{
-  depTree: DepTree;
+  depGraph: DepGraph;
   allSubProjectNames: string[];
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 }> {
-  const packageName = path.basename(root);
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
   if (subProject) {
-    const { depTree, meta } = getDepsSubProject(
-      root,
-      subProject,
-      allProjectDeps,
-    );
+    const { depGraph, meta } = getDepsSubProject(subProject, allProjectDeps);
     return {
-      depTree,
+      depGraph,
       allSubProjectNames,
       gradleProjectName: meta.gradleProjectName,
       versionBuildInfo: allProjectDeps.versionBuildInfo,
@@ -282,16 +293,9 @@ async function getAllDepsOneProject(
   }
 
   const { projects, defaultProject } = allProjectDeps;
-  const { depDict } = projects[defaultProject];
+  const { depGraph } = projects[defaultProject];
   return {
-    depTree: {
-      dependencies: depDict,
-      name: packageName,
-      // TODO: extract from project
-      // https://snyksec.atlassian.net/browse/BST-558
-      version: '0.0.0',
-      packageFormatVersion,
-    },
+    depGraph,
     allSubProjectNames,
     gradleProjectName: defaultProject,
     versionBuildInfo: allProjectDeps.versionBuildInfo,
@@ -299,28 +303,19 @@ async function getAllDepsOneProject(
 }
 
 function getDepsSubProject(
-  root: string,
   subProject: string,
   allProjectDeps: JsonDepsScriptResult,
-): { depTree: DepTree; meta: any } {
-  const packageName = `${path.basename(root)}/${subProject}`;
+): { depGraph: DepGraph; meta: any } {
   const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
 
   if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
     throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
   }
 
-  const depDict = allProjectDeps.projects[subProject].depDict;
+  const depGraph = allProjectDeps.projects[subProject].depGraph;
 
   return {
-    depTree: {
-      dependencies: depDict,
-      name: packageName,
-      // TODO: extract from project
-      // https://snyksec.atlassian.net/browse/BST-558
-      version: '0.0.0',
-      packageFormatVersion,
-    },
+    depGraph,
     meta: {
       gradleProjectName,
     },
@@ -332,13 +327,7 @@ async function getAllDepsAllProjects(
   options: Options,
 ): Promise<ScannedProject[]> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
-  const basePackageName = path.basename(root);
-  const packageVersion = '0.0.0';
   return Object.keys(allProjectDeps.projects).map((proj) => {
-    const packageName =
-      proj === allProjectDeps.defaultProject
-        ? basePackageName
-        : `${basePackageName}/${proj}`;
     const defaultProject = allProjectDeps.defaultProject;
     const gradleProjectName =
       proj === defaultProject ? defaultProject : `${defaultProject}/${proj}`;
@@ -350,12 +339,7 @@ async function getAllDepsAllProjects(
         gradleProjectName,
         versionBuildInfo: allProjectDeps.versionBuildInfo,
       },
-      depTree: {
-        dependencies: allProjectDeps.projects[proj].depDict,
-        name: packageName,
-        version: packageVersion,
-        packageFormatVersion,
-      },
+      depGraph: allProjectDeps.projects[proj].depGraph,
     };
   });
 }
@@ -503,10 +487,14 @@ async function getAllDeps(
     }
 
     // processing snykGraph from gradle task to depGraph
-    for (const projectId in extractedJson.projects) {
-      extractedJson.projects[projectId].depDict = await depsFromGraph(
-        extractedJson.projects[projectId].depDict,
+    for (const projectName in extractedJson.projects) {
+      const { snykGraph } = extractedJson.projects[projectName];
+      extractedJson.projects[projectName].depGraph = await buildGraph(
+        snykGraph,
+        projectName,
       );
+      // this property usage ends here
+      delete extractedJson.projects[projectName].snykGraph;
     }
 
     return extractedJson;
