@@ -61,6 +61,9 @@ export interface GradleInspectOptions {
   // Gradle process just never exits, from the Node's standpoint.
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
+
+  // The CLI will sometimes pre-create the `args` for the plugin
+  args?: string[];
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;

@@ -1,0 +1,25 @@
+{
+  "plugin": {
+    "name": "bundled:gradle",
+    "runtime": "unknown",
+    "targetFile": null,
+    "meta": {
+      "allSubProjectNames": ["multi-config"]
+    }
+  },
+  "package": {
+    "dependencies": {
+      "javax.servlet:servlet-api": {
+        "name": "javax.servlet:servlet-api",
+        "version": "2.5"
+      }
+    },
+    "name": ".",
+    "version": "0.0.0",
+    "packageFormatVersion": "mvn:0.0.1"
+  },
+  "meta": {
+    "gradleProjectName": "multi-config",
+    "versionBuildInfo": {}
+  }
+}

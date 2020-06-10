@@ -3,49 +3,30 @@ import { fixtureDir } from '../common';
 import { test } from 'tap';
 import { inspect } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
-
-const rootNoWrapper = fixtureDir('no wrapper');
+import * as fs from 'fs';
 
 test('run inspect()', async (t) => {
-  const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
-    'correct version found',
+  const fixturePath = fixtureDir('no wrapper');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
   );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'));
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
 });
 
 test('multi-config: both compile and runtime deps picked up by default', async (t) => {
-  const result = await inspect(
-    '.',
-    path.join(fixtureDir('multi-config'), 'build.gradle'),
+  const fixturePath = fixtureDir('multi-config');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
   );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'));
   t.equal(result.package.name, '.', 'returned project name is not sub-project');
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
-    'correct version of compile+runtime dep found',
-  );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
-    'correct version of compileOnly dep found',
-  );
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
   t.equal(
     Object.keys(result.package.dependencies!).length,
     6,
@@ -54,26 +35,23 @@ test('multi-config: both compile and runtime deps picked up by default', async (
 });
 
 test('multi-confg: only deps for specified conf are picked up (precise match)', async (t) => {
-  const result = await inspect(
-    '.',
-    path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { 'configuration-matching': '^compileOnly$' },
+  const fixturePath = fixtureDir('multi-config');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(
+      path.join(fixturePath, 'compileOnly-expectedTree.json'),
+      'utf-8',
+    ),
   );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'), {
+    'configuration-matching': '^compileOnly$',
+  });
   t.equal(result.package.name, '.', 'returned project name is not sub-project');
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
-    'no compile+runtime dep found',
-  );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
-    'correct version of compileOnly dep found',
-  );
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
   t.equal(
     Object.keys(result.package.dependencies!).length,
     1,
@@ -82,26 +60,23 @@ test('multi-confg: only deps for specified conf are picked up (precise match)', 
 });
 
 test('multi-config: only deps for specified conf are picked up (fuzzy match)', async (t) => {
-  const result = await inspect(
-    '.',
-    path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { 'configuration-matching': 'pileon' },
-  ); // case-insensitive regexp matching "compileOnly"
+  const fixturePath = fixtureDir('multi-config');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(
+      path.join(fixturePath, 'compileOnly-expectedTree.json'),
+      'utf-8',
+    ),
+  );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'), {
+    'configuration-matching': 'pileon',
+  }); // case-insensitive regexp matching "compileOnly"
   t.equal(result.package.name, '.', 'returned project name is not sub-project');
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
-    'no compile+runtime dep found',
-  );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
-    'correct version of compileOnly dep found',
-  );
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
   t.equal(
     Object.keys(result.package.dependencies!).length,
     1,
@@ -110,26 +85,23 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
 });
 
 test('multi-confg: only deps for specified conf are picked up (using legacy CLI argument)', async (t) => {
-  const result = await inspect(
-    '.',
-    path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { args: ['--configuration', 'compileOnly'] },
+  const fixturePath = fixtureDir('multi-config');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(
+      path.join(fixturePath, 'compileOnly-expectedTree.json'),
+      'utf-8',
+    ),
   );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'), {
+    args: ['--configuration', 'compileOnly'],
+  });
   t.equal(result.package.name, '.', 'returned project name is not sub-project');
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
-    'no compile+runtime dep found',
-  );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
-    'correct version of compileOnly dep found',
-  );
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
   t.equal(
     Object.keys(result.package.dependencies!).length,
     1,
@@ -146,9 +118,13 @@ test('tests for Gradle 3+', async (t0) => {
     t0.test(
       'multi-config: only deps for specified conf are picked up (attribute match)',
       async (t) => {
+        const fixturePath = fixtureDir('multi-config-attributes');
+        const expectedResult = JSON.parse(
+          fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
+        );
         const result = await inspect(
           '.',
-          path.join(fixtureDir('multi-config-attributes'), 'build.gradle'),
+          path.join(fixturePath, 'build.gradle'),
           { 'configuration-attributes': 'usage:java-api' },
         );
         t.match(
@@ -161,15 +137,10 @@ test('tests for Gradle 3+', async (t0) => {
           'multi-config-attributes',
           'returned new project name is not sub-project',
         );
-        t.notOk(
-          result.package.dependencies!['org.apache.commons:commons-lang3'],
-          'no runtime dep found',
-        );
-        t.equal(
-          result.package.dependencies!['commons-httpclient:commons-httpclient']
-            .version,
-          '3.1',
-          'correct version of api dep found',
+        t.deepEqual(
+          result,
+          expectedResult,
+          'plugin did not return expected result',
         );
         t.equal(
           Object.keys(result.package.dependencies!).length,
@@ -185,12 +156,13 @@ test('tests for Gradle 3+', async (t0) => {
         // This test is different from the previous because of specificAttr
         // When constructing a merged configuration, it's important to scan all the subprojects and discover all the
         // values of specificAttr to make sure the configuration
+        const fixturePath = fixtureDir('multi-config-attributes-subproject');
+        const expectedResult = JSON.parse(
+          fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
+        );
         const result = await inspect(
           '.',
-          path.join(
-            fixtureDir('multi-config-attributes-subproject'),
-            'build.gradle',
-          ),
+          path.join(fixturePath, 'build.gradle'),
           { 'configuration-attributes': 'usage:java-api' },
         ); // there's also specificAttr but it won't be picked up
         t.equal(
@@ -203,15 +175,10 @@ test('tests for Gradle 3+', async (t0) => {
           'root-proj',
           'returned project name is `root-proj`',
         );
-        t.notOk(
-          result.package.dependencies!['org.apache.commons:commons-lang3'],
-          'no runtime dep found',
-        );
-        t.equal(
-          result.package.dependencies!['commons-httpclient:commons-httpclient']
-            .version,
-          '3.1',
-          'correct version of api dep found',
+        t.deepEqual(
+          result,
+          expectedResult,
+          'plugin did not return expected result',
         );
         t.equal(
           Object.keys(result.package.dependencies!).length,
@@ -224,39 +191,22 @@ test('tests for Gradle 3+', async (t0) => {
 });
 
 test('custom dependency resolution via configurations.all is supported', async (t) => {
-  const result = await inspect(
-    '.',
-    path.join(fixtureDir('custom-resolution-strategy-via-all'), 'build.gradle'),
+  const fixturePath = fixtureDir('custom-resolution-strategy-via-all');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.2.0', // forced, normally 25.3.0
-    'overridden version found',
-  );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'));
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
+  // com.android.tools:annotations version is '25.2.0' forced, would normally be 25.3.0
 });
 
 test('custom dependency resolution via configurations* is NOT suppored (known problem)', async (t) => {
   // See the test case for more details
-  const result = await inspect(
-    '.',
-    path.join(
-      fixtureDir('custom-resolution-strategy-via-asterisk'),
-      'build.gradle',
-    ),
+  const fixturePath = fixtureDir('custom-resolution-strategy-via-asterisk');
+  const expectedResult = JSON.parse(
+    fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0', // 25.2.0 in NOT forced
-    'original version found',
-  );
+  const result = await inspect('.', path.join(fixturePath, 'build.gradle'));
+  t.deepEqual(result, expectedResult, 'plugin did not return expected result');
+  // com.android.tools:annotations version is not forced, and is 25.3.0
 });

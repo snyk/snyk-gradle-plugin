@@ -1,0 +1,293 @@
+{
+  "plugin": {
+    "name": "bundled:gradle",
+    "runtime": "unknown",
+    "targetFile": null,
+    "meta": {
+      "allSubProjectNames": ["gradle-kts"]
+    }
+  },
+  "package": {
+    "dependencies": {
+      "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+        "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+        "version": "1.3.21",
+        "dependencies": {
+          "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-stdlib": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                "version": "1.3.21"
+              },
+              "org.jetbrains:annotations": {
+                "name": "org.jetbrains:annotations",
+                "version": "13.0"
+              }
+            }
+          }
+        }
+      },
+      "org.jetbrains.kotlin:kotlin-compiler-embeddable": {
+        "name": "org.jetbrains.kotlin:kotlin-compiler-embeddable",
+        "version": "1.3.21",
+        "dependencies": {
+          "org.jetbrains.kotlin:kotlin-stdlib": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                "version": "1.3.21"
+              },
+              "org.jetbrains:annotations": {
+                "name": "org.jetbrains:annotations",
+                "version": "13.0"
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-reflect": {
+            "name": "org.jetbrains.kotlin:kotlin-reflect",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-script-runtime": {
+            "name": "org.jetbrains.kotlin:kotlin-script-runtime",
+            "version": "1.3.21"
+          },
+          "org.jetbrains.intellij.deps:trove4j": {
+            "name": "org.jetbrains.intellij.deps:trove4j",
+            "version": "1.0.20181211"
+          }
+        }
+      },
+      "org.jetbrains.kotlin:kotlin-reflect": {
+        "name": "org.jetbrains.kotlin:kotlin-reflect",
+        "version": "1.3.21",
+        "dependencies": {
+          "org.jetbrains.kotlin:kotlin-stdlib": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                "version": "1.3.21"
+              },
+              "org.jetbrains:annotations": {
+                "name": "org.jetbrains:annotations",
+                "version": "13.0"
+              }
+            }
+          }
+        }
+      },
+      "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+        "name": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable",
+        "version": "1.3.21"
+      },
+      "org.jetbrains.kotlin:kotlin-allopen": {
+        "name": "org.jetbrains.kotlin:kotlin-allopen",
+        "version": "1.3.21",
+        "dependencies": {
+          "org.jetbrains.kotlin:kotlin-stdlib": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                "version": "1.3.21"
+              },
+              "org.jetbrains:annotations": {
+                "name": "org.jetbrains:annotations",
+                "version": "13.0"
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-gradle-plugin-api": {
+            "name": "org.jetbrains.kotlin:kotlin-gradle-plugin-api",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              },
+              "org.jetbrains.kotlin:kotlin-native-utils": {
+                "name": "org.jetbrains.kotlin:kotlin-native-utils",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                    "version": "1.3.21",
+                    "dependencies": {
+                      "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                        "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                        "version": "1.3.21"
+                      },
+                      "org.jetbrains:annotations": {
+                        "name": "org.jetbrains:annotations",
+                        "version": "13.0"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-gradle-plugin-model": {
+            "name": "org.jetbrains.kotlin:kotlin-gradle-plugin-model",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "org.jetbrains.kotlin:kotlin-noarg": {
+        "name": "org.jetbrains.kotlin:kotlin-noarg",
+        "version": "1.3.21",
+        "dependencies": {
+          "org.jetbrains.kotlin:kotlin-stdlib": {
+            "name": "org.jetbrains.kotlin:kotlin-stdlib",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                "version": "1.3.21"
+              },
+              "org.jetbrains:annotations": {
+                "name": "org.jetbrains:annotations",
+                "version": "13.0"
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-gradle-plugin-api": {
+            "name": "org.jetbrains.kotlin:kotlin-gradle-plugin-api",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              },
+              "org.jetbrains.kotlin:kotlin-native-utils": {
+                "name": "org.jetbrains.kotlin:kotlin-native-utils",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                    "version": "1.3.21",
+                    "dependencies": {
+                      "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                        "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                        "version": "1.3.21"
+                      },
+                      "org.jetbrains:annotations": {
+                        "name": "org.jetbrains:annotations",
+                        "version": "13.0"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "org.jetbrains.kotlin:kotlin-gradle-plugin-model": {
+            "name": "org.jetbrains.kotlin:kotlin-gradle-plugin-model",
+            "version": "1.3.21",
+            "dependencies": {
+              "org.jetbrains.kotlin:kotlin-stdlib": {
+                "name": "org.jetbrains.kotlin:kotlin-stdlib",
+                "version": "1.3.21",
+                "dependencies": {
+                  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+                    "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+                    "version": "1.3.21"
+                  },
+                  "org.jetbrains:annotations": {
+                    "name": "org.jetbrains:annotations",
+                    "version": "13.0"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "name": ".",
+    "version": "0.0.0",
+    "packageFormatVersion": "mvn:0.0.1"
+  },
+  "meta": {
+    "gradleProjectName": "gradle-kts",
+    "versionBuildInfo": {}
+  }
+}

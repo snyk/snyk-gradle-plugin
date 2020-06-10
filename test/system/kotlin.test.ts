@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
 
@@ -19,9 +20,13 @@ if (kotlinSupported) {
     'build.gradle.kts files are supported',
     { timeout: 150000 },
     async (t) => {
+      const fixturePath = fixtureDir('gradle-kts');
+      const expectedResult = JSON.parse(
+        fs.readFileSync(path.join(fixturePath, 'expectedTree.json'), 'utf-8'),
+      );
       const result = await inspect(
         '.',
-        path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'),
+        path.join(fixturePath, 'build.gradle.kts'),
       );
       t.match(
         result.package.name,
@@ -33,14 +38,7 @@ if (kotlinSupported) {
         'gradle-kts',
         'returned new project name is not sub-project',
       );
-      t.equal(
-        result.package.dependencies!['org.jetbrains.kotlin:kotlin-stdlib-jdk8']
-          .dependencies!['org.jetbrains.kotlin:kotlin-stdlib'].dependencies![
-          'org.jetbrains.kotlin:kotlin-stdlib-common'
-        ].version,
-        '1.3.21',
-        'correct version of a dependency is found',
-      );
+      t.deepEqual(result, expectedResult, 'plugin returned expected result');
       t.equal(
         Object.keys(result.package.dependencies!).length,
         6,

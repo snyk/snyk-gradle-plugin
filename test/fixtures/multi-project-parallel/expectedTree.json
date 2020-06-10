@@ -1,0 +1,111 @@
+{
+  "plugin": {
+    "name": "bundled:gradle",
+    "runtime": "unknown",
+    "meta": {}
+  },
+  "scannedProjects": [
+    {
+      "meta": {
+        "gradleProjectName": "root-proj",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    },
+    {
+      "meta": {
+        "gradleProjectName": "root-proj/subproj0",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel/subproj0",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    },
+    {
+      "meta": {
+        "gradleProjectName": "root-proj/subproj1",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel/subproj1",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    },
+    {
+      "meta": {
+        "gradleProjectName": "root-proj/subproj2",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel/subproj2",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    },
+    {
+      "meta": {
+        "gradleProjectName": "root-proj/subproj3",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel/subproj3",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    },
+    {
+      "meta": {
+        "gradleProjectName": "root-proj/subproj4",
+        "versionBuildInfo": {}
+      },
+      "depTree": {
+        "dependencies": {
+          "io.swagger:swagger-annotations": {
+            "name": "io.swagger:swagger-annotations",
+            "version": "1.5.13"
+          }
+        },
+        "name": "multi-project-parallel/subproj4",
+        "version": "0.0.0",
+        "packageFormatVersion": "mvn:0.0.1"
+      }
+    }
+  ]
+}

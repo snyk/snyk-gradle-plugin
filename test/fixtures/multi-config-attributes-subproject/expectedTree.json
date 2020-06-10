@@ -1,0 +1,43 @@
+{
+  "plugin": {
+    "name": "bundled:gradle",
+    "runtime": "unknown",
+    "targetFile": null,
+    "meta": {
+      "allSubProjectNames": ["root-proj", "subproj"]
+    }
+  },
+  "package": {
+    "dependencies": {
+      "commons-httpclient:commons-httpclient": {
+        "name": "commons-httpclient:commons-httpclient",
+        "version": "3.1",
+        "dependencies": {
+          "commons-logging:commons-logging": {
+            "name": "commons-logging:commons-logging",
+            "version": "1.0.4"
+          },
+          "commons-codec:commons-codec": {
+            "name": "commons-codec:commons-codec",
+            "version": "1.2"
+          }
+        }
+      },
+      "com.google.guava:guava": {
+        "name": "com.google.guava:guava",
+        "version": "18.0"
+      },
+      "com.github.jitpack:subproj": {
+        "name": "com.github.jitpack:subproj",
+        "version": "unspecified"
+      }
+    },
+    "name": ".",
+    "version": "0.0.0",
+    "packageFormatVersion": "mvn:0.0.1"
+  },
+  "meta": {
+    "gradleProjectName": "root-proj",
+    "versionBuildInfo": {}
+  }
+}
