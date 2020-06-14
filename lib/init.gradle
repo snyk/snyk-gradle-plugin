@@ -259,7 +259,8 @@ allprojects { everyProj ->
                         println('SNYKECHO converting gradle graph to snyk-graph format')
                         projectsDict[proj.name] = [
                             'targetFile': findProject(proj.path).buildFile.toString(),
-                            'snykGraph': getSnykGraph(gradleFirstLevelDeps)
+                            'snykGraph': getSnykGraph(gradleFirstLevelDeps),
+                            'projectVersion': proj.version.toString()
                         ]
                     } else {
                         projectsDict[proj.name] = [

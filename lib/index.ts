@@ -168,6 +168,7 @@ interface GradleProjectInfo {
   depGraph: DepGraph;
   snykGraph: { [name: string]: SnykGraph }; // snykGraph from gradle task
   targetFile: string;
+  projectVersion: string;
 }
 
 function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
@@ -201,13 +202,14 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
 async function buildGraph(
   snykGraph: { [dependencyId: string]: SnykGraph },
   projectName: string,
+  projectVersion: string,
 ) {
   const pkgManager: PkgManager = { name: 'gradle' };
   const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
 
   const depGraphBuilder = new DepGraphBuilder(pkgManager, {
     name: projectName,
-    version: '0.0.0',
+    version: projectVersion || '0.0.0',
   });
 
   if (isEmptyGraph) {
@@ -487,14 +489,22 @@ async function getAllDeps(
     }
 
     // processing snykGraph from gradle task to depGraph
-    for (const projectName in extractedJson.projects) {
-      const { snykGraph } = extractedJson.projects[projectName];
-      extractedJson.projects[projectName].depGraph = await buildGraph(
+    for (const projectId in extractedJson.projects) {
+      const { snykGraph, projectVersion } = extractedJson.projects[projectId];
+
+      let projectName = path.basename(root);
+
+      if (projectId !== extractedJson.defaultProject) {
+        projectName = `${path.basename(root)}/${projectId}`;
+      }
+
+      extractedJson.projects[projectId].depGraph = await buildGraph(
         snykGraph,
         projectName,
+        projectVersion,
       );
       // this property usage ends here
-      delete extractedJson.projects[projectName].snykGraph;
+      delete extractedJson.projects[projectId].snykGraph;
     }
 
     return extractedJson;
