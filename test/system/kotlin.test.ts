@@ -24,7 +24,7 @@ if (kotlinSupported) {
         path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'),
       );
       t.match(
-        result.package.name,
+        result.dependencyGraph.rootPkg.name,
         '.',
         'returned project name is not sub-project',
       );
@@ -33,19 +33,25 @@ if (kotlinSupported) {
         'gradle-kts',
         'returned new project name is not sub-project',
       );
-      t.equal(
-        result.package.dependencies!['org.jetbrains.kotlin:kotlin-stdlib-jdk8']
-          .dependencies!['org.jetbrains.kotlin:kotlin-stdlib'].dependencies![
-          'org.jetbrains.kotlin:kotlin-stdlib-common'
-        ].version,
-        '1.3.21',
+
+      const pkgs = result.dependencyGraph.getDepPkgs();
+      const nodeIds: string[] = [];
+      Object.keys(pkgs).forEach((id) => {
+        nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+      });
+
+      t.ok(
+        nodeIds.indexOf('org.jetbrains.kotlin:kotlin-stdlib-common@1.3.21') !==
+          -1,
         'correct version of a dependency is found',
       );
-      t.equal(
-        Object.keys(result.package.dependencies!).length,
-        6,
-        'top level deps: 6',
+
+      // double parsing to have access to internal depGraph data, no methods available to properly
+      // return the deps nodeIds list that belongs to a node
+      const graphObject: any = JSON.parse(
+        JSON.stringify(result.dependencyGraph),
       );
+      t.ok(graphObject.graph.nodes[0].deps.length === 6, 'top level deps');
     },
   );
 }

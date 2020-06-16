@@ -9,24 +9,22 @@ test('multi-project, explicitly targeting a subproject build file', async (t) =>
     '.',
     path.join(fixtureDir('multi-project'), 'subproj', 'build.gradle'),
   );
-  t.equals(result.package.name, '.', 'root project is "."');
+  t.equals(result.dependencyGraph.rootPkg.name, '.', 'root project is "."');
   t.equals(
     result.meta!.gradleProjectName,
     'subproj',
-    'root project is "subproj"',
+    'sub project is "subproj"',
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -37,7 +35,7 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
     'subproj/build.gradle',
   );
   t.equals(
-    result.package.name,
+    result.dependencyGraph.rootPkg.name,
     'multi-project',
     'root project is "multi-project"',
   );
@@ -48,16 +46,14 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -67,19 +63,21 @@ test('multi-project, ran from a subproject directory', async (t) => {
     path.join(fixtureDir('multi-project'), 'subproj'),
     'build.gradle',
   );
-  t.equals(result.package.name, 'subproj', 'root project is "subproj"');
+  t.equals(
+    result.dependencyGraph.rootPkg.name,
+    'subproj',
+    'root project is "subproj"',
+  );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -94,22 +92,20 @@ test('multi-project: only sub-project has deps and they are returned', async (t)
     options,
   );
   t.match(
-    result.package.name,
-    '/subproj',
+    result.dependencyGraph.rootPkg.name,
+    './subproj',
     'sub project name is included in the root pkg name',
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -119,16 +115,24 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     '.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
   );
-  t.match(result.package.name, '.', 'returned project name is not sub-project');
+
+  t.match(
+    result.dependencyGraph.rootPkg.name,
+    '.',
+    'returned project name is not sub-project',
+  );
+
   t.match(
     result.meta!.gradleProjectName,
     'root-proj',
     'returned new project name is not sub-project',
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
-  if (result.package.dependencies) {
-    t.ok(Object.keys(result.package.dependencies).length === 0);
-  }
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length === 0, 'no dependencies');
 });
 
 let wrapperIsCompatibleWithJvm = true;
@@ -148,7 +152,7 @@ if (wrapperIsCompatibleWithJvm) {
       path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'),
     );
     t.match(
-      result.package.name,
+      result.dependencyGraph.rootPkg.name,
       '.',
       'returned project name is not sub-project',
     );
@@ -162,9 +166,10 @@ if (wrapperIsCompatibleWithJvm) {
       'root-proj',
       'subproj',
     ]);
-    if (result.package.dependencies) {
-      t.ok(Object.keys(result.package.dependencies).length === 0);
-    }
+    // double parsing to have access to internal depGraph data, no methods available to properly
+    // return the deps nodeIds list that belongs to a node
+    const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+    t.ok(graphObject.graph.nodes[0].deps.length === 0, 'no dependencies');
   });
 }
 
@@ -175,7 +180,7 @@ test('multi-project: parallel is handled correctly', async (t) => {
     'build.gradle',
   );
   t.match(
-    result.package.name,
+    result.dependencyGraph.rootPkg.name,
     'multi-project-parallel',
     'expected project name',
   );
@@ -184,7 +189,11 @@ test('multi-project: parallel is handled correctly', async (t) => {
     'root-proj',
     'expected new project name',
   );
-  t.ok(result.package.dependencies);
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length > 0, 'have dependencies');
 });
 
 test('multi-project: only sub-project has deps and they are returned space needs trimming', async (t) => {
@@ -200,21 +209,19 @@ test('multi-project: only sub-project has deps and they are returned space needs
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
   t.match(
-    result.package.name,
+    result.dependencyGraph.rootPkg.name,
     '/subproj',
     'sub project name is included in the root pkg name',
   );
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -228,20 +235,22 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
   // It's an array, so we have to scan
   t.equal(result.scannedProjects.length, 2);
   for (const p of result.scannedProjects) {
-    if (p.depTree.name === '.') {
+    if (p.depGraph.rootPkg.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      if (p.depTree.dependencies) {
-        t.ok(
-          Object.keys(p.depTree.dependencies).length === 0,
-          'no dependencies for the main depRoot',
-        );
-      }
+
+      // double parsing to have access to internal depGraph data, no methods available to properly
+      // return the deps nodeIds list that belongs to a node
+      const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
+      t.ok(
+        graphObject.graph.nodes[0].deps.length === 0,
+        'no dependencies for the main depRoot',
+      );
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     } else {
       t.equal(
-        p.depTree.name,
+        p.depGraph.rootPkg.name,
         './subproj',
         'sub project name is included in the root pkg name',
       );
@@ -250,17 +259,18 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
         'root-proj/subproj',
         'new sub project name is included in the root pkg name',
       );
-      t.equal(
-        p.depTree.dependencies!['com.android.tools.build:builder']
-          .dependencies!['com.android.tools.build:manifest-merger']
-          .dependencies!['com.android.tools:sdk-common'].dependencies![
-          'com.android.tools.build:builder-test-api'
-        ].dependencies!['com.android.tools.ddms:ddmlib'].dependencies![
-          'com.android.tools:common'
-        ].dependencies!['com.android.tools:annotations'].version,
-        '25.3.0',
+
+      const pkgs = p.depGraph.getDepPkgs();
+      const nodeIds: string[] = [];
+      Object.keys(pkgs).forEach((id) => {
+        nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+      });
+
+      t.ok(
+        nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
         'correct version found',
       );
+
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
@@ -275,16 +285,18 @@ test('single-project: array of one is returned with allSubProjects flag', async 
     { allSubProjects: true },
   );
   t.equal(result.scannedProjects.length, 1);
-  t.equal(result.scannedProjects[0].depTree.name, '.');
+  t.equal(result.scannedProjects[0].depGraph.rootPkg.name, '.');
   t.equal(
     result.scannedProjects[0].meta!.gradleProjectName,
     'api-configuration',
   );
-  t.ok(
-    result.scannedProjects[0].depTree.dependencies![
-      'commons-httpclient:commons-httpclient'
-    ],
-  );
+
+  const pkgs = result.scannedProjects[0].depGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+  t.ok(nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1);
 });
 
 test('multi-project-some-unscannable: allSubProjects fails', async (t) => {
@@ -314,21 +326,19 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
   ]);
 
   t.match(
-    result.package.name,
+    result.dependencyGraph.rootPkg.name,
     '/subproj',
     'sub project name is included in the root pkg name',
   );
 
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -353,7 +363,7 @@ test('multi-project: parallel with allSubProjects produces multiple results with
   const names = new Set<string>();
   const newNames = new Set<string>();
   for (const p of result.scannedProjects) {
-    names.add(p.depTree.name!);
+    names.add(p.depGraph.rootPkg.name!);
     newNames.add(p.meta!.gradleProjectName);
     t.ok(p.meta!.versionBuildInfo.gradleVersion !== null);
   }
@@ -390,20 +400,23 @@ test('multi-project: allSubProjects + configuration', async (t) => {
   // It's an array, so we have to scan
   t.equal(result.scannedProjects.length, 2);
   for (const p of result.scannedProjects) {
-    if (p.depTree.name === '.') {
+    if (p.depGraph.rootPkg.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      if (p.depTree.dependencies) {
-        t.ok(
-          Object.keys(p.depTree.dependencies).length === 0,
-          'no dependencies for the main depRoot',
-        );
-      }
+
+      // double parsing to have access to internal depGraph data, no methods available to properly
+      // return the deps nodeIds list that belongs to a node
+      const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
+      t.ok(
+        graphObject.graph.nodes[0].deps.length === 0,
+        'no dependencies for the main depRoot',
+      );
+
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     } else {
       t.equal(
-        p.depTree.name,
+        p.depGraph.rootPkg.name,
         './subproj',
         'sub project name is included in the root pkg name',
       );
@@ -412,15 +425,20 @@ test('multi-project: allSubProjects + configuration', async (t) => {
         'root-proj/subproj',
         'new sub project name is included in the root pkg name',
       );
-      t.equal(
-        p.depTree.dependencies!['axis:axis'].version,
-        '1.3',
-        'correct version found',
-      );
-      t.notOk(
-        p.depTree.dependencies!['com.android.tools.build:builder'],
+
+      const pkgs = p.depGraph.getDepPkgs();
+      const nodeIds: string[] = [];
+      Object.keys(pkgs).forEach((id) => {
+        nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+      });
+
+      t.ok(nodeIds.indexOf('axis:axis@1.3') !== -1, 'correct version found');
+
+      t.ok(
+        nodeIds.indexOf('com.android.tools.build:builder@2.3.0') === -1,
         'non-compileOnly dependency is not found',
       );
+
       t.notOk(p.targetFile, 'no target file returned'); // see targetFileFilteredForCompatibility
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // t.match(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
@@ -434,7 +452,7 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
     path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
     {},
   );
-  t.equal(result.package.name, '.', 'root project name is "."');
+  t.equal(result.dependencyGraph.rootPkg.name, '.', 'root project name is "."');
   t.equal(
     result.meta!.gradleProjectName,
     'root-proj',
@@ -442,26 +460,20 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
   );
   t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
 
-  t.notOk(
-    result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
-      'com.github.jitpack:root-proj'
-    ],
-    'dependency cycle for sub-project is not returned in results',
-  );
-
-  t.equal(
-    result.package.dependencies!['com.github.jitpack:subproj'].dependencies![
-      'com.android.tools.build:builder'
-    ].dependencies!['com.android.tools.build:manifest-merger'].dependencies![
-      'com.android.tools:sdk-common'
-    ].dependencies!['com.android.tools.build:builder-test-api'].dependencies![
-      'com.android.tools.ddms:ddmlib'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
-    'a dependency chain is found through subproj dependency',
-  );
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  for (const node of graphObject.graph.nodes) {
+    const { nodeId, deps } = node;
+    if (nodeId === 'com.github.jitpack:subproj@unspecified') {
+      const noCycle =
+        deps.indexOf('com.github.jitpack:root-proj@unspecified') === -1;
+      t.ok(
+        noCycle,
+        'dependency cycle for sub-project is not returned in results',
+      );
+    }
+  }
 });
 
 test('multi-project-dependency-cycle: scanning all subprojects works fine', async (t) => {
@@ -472,15 +484,21 @@ test('multi-project-dependency-cycle: scanning all subprojects works fine', asyn
   );
   // It's an array, so we have to scan
   t.equal(result.scannedProjects.length, 2);
+
   for (const p of result.scannedProjects) {
-    if (p.depTree.name === '.') {
+    if (p.depGraph.rootPkg.name === '.') {
       t.equal(p.meta!.gradleProjectName, 'root-proj', 'new project name');
-      t.ok(
-        p.depTree.dependencies!['com.github.jitpack:subproj'].dependencies![
-          'com.android.tools.build:builder'
-        ],
-        'dependency cycle is not returned for the main',
-      );
+      // double parsing to have access to internal depGraph data, no methods available to properly
+      // return the deps nodeIds list that belongs to a node
+      const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
+      for (const node of graphObject.graph.nodes) {
+        const { nodeId, deps } = node;
+        if (nodeId === 'com.github.jitpack:subproj@unspecified') {
+          const noCycle =
+            deps.indexOf('com.github.jitpack:root-proj@unspecified') === -1;
+          t.ok(noCycle, 'dependency cycle is not returned for the main');
+        }
+      }
     }
   }
 });

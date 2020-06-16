@@ -8,14 +8,14 @@ const rootNoWrapper = fixtureDir('no wrapper');
 
 test('run inspect()', async (t) => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
 });
@@ -25,60 +25,76 @@ test('multi-config: both compile and runtime deps picked up by default', async (
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
   );
-  t.equal(result.package.name, '.', 'returned project name is not sub-project');
+  t.equal(
+    result.dependencyGraph.rootPkg.name,
+    '.',
+    'returned project name is not sub-project',
+  );
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0',
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version of compile+runtime dep found',
   );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
+
+  t.ok(
+    nodeIds.indexOf('javax.servlet:servlet-api@2.5') !== -1,
     'correct version of compileOnly dep found',
   );
-  t.equal(
-    Object.keys(result.package.dependencies!).length,
-    6,
-    'top level deps: 6',
-  );
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length === 6, 'top level deps');
 });
 
-test('multi-confg: only deps for specified conf are picked up (precise match)', async (t) => {
+test('multi-config: only deps for specified conf are picked up (precise match)', async (t) => {
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { 'configuration-matching': '^compileOnly$' },
   );
-  t.equal(result.package.name, '.', 'returned project name is not sub-project');
+  t.equal(
+    result.dependencyGraph.rootPkg.name,
+    '.',
+    'returned project name is not sub-project',
+  );
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools.build:builder@2.3.0') === -1,
     'no compile+runtime dep found',
   );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
+
+  t.ok(
+    nodeIds.indexOf('javax.servlet:servlet-api@2.5') !== -1,
     'correct version of compileOnly dep found',
   );
-  t.equal(
-    Object.keys(result.package.dependencies!).length,
-    1,
-    'top level deps: 1',
-  );
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length === 1, 'top level deps 1');
 });
 
 test('multi-config: only deps for specified conf are picked up (fuzzy match)', async (t) => {
@@ -87,54 +103,75 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { 'configuration-matching': 'pileon' },
   ); // case-insensitive regexp matching "compileOnly"
-  t.equal(result.package.name, '.', 'returned project name is not sub-project');
+  t.equal(
+    result.dependencyGraph.rootPkg.name,
+    '.',
+    'returned project name is not sub-project',
+  );
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools.build:builder@2.3.0') === -1,
     'no compile+runtime dep found',
   );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
+
+  t.ok(
+    nodeIds.indexOf('javax.servlet:servlet-api@2.5') !== -1,
     'correct version of compileOnly dep found',
   );
-  t.equal(
-    Object.keys(result.package.dependencies!).length,
-    1,
-    'top level deps: 1',
-  );
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length === 1, 'top level deps 1');
 });
 
-test('multi-confg: only deps for specified conf are picked up (using legacy CLI argument)', async (t) => {
+test('multi-config: only deps for specified conf are picked up (using legacy CLI argument)', async (t) => {
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { args: ['--configuration', 'compileOnly'] },
   );
-  t.equal(result.package.name, '.', 'returned project name is not sub-project');
+  t.equal(
+    result.dependencyGraph.rootPkg.name,
+    '.',
+    'returned project name is not sub-project',
+  );
   t.equal(
     result.meta!.gradleProjectName,
     'multi-config',
     'returned new project name is not sub-project',
   );
-  t.notOk(
-    result.package.dependencies!['com.android.tools.build:builder'],
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools.build:builder@2.3.0') === -1,
     'no compile+runtime dep found',
   );
-  t.equal(
-    result.package.dependencies!['javax.servlet:servlet-api'].version,
-    '2.5',
+
+  t.ok(
+    nodeIds.indexOf('javax.servlet:servlet-api@2.5') !== -1,
     'correct version of compileOnly dep found',
   );
-  t.equal(
-    Object.keys(result.package.dependencies!).length,
-    1,
-    'top level deps: 1',
-  );
+
+  // double parsing to have access to internal depGraph data, no methods available to properly
+  // return the deps nodeIds list that belongs to a node
+  const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
+  t.ok(graphObject.graph.nodes[0].deps.length === 1, 'top level deps 1');
 });
 
 test('tests for Gradle 3+', async (t0) => {
@@ -152,7 +189,7 @@ test('tests for Gradle 3+', async (t0) => {
           { 'configuration-attributes': 'usage:java-api' },
         );
         t.match(
-          result.package.name,
+          result.dependencyGraph.rootPkg.name,
           '.',
           'returned project name is not sub-project',
         );
@@ -161,21 +198,29 @@ test('tests for Gradle 3+', async (t0) => {
           'multi-config-attributes',
           'returned new project name is not sub-project',
         );
-        t.notOk(
-          result.package.dependencies!['org.apache.commons:commons-lang3'],
+
+        const pkgs = result.dependencyGraph.getDepPkgs();
+        const nodeIds: string[] = [];
+        Object.keys(pkgs).forEach((id) => {
+          nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+        });
+
+        t.ok(
+          nodeIds.indexOf('org.apache.commons:commons-lang3@3.8.1') === -1,
           'no runtime dep found',
         );
-        t.equal(
-          result.package.dependencies!['commons-httpclient:commons-httpclient']
-            .version,
-          '3.1',
+
+        t.ok(
+          nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1,
           'correct version of api dep found',
         );
-        t.equal(
-          Object.keys(result.package.dependencies!).length,
-          2,
-          'top level deps: 2',
-        ); // 1 with good attr, 1 with no attr
+
+        // double parsing to have access to internal depGraph data, no methods available to properly
+        // return the deps nodeIds list that belongs to a node
+        const graphObject: any = JSON.parse(
+          JSON.stringify(result.dependencyGraph),
+        );
+        t.ok(graphObject.graph.nodes[0].deps.length === 2, 'top level deps 2'); // 1 with good attr, 1 with no attr
       },
     );
 
@@ -194,7 +239,7 @@ test('tests for Gradle 3+', async (t0) => {
           { 'configuration-attributes': 'usage:java-api' },
         ); // there's also specificAttr but it won't be picked up
         t.equal(
-          result.package.name,
+          result.dependencyGraph.rootPkg.name,
           '.',
           'returned project name is not sub-project',
         );
@@ -203,21 +248,29 @@ test('tests for Gradle 3+', async (t0) => {
           'root-proj',
           'returned project name is `root-proj`',
         );
-        t.notOk(
-          result.package.dependencies!['org.apache.commons:commons-lang3'],
+
+        const pkgs = result.dependencyGraph.getDepPkgs();
+        const nodeIds: string[] = [];
+        Object.keys(pkgs).forEach((id) => {
+          nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+        });
+
+        t.ok(
+          nodeIds.indexOf('org.apache.commons:commons-lang3') === -1,
           'no runtime dep found',
         );
-        t.equal(
-          result.package.dependencies!['commons-httpclient:commons-httpclient']
-            .version,
-          '3.1',
+
+        t.ok(
+          nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1,
           'correct version of api dep found',
         );
-        t.equal(
-          Object.keys(result.package.dependencies!).length,
-          3,
-          'top level deps: 3',
-        ); // 1 with good attr, 1 with no attr
+
+        // double parsing to have access to internal depGraph data, no methods available to properly
+        // return the deps nodeIds list that belongs to a node
+        const graphObject: any = JSON.parse(
+          JSON.stringify(result.dependencyGraph),
+        );
+        t.ok(graphObject.graph.nodes[0].deps.length === 3, 'top level deps 3');
       },
     );
   }
@@ -228,14 +281,15 @@ test('custom dependency resolution via configurations.all is supported', async (
     '.',
     path.join(fixtureDir('custom-resolution-strategy-via-all'), 'build.gradle'),
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.2.0', // forced, normally 25.3.0
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.2.0') !== -1, //forced, normally 25.3.0
     'overridden version found',
   );
 });
@@ -249,14 +303,15 @@ test('custom dependency resolution via configurations* is NOT suppored (known pr
       'build.gradle',
     ),
   );
-  t.equal(
-    result.package.dependencies!['com.android.tools.build:builder']
-      .dependencies!['com.android.tools:sdklib'].dependencies![
-      'com.android.tools:repository'
-    ].dependencies!['com.android.tools:common'].dependencies![
-      'com.android.tools:annotations'
-    ].version,
-    '25.3.0', // 25.2.0 in NOT forced
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1, // 25.2.0 in NOT forced
     'original version found',
   );
 });
