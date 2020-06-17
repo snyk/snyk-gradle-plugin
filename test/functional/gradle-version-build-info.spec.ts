@@ -116,7 +116,7 @@ describe('validate gradle version build info', () => {
     );
     expect(versionBuildInfo.metaBuildVersion.os).toBe('Mac OS X 10.15 x86_64');
   });
-  it('should not extract gradle -v output info when output is malformed', async (t) => {
+  it('should not extract gradle -v output info when output is malformed', async () => {
     const expectedGradleOutput = 'malformed data';
     const versionBuildInfo = testableMethods.getVersionBuildInfo(
       expectedGradleOutput,
