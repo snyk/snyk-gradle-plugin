@@ -6,7 +6,7 @@ import { error } from 'util';
 const isWin = /^win/.test(os.platform());
 const quot = isWin ? '"' : "'";
 
-describe('', () => {
+describe('test gradle plugin', () => {
   it('check build args with array (new configuration arg)', async () => {
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
       'configuration-matching': 'confRegex',
