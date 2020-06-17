@@ -8,11 +8,12 @@ const quot = isWin ? '"' : "'";
 
 describe('test gradle plugin', () => {
   it('check build args with array (new configuration arg)', async () => {
+    // Setup
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
       'configuration-matching': 'confRegex',
       args: ['--build-file', 'build.gradle'],
     });
-    expect(result).toEqual([
+    const expectedResult = [
       'snykResolvedDepsJson',
       '-q',
       `-Pconfiguration=${quot}confRegex${quot}`,
@@ -23,16 +24,19 @@ describe('test gradle plugin', () => {
       '-I /tmp/init.gradle',
       '--build-file',
       'build.gradle',
-    ]);
+    ];
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 
-  it('check build args with array (new configuration arg) with --deamon', async () => {
+  it('check build args with array (new configuration arg) with --daemon', async () => {
+    // Setup
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
       daemon: true,
       'configuration-matching': 'confRegex',
       args: ['--build-file', 'build.gradle'],
     });
-    expect(result).toEqual([
+    const expectedResult = [
       'snykResolvedDepsJson',
       '-q',
       `-Pconfiguration=${quot}confRegex${quot}`,
@@ -42,14 +46,17 @@ describe('test gradle plugin', () => {
       '-I /tmp/init.gradle',
       '--build-file',
       'build.gradle',
-    ]);
+    ];
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 
   it('check build args with array (legacy configuration arg)', async () => {
+    // Setup
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
       args: ['--build-file', 'build.gradle', '--configuration=compile'],
     });
-    expect(result).toEqual([
+    const expectedResult = [
       'snykResolvedDepsJson',
       '-q',
       '--no-daemon',
@@ -60,11 +67,18 @@ describe('test gradle plugin', () => {
       '--build-file',
       'build.gradle',
       `-Pconfiguration=${quot}^compile$${quot}`,
-    ]);
+    ];
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 
   it('check build args with scan all subprojects', async () => {
-    const mockResult = [
+    // Setup
+    const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
+      allSubProjects: true,
+      args: ['--build-file', 'build.gradle', '--configuration', 'compile'],
+    });
+    const expectedResult = [
       'snykResolvedDepsJson',
       '-q',
       '--no-daemon',
@@ -76,47 +90,53 @@ describe('test gradle plugin', () => {
       `-Pconfiguration=${quot}^compile$${quot}`,
       '', // this is a harmless artifact of argument transformation
     ];
-    try {
-      await testableMethods.buildArgs('.', null, '/tmp/init.gradle', {
-        allSubProjects: true,
-        args: ['--build-file', 'build.gradle', '--configuration', 'compile'],
-      });
-    } catch(e) {
-      expect(e.message).toEqual(mockResult);
-    }
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 
   it('extractJsonFromScriptOutput returns JSONDEPS only', async () => {
+    // Setup
     const result = testableMethods.extractJsonFromScriptOutput(`Mr Gradle says hello
 la dee da, la dee da
 JSONDEPS {"hello": "world"}
 some other noise`);
-    expect(result).toEqual({ hello: 'world' });
+    const expectedResult = { hello: 'world' };
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 
   it('extractJsonFromScriptOutput throws on no JSONDEPS', async () => {
+    // Setup
     const output = 'something else entirely';
     try {
-    await testableMethods.extractJsonFromScriptOutput(output);
-  } catch (e) {
-    expect(e.message).toContain(
-      `No line prefixed with "JSONDEPS " was returned; full output:\n${output}`,
-    );
-  }
+      // Exercise
+      testableMethods.extractJsonFromScriptOutput(output);
+    } catch (e) {
+      // Verify `expected error message and output`
+      expect(e.message).toBe(
+        `No line prefixed with "JSONDEPS " was returned; full output:\n${output}`,
+      );
+    }
   });
 
   it('extractJsonFromScriptOutput throws on multiple JSONDEPS', async () => {
+    // Setup
     const output = 'JSONDEPS {"hello": "world"}\nJSONDEPS ["one more thing"]';
     try {
-      await testableMethods.extractJsonFromScriptOutput(output)
-    } catch(e) {
-      expect(e.message).toContain('More than one line with "JSONDEPS " prefix was returned');
-    };
+      // Exercise
+      testableMethods.extractJsonFromScriptOutput(output);
+    } catch (e) {
+      // Verify `expected error message`
+      expect(e.message).toBe(
+        'More than one line with "JSONDEPS " prefix was returned',
+      );
+    }
   });
 
   it('check build args (plain console output)', async () => {
+    // Setup
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {});
-    expect(result).toEqual([
+    const expectedResult = [
       'snykResolvedDepsJson',
       '-q',
       '--no-daemon',
@@ -124,6 +144,8 @@ some other noise`);
       '-Dorg.gradle.console=plain',
       '-PonlySubProject=.',
       '-I /tmp/init.gradle',
-    ]);
+    ];
+    // Verify
+    expect(result).toEqual(expectedResult);
   });
 });
