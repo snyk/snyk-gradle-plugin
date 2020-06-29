@@ -216,33 +216,33 @@ async function buildGraph(
     return depGraphBuilder.build();
   }
 
-  // prepare nodes
-  for (const key of Object.keys(snykGraph)) {
-    const { name, version } = snykGraph[key];
+  const childrenChain = new Map();
+  const ancestorsChain = new Map();
+
+  for (const id of Object.keys(snykGraph)) {
+    const { name, version, parentIds } = snykGraph[id];
     const nodeId = `${name}@${version}`;
-    // adding nodes
-    depGraphBuilder.addPkgNode(
-      {
-        name,
-        version,
-      },
-      nodeId,
-    );
+
+    depGraphBuilder.addPkgNode({ name, version }, nodeId);
+
+    if (parentIds) {
+      for (const parentId of parentIds) {
+        const currentChildren = childrenChain.get(parentId) || [];
+        const currentAncestors = ancestorsChain.get(parentId) || [];
+        childrenChain.set(parentId, [...currentChildren, nodeId]);
+        ancestorsChain.set(nodeId, [...currentAncestors, parentId]);
+      }
+    }
   }
 
-  const connectionsChain = new Set();
-
-  // prepare edges
-  for (const key of Object.keys(snykGraph)) {
-    // avoid duplicated values
-    snykGraph[key].parentIds = Array.from(
-      new Set(snykGraph[key].parentIds).values(),
+  // Edges
+  for (const id of Object.keys(snykGraph)) {
+    snykGraph[id].parentIds = Array.from(
+      new Set(snykGraph[id].parentIds).values(),
     );
-
-    const { name, version, parentIds } = snykGraph[key];
+    const { name, version, parentIds } = snykGraph[id];
     const nodeId = `${name}@${version}`;
 
-    // adding edges
     if (parentIds && parentIds.length > 0) {
       for (let parentId of parentIds) {
         // case of missing assign version
@@ -250,25 +250,57 @@ async function buildGraph(
           const { name, version } = snykGraph[parentId];
           parentId = `${name}@${version}`;
         }
-        const isSameDependency: boolean = parentId === nodeId;
-        const existsConnection: boolean =
-          connectionsChain.has(`${parentId}|${nodeId}`) &&
-          connectionsChain.has(`${nodeId}|${parentId}`);
 
-        if (isSameDependency || existsConnection) {
+        if (parentId === nodeId) {
+          continue;
+        }
+        const alreadyVisited = new Set();
+        const hasCycles = findCycles(
+          ancestorsChain,
+          parentId,
+          nodeId,
+          alreadyVisited,
+        );
+
+        if (hasCycles) {
           continue;
         }
         depGraphBuilder.connectDep(parentId, nodeId);
-        // avoid cycles
-        connectionsChain.add(`${parentId}|${nodeId}`);
-        connectionsChain.add(`${nodeId}|${parentId}`);
       }
     } else {
       depGraphBuilder.connectDep('root-node', nodeId);
     }
   }
-  connectionsChain.clear();
+  childrenChain.clear();
+  ancestorsChain.clear();
   return depGraphBuilder.build();
+}
+
+function findCycles(ancestorsChain, parentId, currentNode, alreadyVisited) {
+  if (ancestorsChain && parentId && currentNode) {
+    const currentAncestors = ancestorsChain.get(parentId);
+    if (parentId === currentNode) {
+      return true;
+    }
+    alreadyVisited.add(parentId);
+    if (currentAncestors) {
+      if (currentAncestors.includes(currentNode)) {
+        return true;
+      }
+      for (const ancestor of currentAncestors) {
+        if (!alreadyVisited.has(ancestor) && ancestor !== currentNode) {
+          alreadyVisited.add(ancestor);
+          return findCycles(
+            ancestorsChain,
+            ancestor,
+            currentNode,
+            alreadyVisited,
+          );
+        }
+      }
+    }
+  }
+  return false;
 }
 
 async function getAllDepsOneProject(
