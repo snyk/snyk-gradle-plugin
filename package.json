@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@snyk/cli-interface": "2.8.0",
-    "@snyk/dep-graph": "^1.17.0",
+    "@snyk/dep-graph": "^1.19.0",
     "@types/debug": "^4.1.4",
     "chalk": "^3.0.0",
     "debug": "^4.1.1",
