@@ -39,7 +39,7 @@ jobs:
     node_js: 8
     env: GRADLE_VERSION=6.0 JDK=11 Node.js=8
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -47,7 +47,7 @@ jobs:
     node_js: 10
     env: GRADLE_VERSION=6.0 JDK=12 Node.js=10
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -55,7 +55,7 @@ jobs:
     node_js: 12
     env: GRADLE_VERSION=6.0 JDK=13 Node.js=12
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -64,7 +64,7 @@ jobs:
     # java 9+ and gradle 2 not supported
     env: GRADLE_VERSION=2.14 JDK=8
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -72,42 +72,42 @@ jobs:
     # java 9+ and gradle 3 not supported
     env: GRADLE_VERSION=3.5.1 JDK=8
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=4.10.3 JDK=8
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=4.10.3 JDK=11
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=4.10.3 JDK=13
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=5.3.1 JDK=8
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
   -
     env: GRADLE_VERSION=5.3.1 JDK=11
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
@@ -116,7 +116,7 @@ jobs:
     # https://github.com/gradle/gradle/issues/8681
     env: GRADLE_VERSION=5.6.4 JDK=12
     script:
-      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]*hs-adpt")
+      - sdk install java $(sdk list java | grep -o -m1 "$JDK\.[0-9\.]\+hs-adpt")
       - sdk install gradle $GRADLE_VERSION
       - java -version
       - npm test
