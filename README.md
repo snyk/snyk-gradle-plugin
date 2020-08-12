@@ -12,6 +12,8 @@ Snyk helps you find, fix and monitor for known vulnerabilities in your dependenc
 
 This plugin provides dependency metadata for Gradle projects that use `gradle` and have a `build.gradle` file.
 
+# Documentation
+Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/360003817357-Snyk-for-Java) documentation
 
 # Support
 
