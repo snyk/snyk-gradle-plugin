@@ -484,12 +484,17 @@ async function getAllDeps(
   targetFile: string,
   options: Options,
 ): Promise<JsonDepsScriptResult> {
-  const command = getCommand(root, targetFile);
+  const { command, pathToWrapper } = getCommand(root, targetFile);
+  const relativeRoot = pathToWrapper ? pathToWrapper : root;
+  const targetFileRelative = pathToWrapper
+    ? path.relative(relativeRoot, targetFile)
+    : targetFile;
 
   let gradleVersionOutput = '[COULD NOT RUN gradle -v] ';
+
   try {
     gradleVersionOutput = await subProcess.execute(command, ['-v'], {
-      cwd: root,
+      cwd: relativeRoot,
     });
   } catch (_) {
     // intentionally empty
@@ -500,7 +505,12 @@ async function getAllDeps(
   }
 
   const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath();
-  const args = buildArgs(root, targetFile, injectedScripPath, options);
+  const args = buildArgs(
+    relativeRoot,
+    targetFileRelative,
+    injectedScripPath,
+    options,
+  );
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
@@ -508,7 +518,7 @@ async function getAllDeps(
     const stdoutText = await subProcess.execute(
       command,
       args,
-      { cwd: root },
+      { cwd: relativeRoot },
       printIfEcho,
     );
     if (cleanupCallback) {
@@ -646,10 +656,17 @@ function toCamelCase(input: string) {
   return input.charAt(0).toLowerCase() + input.substring(1);
 }
 
-function getCommand(root: string, targetFile: string) {
+function getCommand(
+  root: string,
+  targetFile: string,
+): {
+  command: string;
+  pathToWrapper?: string;
+} {
   const isWinLocal = /^win/.test(os.platform()); // local check, can be stubbed in tests
   const quotLocal = isWinLocal ? '"' : "'";
   const wrapperScript = isWinLocal ? 'gradlew.bat' : './gradlew';
+
   // try to find a sibling wrapper script first
   let pathToWrapper = path.resolve(
     root,
@@ -657,14 +674,20 @@ function getCommand(root: string, targetFile: string) {
     wrapperScript,
   );
   if (fs.existsSync(pathToWrapper)) {
-    return quotLocal + pathToWrapper + quotLocal;
+    return {
+      command: quotLocal + pathToWrapper + quotLocal,
+      pathToWrapper: path.parse(pathToWrapper).dir,
+    };
   }
   // now try to find a wrapper in the root
   pathToWrapper = path.resolve(root, wrapperScript);
   if (fs.existsSync(pathToWrapper)) {
-    return quotLocal + pathToWrapper + quotLocal;
+    return {
+      command: quotLocal + pathToWrapper + quotLocal,
+      pathToWrapper: path.parse(pathToWrapper).dir,
+    };
   }
-  return 'gradle';
+  return { command: 'gradle' };
 }
 
 function buildArgs(
