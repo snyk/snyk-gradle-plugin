@@ -82,6 +82,15 @@ export async function inspect(
   targetFile: string,
   options?: Options,
 ): Promise<api.InspectResult> {
+  debugLog(
+    'Gradle inspect called with: ' +
+      JSON.stringify({
+        root,
+        targetFile,
+        allSubProjects: (options as any)?.allSubProjects,
+        subProject: (options as any)?.subProject,
+      }),
+  );
   if (!options) {
     options = { dev: false };
   }
@@ -485,8 +494,8 @@ async function getAllDeps(
   options: Options,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-
-  let gradleVersionOutput = '[COULD NOT RUN gradle -v] ';
+  debugLog('`gradle -v` command run: ' + command);
+  let gradleVersionOutput = '[COULD NOT RUN gradle -v]';
   try {
     gradleVersionOutput = await subProcess.execute(command, ['-v'], {
       cwd: root,
