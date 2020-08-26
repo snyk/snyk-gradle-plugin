@@ -381,6 +381,7 @@ async function getAllDepsAllProjects(
       meta: {
         gradleProjectName,
         versionBuildInfo: allProjectDeps.versionBuildInfo,
+        targetFile: allProjectDeps.projects[proj].targetFile,
       },
       depGraph: allProjectDeps.projects[proj].depGraph,
     };
