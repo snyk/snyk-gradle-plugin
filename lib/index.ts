@@ -8,6 +8,7 @@ import * as chalk from 'chalk';
 import { DepGraphBuilder, PkgManager, DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import debugModule = require('debug');
+import { findCycles } from './find-cycles';
 
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -208,7 +209,7 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   return JSON.parse(jsonLine!);
 }
 
-async function buildGraph(
+export async function buildGraph(
   snykGraph: { [dependencyId: string]: SnykGraph },
   projectName: string,
   projectVersion: string,
@@ -234,7 +235,7 @@ async function buildGraph(
 
     depGraphBuilder.addPkgNode({ name, version }, nodeId);
 
-    if (parentIds) {
+    if (parentIds && nodeId) {
       for (const parentId of parentIds) {
         const currentChildren = childrenChain.get(parentId) || [];
         const currentAncestors = ancestorsChain.get(parentId) || [];
@@ -244,6 +245,7 @@ async function buildGraph(
     }
   }
 
+  const parentlessDueOfCycles = new Set();
   // Edges
   for (const id of Object.keys(snykGraph)) {
     snykGraph[id].parentIds = Array.from(
@@ -260,18 +262,20 @@ async function buildGraph(
           parentId = `${name}@${version}`;
         }
 
-        if (parentId === nodeId) {
+        if (!parentId || !nodeId || parentId === nodeId) {
           continue;
         }
         const alreadyVisited = new Set();
         const hasCycles = findCycles(
           ancestorsChain,
+          childrenChain,
           parentId,
           nodeId,
           alreadyVisited,
         );
 
         if (hasCycles) {
+          parentlessDueOfCycles.add(nodeId);
           continue;
         }
         depGraphBuilder.connectDep(parentId, nodeId);
@@ -280,36 +284,14 @@ async function buildGraph(
       depGraphBuilder.connectDep('root-node', nodeId);
     }
   }
+
+  //@boost temporary solution while we do not allow cycles (jvm supports cycles)
+  parentlessDueOfCycles.forEach((child: string) => {
+    depGraphBuilder.connectDep('root-node', child);
+  });
   childrenChain.clear();
   ancestorsChain.clear();
   return depGraphBuilder.build();
-}
-
-function findCycles(ancestorsChain, parentId, currentNode, alreadyVisited) {
-  if (ancestorsChain && parentId && currentNode) {
-    const currentAncestors = ancestorsChain.get(parentId);
-    if (parentId === currentNode) {
-      return true;
-    }
-    alreadyVisited.add(parentId);
-    if (currentAncestors) {
-      if (currentAncestors.includes(currentNode)) {
-        return true;
-      }
-      for (const ancestor of currentAncestors) {
-        if (!alreadyVisited.has(ancestor) && ancestor !== currentNode) {
-          alreadyVisited.add(ancestor);
-          return findCycles(
-            ancestorsChain,
-            ancestor,
-            currentNode,
-            alreadyVisited,
-          );
-        }
-      }
-    }
-  }
-  return false;
 }
 
 async function getAllDepsOneProject(

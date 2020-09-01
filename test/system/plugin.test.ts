@@ -5,6 +5,7 @@ import { inspect } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
 
 const rootNoWrapper = fixtureDir('no wrapper');
+const GRADLE_VERSION = process.env.GRADLE_VERSION;
 
 test('run inspect()', async (t) => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
@@ -55,7 +56,15 @@ test('multi-config: both compile and runtime deps picked up by default', async (
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
-  t.ok(graphObject.graph.nodes[0].deps.length === 6, 'top level deps');
+  if (GRADLE_VERSION) {
+    const major = parseInt(GRADLE_VERSION.split('.')[0]);
+    if (major < 4) {
+      t.ok(graphObject.graph.nodes[0].deps.length === 11, 'top level deps');
+    } else {
+      t.ok(graphObject.graph.nodes[0].deps.length === 9, 'top level deps');
+    }
+  }
+  t.ok(result.dependencyGraph.getPkgs().length === 42, 'same dependencies');
 });
 
 test('multi-config: only deps for specified conf are picked up (precise match)', async (t) => {
