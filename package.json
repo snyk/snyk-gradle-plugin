@@ -45,8 +45,8 @@
     "typescript": "^3.9.2"
   },
   "dependencies": {
-    "@snyk/cli-interface": "2.9.0",
-    "@snyk/dep-graph": "^1.19.0",
+    "@snyk/cli-interface": "2.9.1",
+    "@snyk/dep-graph": "^1.19.4",
     "@types/debug": "^4.1.4",
     "chalk": "^3.0.0",
     "debug": "^4.1.1",
