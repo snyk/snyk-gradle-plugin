@@ -3,6 +3,10 @@ import { fixtureDir } from '../common';
 import { test } from 'tap';
 import { inspect } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
+import * as fs from 'fs';
+import * as sinon from 'sinon';
+import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
+import { CallGraph } from '@snyk/cli-interface/legacy/common';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const GRADLE_VERSION = process.env.GRADLE_VERSION;
@@ -19,6 +23,40 @@ test('run inspect()', async (t) => {
     nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
     'correct version found',
   );
+});
+
+test('run inspect() with reachableVulns', async (t) => {
+  const gradleCallGraph = JSON.parse(
+    fs.readFileSync(
+      path.join(fixtureDir('call-graphs'), 'simple.json'),
+      'utf-8',
+    ),
+  );
+  const javaCallGraphBuilderStub = sinon
+    .stub(javaCallGraphBuilder, 'getCallGraphGradle')
+    .resolves(gradleCallGraph as CallGraph);
+  const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
+    reachableVulns: true,
+  });
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
+    'correct version found',
+  );
+  t.ok(javaCallGraphBuilderStub.calledOnce, 'called to the call graph builder');
+  t.ok(
+    javaCallGraphBuilderStub.calledWith(path.join('.', rootNoWrapper)),
+    'call graph builder was called with the correct path',
+  );
+  t.same(gradleCallGraph, result.callGraph, 'returns expected callgraph');
+  t.teardown(() => {
+    javaCallGraphBuilderStub.restore();
+  });
 });
 
 test('multi-config: both compile and runtime deps picked up by default', async (t) => {

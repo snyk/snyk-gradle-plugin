@@ -7,10 +7,12 @@ import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
 import { DepGraphBuilder, PkgManager, DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
+import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import debugModule = require('debug');
 import { findCycles } from './find-cycles';
 
 type ScannedProject = legacyCommon.ScannedProject;
+type CallGraph = legacyCommon.CallGraph;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
@@ -59,6 +61,7 @@ export interface GradleInspectOptions {
   // Gradle process just never exits, from the Node's standpoint.
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
+  reachableVulns?: boolean;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -105,6 +108,17 @@ export async function inspect(
     targetFile: targetFileFilteredForCompatibility(targetFile),
     meta: {},
   };
+
+  let callGraph: CallGraph | undefined;
+  const targetPath = path.join(root, targetFile);
+  if (options.reachableVulns) {
+    debugLog(`getting call graph from path ${targetPath}`);
+    callGraph = await javaCallGraphBuilder.getCallGraphGradle(
+      path.dirname(targetPath),
+    );
+    debugLog('got call graph successfully');
+  }
+
   if (api.isMultiSubProject(options)) {
     if (subProject) {
       throw new Error(
@@ -120,6 +134,7 @@ export async function inspect(
     return {
       plugin,
       scannedProjects,
+      callGraph,
     };
   }
   const depGraphAndDepRootNames = await getAllDepsOneProject(
@@ -136,6 +151,7 @@ export async function inspect(
   return {
     plugin,
     package: null, //TODO @boost: delete me once cli-interface makes it optional
+    callGraph,
     dependencyGraph: depGraphAndDepRootNames.depGraph,
     meta: {
       gradleProjectName: depGraphAndDepRootNames.gradleProjectName,

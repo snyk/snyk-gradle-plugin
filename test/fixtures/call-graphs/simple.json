@@ -1,0 +1,33 @@
+{
+  "options": {
+    "directed": true,
+    "multigraph": false,
+    "compound": false
+  },
+  "nodes": [
+    {
+      "v": "com.ibm.wala.FakeRootClass:fakeRootMethod",
+      "value": {
+        "className": "com.ibm.wala.FakeRootClass",
+        "functionName": "fakeRootMethod"
+      }
+    },
+    {
+      "v": "ch.qos.logback.classic.net.SocketNode:run",
+      "value": {
+        "className": "ch.qos.logback.classic.net.SocketNode",
+        "functionName": "run"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "v": "com.ibm.wala.FakeRootClass:fakeRootMethod",
+      "w": "com.ibm.wala.FakeRootClass:fakeWorldClinit"
+    },
+    {
+      "v": "ch.qos.logback.classic.net.SocketNode",
+      "w": "com.ibm.wala.FakeRootClass:fakeWorldClinit"
+    }
+  ]
+}
