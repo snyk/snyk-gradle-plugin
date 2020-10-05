@@ -47,7 +47,7 @@
   "dependencies": {
     "@snyk/cli-interface": "2.9.1",
     "@snyk/dep-graph": "^1.19.4",
-    "@snyk/java-call-graph-builder": "1.15.1",
+    "@snyk/java-call-graph-builder": "1.16.0",
     "@types/debug": "^4.1.4",
     "chalk": "^3.0.0",
     "debug": "^4.1.1",
