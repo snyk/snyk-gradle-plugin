@@ -10,6 +10,7 @@ import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import debugModule = require('debug');
 import { findCycles } from './find-cycles';
+import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -395,11 +396,6 @@ async function printIfEcho(line: string) {
   }
 }
 
-// <insert a npm left-pad joke here>
-function leftPad(s: string, n: number) {
-  return ' '.repeat(Math.max(n - s.length, 0)) + s;
-}
-
 async function getInjectedScriptPath(): Promise<{
   injectedScripPath: string;
   cleanupCallback?: () => void;
@@ -523,6 +519,10 @@ async function getAllDeps(
       cleanupCallback();
     }
     const extractedJson = extractJsonFromScriptOutput(stdoutText);
+    const jsonAttrsPretty = getGradleAttributesPretty(stdoutText);
+    logger(
+      `The following attributes and their possible values were found in your configurations: ${jsonAttrsPretty}`,
+    );
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
       extractedJson.versionBuildInfo = versionBuildInfo;
@@ -569,27 +569,13 @@ message from above, starting with ===== DEBUG INFORMATION START =====.`;
     // impossible.
     // There are no automated tests for this yet (setting up Android SDK is quite problematic).
     // See test/manual/README.md
-
+    const jsonAttrsPretty = getGradleAttributesPretty(error.message);
+    if (jsonAttrsPretty) {
+      logger(
+        `The following attributes and their possible values were found in your configurations: ${jsonAttrsPretty}`,
+      );
+    }
     if (cannotResolveVariantMarkers.find((m) => error.message.includes(m))) {
-      // Extract attribute information via JSONATTRS marker:
-      const jsonAttrs = JSON.parse(
-        (error.message as string)
-          .split('\n')
-          .filter((line) => /^JSONATTRS /.test(line))[0]
-          .substr(10),
-      );
-      const attrNameWidth = Math.max(
-        ...Object.keys(jsonAttrs).map((name) => name.length),
-      );
-      const jsonAttrsPretty = Object.keys(jsonAttrs)
-        .map(
-          (name) =>
-            chalk.whiteBright(leftPad(name, attrNameWidth)) +
-            ': ' +
-            chalk.gray(jsonAttrs[name].join(', ')),
-        )
-        .join('\n');
-
       mainErrorMessage = `Error running Gradle dependency analysis.
 
 It seems like you are scanning an Android build with ambiguous dependency variants.
@@ -757,4 +743,5 @@ export const exportsForTests = {
   extractJsonFromScriptOutput,
   getVersionBuildInfo,
   toCamelCase,
+  getGradleAttributesPretty,
 };
