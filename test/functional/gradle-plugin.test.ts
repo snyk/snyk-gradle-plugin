@@ -118,6 +118,25 @@ test('extractJsonFromScriptOutput throws on multiple JSONDEPS', async (t) => {
   }
 });
 
+test('getGradleAttributesPretty returns undefined when throws', async (t) => {
+  const result = testableMethods.getGradleAttributesPretty(``);
+  t.deepEqual(result, undefined);
+});
+
+test('getGradleAttributesPretty returns attributes on success', async (t) => {
+  const result = testableMethods.getGradleAttributesPretty(
+    `SNYKECHO snykResolvedDepsJson task is executing via doLast
+    JSONATTRS {"org.gradle.usage":["java-runtime","java-api"],"org.gradle.category":["library"],"org.gradle.libraryelements":["jar"],"org.gradle.dependency.bundling":["external"]}
+    SNYKECHO processing project: subproj`,
+  );
+  t.deepEqual(
+    result,
+    `              org.gradle.usage: java-runtime, java-api
+           org.gradle.category: library
+    org.gradle.libraryelements: jar
+org.gradle.dependency.bundling: external`,
+  );
+});
 test('check build args (plain console output)', async (t) => {
   const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {});
   t.deepEqual(result, [
