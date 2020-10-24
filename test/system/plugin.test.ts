@@ -9,7 +9,6 @@ import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import { CallGraph } from '@snyk/cli-interface/legacy/common';
 
 const rootNoWrapper = fixtureDir('no wrapper');
-const GRADLE_VERSION = process.env.GRADLE_VERSION;
 
 test('run inspect()', async (t) => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
@@ -94,13 +93,15 @@ test('multi-config: both compile and runtime deps picked up by default', async (
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
-  if (GRADLE_VERSION) {
-    const major = parseInt(GRADLE_VERSION.split('.')[0]);
-    if (major < 4) {
-      t.ok(graphObject.graph.nodes[0].deps.length === 11, 'top level deps');
-    } else {
-      t.ok(graphObject.graph.nodes[0].deps.length === 9, 'top level deps');
-    }
+  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
+  const isGradleVersionLessThan4 =
+    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) <
+    4;
+
+  if (isGradleVersionLessThan4) {
+    t.ok(graphObject.graph.nodes[0].deps.length === 16, 'top level deps');
+  } else {
+    t.ok(graphObject.graph.nodes[0].deps.length === 14, 'top level deps');
   }
   t.ok(result.dependencyGraph.getPkgs().length === 42, 'same dependencies');
 });

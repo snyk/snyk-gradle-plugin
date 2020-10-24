@@ -20,7 +20,10 @@ export function findCycles(
         return true;
       }
       for (const ancestor of currentAncestors) {
-        if (!alreadyVisited.has(ancestor) && ancestor !== currentNode) {
+        if (
+          !alreadyVisited.has(ancestor) ||
+          (!alreadyVisited.has(currentNode) && ancestor !== currentNode)
+        ) {
           alreadyVisited.add(ancestor);
           return findCycles(
             ancestorsChain,
