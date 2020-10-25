@@ -51,7 +51,7 @@ if (kotlinSupported) {
       const graphObject: any = JSON.parse(
         JSON.stringify(result.dependencyGraph),
       );
-      t.ok(graphObject.graph.nodes[0].deps.length === 7, 'top level deps');
+      t.ok(graphObject.graph.nodes[0].deps.length === 8, 'top level deps');
     },
   );
 }
