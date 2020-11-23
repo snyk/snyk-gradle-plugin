@@ -395,7 +395,7 @@ test('multi-project: allSubProjects + configuration', async (t) => {
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-project'), 'build.gradle'),
-    { allSubProjects: true, args: ['--configuration', 'compileOnly'] },
+    { allSubProjects: true, args: ['--configuration', 'compileClasspath'] },
   );
   // It's an array, so we have to scan
   t.equal(result.scannedProjects.length, 2);
