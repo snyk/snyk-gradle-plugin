@@ -51,7 +51,21 @@ if (kotlinSupported) {
       const graphObject: any = JSON.parse(
         JSON.stringify(result.dependencyGraph),
       );
-      t.ok(graphObject.graph.nodes[0].deps.length === 8, 'top level deps');
+
+      t.ok(
+        graphObject.graph.nodes[0].deps.length === 3,
+        'top level deps count',
+      );
+
+      t.deepEqual(
+        graphObject.graph.nodes[0].deps,
+        [
+          { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21' },
+          { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib@1.3.21' },
+          { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
+        ],
+        'validate that top level dependencies are the correct ones',
+      );
     },
   );
 }

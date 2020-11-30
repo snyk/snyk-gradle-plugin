@@ -1,6 +1,7 @@
 import groovy.json.JsonOutput
 import java.util.regex.Pattern
 import java.util.regex.Matcher
+import org.gradle.util.GradleVersion
 
 // Snyk dependency resolution script for Gradle.
 // Tested on Gradle versions from 2.14 to 5.4.1
@@ -53,80 +54,85 @@ import java.util.regex.Matcher
 // }
 
 class SnykGraph {
-   def nodes
-   def rootId
-   SnykGraph(rootId) { 
-       this.nodes = [:]
-       this.rootId = rootId
-   }
-   
-   def setNode(key, value) {
-       if(!key) {
-           return
-       }
-       if(this.nodes.get(key)) {
-           return this.nodes.get(key)
-       }
-       if(!value) {
-           return
-       }
-       def vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
-       this.nodes.put(key, vertex)
-       return vertex
-   }
 
-   def setEdge(parentId, childId) {
-       if(!parentId || !childId || parentId == childId) {
-           return
-       }
-       // root-node will be the graphlib root that first-level deps will be attached to
-       if(parentId != this.rootId) {
+    def nodes
+    def rootId
+    SnykGraph(rootId) {
+        this.nodes = [:]
+        this.rootId = rootId
+    }
+
+    def setNode(key, value) {
+        if (!key) {
+            return
+        }
+        if (this.nodes.get(key)) {
+            return this.nodes.get(key)
+        }
+        if (!value) {
+            return
+        }
+        def vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
+        this.nodes.put(key, vertex)
+        return vertex
+    }
+
+    def setEdge(parentId, childId) {
+        if (!parentId || !childId || parentId == childId) {
+            return
+        }
+        // root-node will be the graphlib root that first-level deps will be attached to
+        if (parentId != this.rootId) {
             def parentNode = this.setNode(parentId, null)
-            if(!parentNode) {
+            if (!parentNode) {
                 return
             }
             // avoids cyclic
-            if(parentNode && parentNode.parentIds.contains(childId)) {
+            if (parentNode && parentNode.parentIds.contains(childId)) {
                 return
             }
-       }
-       def childNode = this.setNode(childId, null)
-       if(!childNode || childNode.parentIds.contains(parentId)) {
-           return
-       }
-       childNode.parentIds.add(parentId)
-   }
+        }
+        def childNode = this.setNode(childId, null)
+        if (!childNode || childNode.parentIds.contains(parentId)) {
+            return
+        }
+        childNode.parentIds.add(parentId)
+    }
+
 }
 
 def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
-        deps.each { d -> 
-            def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
-            if(!graph.nodes.get(childId)) {
+    deps.each { dep ->
+            dep.each { d ->
+                def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+                if (!graph.nodes.get(childId)) {
                 def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
                 graph.setNode(childId, childDependency)
-            }
-            //  In Gradle 2, there can be several instances of the same dependency present at each level,
-            //  each for a different configuration. In this case, we need to merge the dependencies.
-            if(!currentChain.contains(childId) && d.children) {
+                }
+                //  In Gradle 2, there can be several instances of the same dependency present at each level,
+                //  each for a different configuration. In this case, we need to merge the dependencies.
+                if (!currentChain.contains(childId) && d.children) {
                 currentChain.add(childId)
                 loadGraph(d.children, graph, childId, currentChain)
+                }
+                graph.setEdge(parentId, childId)
             }
-            graph.setEdge(parentId, childId)
-        }
     }
+}
 
 def getSnykGraph(Iterable deps) {
     def rootId = 'root-node'
     def graph = new SnykGraph(rootId)
     def currentChain = new HashSet()
-    loadGraph(deps, graph, rootId, currentChain) 
+    loadGraph(deps, graph, rootId, currentChain)
+
     return graph.nodes
 }
 
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
-def snykMergedDepsConfExecuted = false
+def snykDepsConfExecuted = false
 allprojects { everyProj ->
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
@@ -155,19 +161,14 @@ allprojects { everyProj ->
                     if (attr.name.toLowerCase().contains(keyValueFilter[0])
                             && attrValueAsString != keyValueFilter[1]) {
                         matches = false
-                    }
+                            }
                 })
             })
             return matches
         }
 
-        def isMatchingConfiguration
-        isMatchingConfiguration = {
-            it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(conf)
-        }
-
         doLast { task ->
-            if (!snykMergedDepsConfExecuted) {
+            if (!snykDepsConfExecuted) {
                 println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
                 def projectsDict = [:]
                 def defaultProjectName = task.project.name
@@ -192,67 +193,74 @@ allprojects { everyProj ->
                 def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
                 def attributesAsStrings = [:] // Map<String, Set<string>>
                 rootProject.allprojects.each { proj ->
-                    proj.configurations.findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
-                        if (!conf.hasProperty('attributes')) {
-                           // Gradle before version 3 does not support attributes
-                            return
-                        }
-                        def attrs = conf.attributes
-                        attrs.keySet().each({ attr ->
-                            def value = attrs.getAttribute(attr)
-                            if (!allConfigurationAttributes.containsKey(attr)) {
-                                allConfigurationAttributes[attr] = new HashSet()
-                                attributesAsStrings[attr.name] = new HashSet()
+                    proj.configurations.findAll({ it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
+                            if (!conf.hasProperty('attributes')) {
+                                // Gradle before version 3 does not support attributes
+                                return
                             }
-                            allConfigurationAttributes[attr].add(value)
-                            attributesAsStrings[attr.name].add(value.toString())
-                        })
+                            def attrs = conf.attributes
+                            attrs.keySet().each({ attr ->
+                                def value = attrs.getAttribute(attr)
+                                if (!allConfigurationAttributes.containsKey(attr)) {
+                                    allConfigurationAttributes[attr] = new HashSet()
+                                    attributesAsStrings[attr.name] = new HashSet()
+                                }
+                                allConfigurationAttributes[attr].add(value)
+                                attributesAsStrings[attr.name].add(value.toString())
+                            })
                     }
                 }
 
                 // These will be used to suggest attribute filtering to the user if the scan fails
                 // due to ambiguous resolution of dependency variants
-                println("JSONATTRS " + JsonOutput.toJson(attributesAsStrings))
+                println('JSONATTRS ' + JsonOutput.toJson(attributesAsStrings))
 
                 rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                     println('SNYKECHO processing project: ' + proj.name)
-                    def snykConf = null
-                    def mergeableConfs = proj.configurations
-                        .findAll({ it.name != 'snykMergedDepsConf' && it.name =~ confNameFilter })
 
-                    // Drop all the configrations that don't match the attribute filter
-                    if (confAttrSpec != null) {
-                        mergeableConfs = mergeableConfs.findAll(matchesAttributeFilter)
+                    def snykConf = null 
+
+                    // Gradle v3.0+ contains concepts as attributes, config canBeResolved, that does not exist in legacy versions
+                    final GradleVersion gradleVersionInUse = GradleVersion.current();
+                    final GradleVersion gradleVersion3 = GradleVersion.version('3.0');
+                    final isGradleVersion3Plus = gradleVersionInUse >= gradleVersion3;
+
+                    if(isGradleVersion3Plus) {
+                        // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
+                        // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
+                        if (confAttrSpec != null) {
+                            // Drop all the configrations that don't match the attribute filter
+                            snykConf = proj.configurations
+                            .findAll({ it.canBeResolved == true && it.canBeConsumed == false && it.name =~ confNameFilter && matchesAttributeFilter(it)  })
+
+                            if(snykConf.size() == 0) {
+                                snykConf = proj.configurations
+                                .findAll({ it.canBeResolved == true && it.canBeConsumed == true && it.name =~ confNameFilter && matchesAttributeFilter(it) })
+                            }
+
+                        } else {
+                            snykConf = proj.configurations
+                            .findAll({ it.canBeResolved == true && it.canBeConsumed == false && it.name =~ confNameFilter  })
+
+                            // if we cannot find dependencies that can be only resolved but not consumable
+                            // we try to find configs that are simultaneously resolvable and consumable
+                            // to prevent dependency resolution conflicts (e.g. Cannot choose between the following variants) 
+                            // we avoid the coexistence of (canBeResolved: true, canBeConsumed: false) and (canBeResolved: true, canBeConsumed: true) configs
+                            if(snykConf.size() == 0) {
+                                snykConf = proj.configurations
+                                .findAll({ it.canBeResolved == true && it.canBeConsumed == true && it.name =~ confNameFilter  })
+                            }
+                        }       
+                    } else {
+                        snykConf = proj.configurations.findAll({ it.name =~ confNameFilter })
                     }
-
-                    if (mergeableConfs.size() == 0 && proj.configurations.size() > 0) {
-
+                
+                    if (snykConf.size() == 0 && proj.configurations.size() > 0) {
                         throw new RuntimeException('Matching configurations not found: ' + confNameFilter +
                                 ', available configurations for project ' + proj + ': '
                                 + proj.configurations.collect { it.name })
-
-                    } else if (mergeableConfs.size() == 1) {
-
-                        // We use the only matching configuration, with its attributes.
-                        snykConf = mergeableConfs.first()
-
-                    } else if (mergeableConfs.size() > 1) {
-                        println('SNYKECHO constructing merged configuration from ' + mergeableConfs.collect { conf -> conf.name })
-                        // We create a new, "merged" configuration here.
-                        snykConf = proj.configurations.create('snykMergedDepsConf')
-
-                        mergeableConfs.each { snykConf.extendsFrom(it) }
-
-                        // Copy all the unambiguous build attributes into the merged configuration
-                        // Gradle before version 3 does not support attributes
-                        if (snykConf.hasProperty('attributes')) {
-                            allConfigurationAttributes.each({ attr, valueSet ->
-                                if (valueSet.size() == 1) {
-                                    snykConf.attributes.attribute(attr, valueSet.head())
-                                }
-                            })
-                        }
                     }
+
                     if (snykConf != null) {
                         println('SNYKECHO resolving configuration ' + snykConf.name)
                         def gradleFirstLevelDeps = snykConf.resolvedConfiguration.firstLevelModuleDependencies
@@ -268,9 +276,9 @@ allprojects { everyProj ->
                         ]
                     }
                 }
-                println("JSONDEPS " + JsonOutput.toJson(result))
-                snykMergedDepsConfExecuted = true
-            }
+                println('JSONDEPS ' + JsonOutput.toJson(result))
+                snykDepsConfExecuted = true
         }
     }
+}
 }

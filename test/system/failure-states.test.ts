@@ -11,7 +11,7 @@ test('malformed build.gradle', async (t) => {
     inspect(
       '.',
       path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
-      { args: ['--configuration', 'compileOnly'] },
+      { args: ['--configuration', 'compileClasspath'] },
     ),
     /unexpected token/,
   );

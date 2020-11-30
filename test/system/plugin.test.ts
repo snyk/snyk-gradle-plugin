@@ -110,7 +110,7 @@ test('multi-config: only deps for specified conf are picked up (precise match)',
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { 'configuration-matching': '^compileOnly$' },
+    { 'configuration-matching': '^compileClasspath$' },
   );
   t.equal(
     result.dependencyGraph.rootPkg.name,
@@ -149,8 +149,8 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { 'configuration-matching': 'pileon' },
-  ); // case-insensitive regexp matching "compileOnly"
+    { 'configuration-matching': 'pileclass' },
+  ); // case-insensitive regexp matching "compileClasspath"
   t.equal(
     result.dependencyGraph.rootPkg.name,
     '.',
@@ -188,7 +188,7 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { args: ['--configuration', 'compileOnly'] },
+    { args: ['--configuration', 'compileClasspath'] },
   );
   t.equal(
     result.dependencyGraph.rootPkg.name,
@@ -220,108 +220,6 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
   t.ok(graphObject.graph.nodes[0].deps.length === 1, 'top level deps 1');
-});
-
-test('tests for Gradle 3+', async (t0) => {
-  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
-  const isGradle3Plus =
-    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) >=
-    3;
-  if (isGradle3Plus) {
-    t0.test(
-      'multi-config: only deps for specified conf are picked up (attribute match)',
-      async (t) => {
-        const result = await inspect(
-          '.',
-          path.join(fixtureDir('multi-config-attributes'), 'build.gradle'),
-          { 'configuration-attributes': 'usage:java-api' },
-        );
-        t.match(
-          result.dependencyGraph.rootPkg.name,
-          '.',
-          'returned project name is not sub-project',
-        );
-        t.match(
-          result.meta!.gradleProjectName,
-          'multi-config-attributes',
-          'returned new project name is not sub-project',
-        );
-
-        const pkgs = result.dependencyGraph.getDepPkgs();
-        const nodeIds: string[] = [];
-        Object.keys(pkgs).forEach((id) => {
-          nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
-        });
-
-        t.ok(
-          nodeIds.indexOf('org.apache.commons:commons-lang3@3.8.1') === -1,
-          'no runtime dep found',
-        );
-
-        t.ok(
-          nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1,
-          'correct version of api dep found',
-        );
-
-        // double parsing to have access to internal depGraph data, no methods available to properly
-        // return the deps nodeIds list that belongs to a node
-        const graphObject: any = JSON.parse(
-          JSON.stringify(result.dependencyGraph),
-        );
-        t.ok(graphObject.graph.nodes[0].deps.length === 2, 'top level deps 2'); // 1 with good attr, 1 with no attr
-      },
-    );
-
-    t0.test(
-      'multi-config: only deps for specified conf are picked up (subproject variants)',
-      async (t) => {
-        // This test is different from the previous because of specificAttr
-        // When constructing a merged configuration, it's important to scan all the subprojects and discover all the
-        // values of specificAttr to make sure the configuration
-        const result = await inspect(
-          '.',
-          path.join(
-            fixtureDir('multi-config-attributes-subproject'),
-            'build.gradle',
-          ),
-          { 'configuration-attributes': 'usage:java-api' },
-        ); // there's also specificAttr but it won't be picked up
-        t.equal(
-          result.dependencyGraph.rootPkg.name,
-          '.',
-          'returned project name is not sub-project',
-        );
-        t.equal(
-          result.meta!.gradleProjectName,
-          'root-proj',
-          'returned project name is `root-proj`',
-        );
-
-        const pkgs = result.dependencyGraph.getDepPkgs();
-        const nodeIds: string[] = [];
-        Object.keys(pkgs).forEach((id) => {
-          nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
-        });
-
-        t.ok(
-          nodeIds.indexOf('org.apache.commons:commons-lang3') === -1,
-          'no runtime dep found',
-        );
-
-        t.ok(
-          nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1,
-          'correct version of api dep found',
-        );
-
-        // double parsing to have access to internal depGraph data, no methods available to properly
-        // return the deps nodeIds list that belongs to a node
-        const graphObject: any = JSON.parse(
-          JSON.stringify(result.dependencyGraph),
-        );
-        t.ok(graphObject.graph.nodes[0].deps.length === 3, 'top level deps 3');
-      },
-    );
-  }
 });
 
 test('custom dependency resolution via configurations.all is supported', async (t) => {
@@ -359,7 +257,7 @@ test('custom dependency resolution via configurations* is NOT suppored (known pr
   });
 
   t.ok(
-    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1, // 25.2.0 in NOT forced
+    nodeIds.indexOf('com.android.tools:annotations@25.2.0') !== -1, // 25.2.0 instead of 25.3.0 due of dependency conflict resolution
     'original version found',
   );
 });
