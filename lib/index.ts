@@ -113,9 +113,11 @@ export async function inspect(
   let callGraph: CallGraph | undefined;
   const targetPath = path.join(root, targetFile);
   if (options.reachableVulns) {
+    const command = getCommand(root, targetFile);
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
       path.dirname(targetPath),
+      command,
     );
     debugLog('got call graph successfully');
   }

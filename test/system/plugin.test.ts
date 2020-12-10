@@ -49,7 +49,10 @@ test('run inspect() with reachableVulns', async (t) => {
   );
   t.ok(javaCallGraphBuilderStub.calledOnce, 'called to the call graph builder');
   t.ok(
-    javaCallGraphBuilderStub.calledWith(path.join('.', rootNoWrapper)),
+    javaCallGraphBuilderStub.calledWith(
+      path.join('.', rootNoWrapper),
+      'gradle',
+    ),
     'call graph builder was called with the correct path',
   );
   t.same(gradleCallGraph, result.callGraph, 'returns expected callgraph');
