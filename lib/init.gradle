@@ -136,7 +136,7 @@ def configsSuccessfullyResolved(configurations) {
             configuration.resolve();
             resolvedConfigurations.add(configuration);
            } catch(Exception ex) {    
-            println('NOT_RESOLVED ' + ex.toString())
+             // Swallowing it
            }
     })
     return resolvedConfigurations;
