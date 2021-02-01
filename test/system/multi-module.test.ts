@@ -299,16 +299,6 @@ test('single-project: array of one is returned with allSubProjects flag', async 
   t.ok(nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1') !== -1);
 });
 
-test('multi-project-some-unscannable: allSubProjects fails', async (t) => {
-  await t.rejects(
-    inspect(
-      '.',
-      path.join(fixtureDir('multi-project-some-unscannable'), 'build.gradle'),
-      { allSubProjects: true },
-    ),
-  );
-});
-
 test('multi-project-some-unscannable: gradle-sub-project for a good subproject works', async (t) => {
   const options = {
     subProject: 'subproj ',
