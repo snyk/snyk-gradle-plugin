@@ -133,7 +133,7 @@ def configsSuccessfullyResolved(configurations) {
     def resolvedConfigurations = [];
     configurations.each({ configuration ->
            try {
-            configuration.resolve();
+            configuration.resolvedConfiguration.firstLevelModuleDependencies;
             resolvedConfigurations.add(configuration);
            } catch(Exception ex) {    
              // Swallowing it
