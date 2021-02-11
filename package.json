@@ -45,7 +45,7 @@
     "typescript": "^3.9.2"
   },
   "dependencies": {
-    "@snyk/cli-interface": "2.9.1",
+    "@snyk/cli-interface": "2.11.0",
     "@snyk/dep-graph": "^1.19.4",
     "@snyk/java-call-graph-builder": "1.19.1",
     "@types/debug": "^4.1.4",
