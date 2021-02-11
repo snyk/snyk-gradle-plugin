@@ -85,6 +85,7 @@ export async function inspect(
 export async function inspect(
   root: string,
   targetFile: string,
+  initFile: string,
   options?: Options,
 ): Promise<api.InspectResult> {
   debugLog(
@@ -112,11 +113,13 @@ export async function inspect(
 
   let callGraph: CallGraph | undefined;
   const targetPath = path.join(root, targetFile);
+  const initPath = path.join(root, initFile);
   if (options.reachableVulns) {
     const command = getCommand(root, targetFile);
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
       path.dirname(targetPath),
+      path.dirname(initPath),
       command,
     );
     debugLog('got call graph successfully');
