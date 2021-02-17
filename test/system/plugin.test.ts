@@ -37,6 +37,7 @@ test('run inspect() with reachableVulns', async (t) => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
     reachableVulns: true,
   });
+
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
   Object.keys(pkgs).forEach((id) => {
@@ -56,6 +57,35 @@ test('run inspect() with reachableVulns', async (t) => {
     'call graph builder was called with the correct path',
   );
   t.same(gradleCallGraph, result.callGraph, 'returns expected callgraph');
+
+  const resultWithInit = await inspect(
+    '.',
+    path.join(rootNoWrapper, 'build.gradle'),
+    {
+      reachableVulns: true,
+      initScript: 'init.gradle',
+    },
+  );
+
+  // test with init script param
+  t.ok(
+    javaCallGraphBuilderStub.calledTwice,
+    'called to the call graph builder',
+  );
+  t.ok(
+    javaCallGraphBuilderStub.calledWith(
+      path.join('.', rootNoWrapper),
+      'gradle',
+      'init.gradle',
+    ),
+    'call graph builder was called with the correct path and init file',
+  );
+  t.same(
+    gradleCallGraph,
+    resultWithInit.callGraph,
+    'returns expected callgraph',
+  );
+
   t.teardown(() => {
     javaCallGraphBuilderStub.restore();
   });

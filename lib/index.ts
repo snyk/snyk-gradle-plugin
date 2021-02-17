@@ -17,6 +17,7 @@ type CallGraph = legacyCommon.CallGraph;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
+
 function debugLog(s: string) {
   if (logger === null) {
     // Lazy init: Snyk CLI needs to process the CLI argument "-d" first.
@@ -63,6 +64,7 @@ export interface GradleInspectOptions {
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
   reachableVulns?: boolean;
+  initScript?: string;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -85,7 +87,6 @@ export async function inspect(
 export async function inspect(
   root: string,
   targetFile: string,
-  initFile: string,
   options?: Options,
 ): Promise<api.InspectResult> {
   debugLog(
@@ -113,14 +114,17 @@ export async function inspect(
 
   let callGraph: CallGraph | undefined;
   const targetPath = path.join(root, targetFile);
-  const initPath = path.join(root, initFile);
   if (options.reachableVulns) {
+    let initScriptPath: string | undefined;
+    if (options.initScript) {
+      initScriptPath = path.join(root, options.initScript);
+    }
     const command = getCommand(root, targetFile);
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
       path.dirname(targetPath),
-      path.dirname(initPath),
       command,
+      initScriptPath,
     );
     debugLog('got call graph successfully');
   }
@@ -368,6 +372,7 @@ function getDepsSubProject(
     },
   };
 }
+
 async function getAllDepsAllProjects(
   root: string,
   targetFile: string,
