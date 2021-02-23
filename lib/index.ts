@@ -114,11 +114,14 @@ export async function inspect(
 
   let callGraph: CallGraph | undefined;
   const targetPath = path.join(root, targetFile);
+
+  let initScriptPath: string | undefined;
+
+  if (options.initScript) {
+    initScriptPath = options.initScript;
+  }
+
   if (options.reachableVulns) {
-    let initScriptPath: string | undefined;
-    if (options.initScript) {
-      initScriptPath = path.join(root, options.initScript);
-    }
     const command = getCommand(root, targetFile);
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
@@ -139,6 +142,7 @@ export async function inspect(
       root,
       targetFile,
       options,
+      initScriptPath,
     );
     plugin.meta = plugin.meta || {};
     return {
@@ -152,6 +156,7 @@ export async function inspect(
     targetFile,
     options,
     subProject,
+    initScriptPath,
   );
   if (depGraphAndDepRootNames.allSubProjectNames) {
     plugin.meta = plugin.meta || {};
@@ -325,13 +330,19 @@ async function getAllDepsOneProject(
   targetFile: string,
   options: Options,
   subProject?: string,
+  initScriptPath?: string,
 ): Promise<{
   depGraph: DepGraph;
   allSubProjectNames: string[];
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 }> {
-  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const allProjectDeps = await getAllDeps(
+    root,
+    targetFile,
+    options,
+    initScriptPath,
+  );
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
   if (subProject) {
     const { depGraph, meta } = getDepsSubProject(subProject, allProjectDeps);
@@ -377,8 +388,14 @@ async function getAllDepsAllProjects(
   root: string,
   targetFile: string,
   options: Options,
+  initScriptPath?: string,
 ): Promise<ScannedProject[]> {
-  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const allProjectDeps = await getAllDeps(
+    root,
+    targetFile,
+    options,
+    initScriptPath,
+  );
   return Object.keys(allProjectDeps.projects).map((proj) => {
     const defaultProject = allProjectDeps.defaultProject;
     const gradleProjectName =
@@ -497,6 +514,7 @@ async function getAllDeps(
   root: string,
   targetFile: string,
   options: Options,
+  initScriptPath?: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   debugLog('`gradle -v` command run: ' + command);
@@ -514,7 +532,13 @@ async function getAllDeps(
   }
 
   const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath();
-  const args = buildArgs(root, targetFile, injectedScripPath, options);
+  const args = buildArgs(
+    root,
+    targetFile,
+    injectedScripPath,
+    options,
+    initScriptPath,
+  );
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
@@ -671,11 +695,19 @@ function getCommand(root: string, targetFile: string) {
   return 'gradle';
 }
 
+function formatArgWithWhiteSpace(arg: string): string {
+  if (/\s/.test(arg)) {
+    return quot + arg + quot;
+  }
+  return arg;
+}
+
 function buildArgs(
   root: string,
   targetFile: string | null,
   initGradlePath: string,
   options: Options,
+  initScriptPath?: string,
 ) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
@@ -685,11 +717,7 @@ function buildArgs(
     }
     args.push('--build-file');
 
-    let formattedTargetFile = targetFile;
-    if (/\s/.test(targetFile)) {
-      // checking for whitespaces
-      formattedTargetFile = quot + targetFile + quot;
-    }
+    const formattedTargetFile = formatArgWithWhiteSpace(targetFile);
     args.push(formattedTargetFile);
   }
 
@@ -727,6 +755,13 @@ function buildArgs(
 
   if (options.args) {
     args.push(...options.args);
+  }
+
+  if (initScriptPath) {
+    const formattedInitScriptPath = formatArgWithWhiteSpace(
+      path.resolve(initScriptPath),
+    );
+    args.push('-I ' + formattedInitScriptPath);
   }
 
   // There might be a legacy --configuration option in 'args'.
