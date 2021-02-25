@@ -5,12 +5,12 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
-import { DepGraphBuilder, PkgManager, DepGraph } from '@snyk/dep-graph';
+import { DepGraph, DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
-import debugModule = require('debug');
 import { findCycles } from './find-cycles';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
+import debugModule = require('debug');
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -115,14 +115,17 @@ export async function inspect(
   let callGraph: CallGraph | undefined;
   const targetPath = path.join(root, targetFile);
 
-  let initScriptPath: string | undefined;
-
-  if (options.initScript) {
-    initScriptPath = options.initScript;
-  }
-
   if (options.reachableVulns) {
     const command = getCommand(root, targetFile);
+
+    let initScriptPath: string | undefined;
+
+    if (options.initScript) {
+      initScriptPath = formatArgWithWhiteSpace(
+        path.resolve(options.initScript),
+      );
+    }
+
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
       path.dirname(targetPath),
@@ -142,7 +145,6 @@ export async function inspect(
       root,
       targetFile,
       options,
-      initScriptPath,
     );
     plugin.meta = plugin.meta || {};
     return {
@@ -156,7 +158,6 @@ export async function inspect(
     targetFile,
     options,
     subProject,
-    initScriptPath,
   );
   if (depGraphAndDepRootNames.allSubProjectNames) {
     plugin.meta = plugin.meta || {};
@@ -330,19 +331,13 @@ async function getAllDepsOneProject(
   targetFile: string,
   options: Options,
   subProject?: string,
-  initScriptPath?: string,
 ): Promise<{
   depGraph: DepGraph;
   allSubProjectNames: string[];
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 }> {
-  const allProjectDeps = await getAllDeps(
-    root,
-    targetFile,
-    options,
-    initScriptPath,
-  );
+  const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
   if (subProject) {
     const { depGraph, meta } = getDepsSubProject(subProject, allProjectDeps);
@@ -388,14 +383,8 @@ async function getAllDepsAllProjects(
   root: string,
   targetFile: string,
   options: Options,
-  initScriptPath?: string,
 ): Promise<ScannedProject[]> {
-  const allProjectDeps = await getAllDeps(
-    root,
-    targetFile,
-    options,
-    initScriptPath,
-  );
+  const allProjectDeps = await getAllDeps(root, targetFile, options);
   return Object.keys(allProjectDeps.projects).map((proj) => {
     const defaultProject = allProjectDeps.defaultProject;
     const gradleProjectName =
@@ -514,7 +503,6 @@ async function getAllDeps(
   root: string,
   targetFile: string,
   options: Options,
-  initScriptPath?: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   debugLog('`gradle -v` command run: ' + command);
@@ -532,13 +520,7 @@ async function getAllDeps(
   }
 
   const { injectedScripPath, cleanupCallback } = await getInjectedScriptPath();
-  const args = buildArgs(
-    root,
-    targetFile,
-    injectedScripPath,
-    options,
-    initScriptPath,
-  );
+  const args = buildArgs(root, targetFile, injectedScripPath, options);
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
@@ -695,7 +677,7 @@ function getCommand(root: string, targetFile: string) {
   return 'gradle';
 }
 
-function formatArgWithWhiteSpace(arg: string): string {
+export function formatArgWithWhiteSpace(arg: string): string {
   if (/\s/.test(arg)) {
     return quot + arg + quot;
   }
@@ -707,7 +689,6 @@ function buildArgs(
   targetFile: string | null,
   initGradlePath: string,
   options: Options,
-  initScriptPath?: string,
 ) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
@@ -733,6 +714,13 @@ function buildArgs(
     );
   }
 
+  if (options.initScript) {
+    const formattedInitScript = formatArgWithWhiteSpace(
+      path.resolve(options.initScript),
+    );
+    args.push('--init-script', formattedInitScript);
+  }
+
   if (!options.daemon) {
     args.push('--no-daemon');
   }
@@ -755,13 +743,6 @@ function buildArgs(
 
   if (options.args) {
     args.push(...options.args);
-  }
-
-  if (initScriptPath) {
-    const formattedInitScriptPath = formatArgWithWhiteSpace(
-      path.resolve(initScriptPath),
-    );
-    args.push('-I ' + formattedInitScriptPath);
   }
 
   // There might be a legacy --configuration option in 'args'.

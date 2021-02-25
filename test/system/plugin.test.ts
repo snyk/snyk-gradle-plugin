@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
-import { inspect } from '../../lib';
+import { inspect, formatArgWithWhiteSpace } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
 import * as fs from 'fs';
 import * as sinon from 'sinon';
@@ -112,7 +112,7 @@ test('run inspect() with reachableVulns', async (t) => {
     javaCallGraphBuilderStub.calledWith(
       path.join('.', rootNoWrapper),
       'gradle',
-      path.join(rootNoWrapper, 'init.gradle'),
+      formatArgWithWhiteSpace(path.join(rootNoWrapper, 'init.gradle')), // arg should be normalized with quotes
     ),
     'call graph builder was called with the correct path and init file',
   );
