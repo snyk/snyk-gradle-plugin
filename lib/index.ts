@@ -141,8 +141,7 @@ export async function inspect(
     const scannedProjects = await getAllDepsAllProjects(
       root,
       targetFile,
-      options,
-      initScriptPath,
+      options
     );
     plugin.meta = plugin.meta || {};
     return {
@@ -155,8 +154,7 @@ export async function inspect(
     root,
     targetFile,
     options,
-    subProject,
-    initScriptPath,
+    subProject
   );
   if (depGraphAndDepRootNames.allSubProjectNames) {
     plugin.meta = plugin.meta || {};
@@ -329,8 +327,7 @@ async function getAllDepsOneProject(
   root: string,
   targetFile: string,
   options: Options,
-  subProject?: string,
-  initScriptPath?: string,
+  subProject?: string
 ): Promise<{
   depGraph: DepGraph;
   allSubProjectNames: string[];
@@ -340,8 +337,7 @@ async function getAllDepsOneProject(
   const allProjectDeps = await getAllDeps(
     root,
     targetFile,
-    options,
-    initScriptPath,
+    options
   );
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
   if (subProject) {
@@ -387,14 +383,12 @@ function getDepsSubProject(
 async function getAllDepsAllProjects(
   root: string,
   targetFile: string,
-  options: Options,
-  initScriptPath?: string,
+  options: Options
 ): Promise<ScannedProject[]> {
   const allProjectDeps = await getAllDeps(
     root,
     targetFile,
-    options,
-    initScriptPath,
+    options
   );
   return Object.keys(allProjectDeps.projects).map((proj) => {
     const defaultProject = allProjectDeps.defaultProject;
@@ -513,8 +507,7 @@ function getVersionBuildInfo(
 async function getAllDeps(
   root: string,
   targetFile: string,
-  options: Options,
-  initScriptPath?: string,
+  options: Options
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   debugLog('`gradle -v` command run: ' + command);
@@ -536,8 +529,7 @@ async function getAllDeps(
     root,
     targetFile,
     injectedScripPath,
-    options,
-    initScriptPath,
+    options
   );
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
@@ -706,8 +698,7 @@ function buildArgs(
   root: string,
   targetFile: string | null,
   initGradlePath: string,
-  options: Options,
-  initScriptPath?: string,
+  options: Options
 ) {
   const args: string[] = [];
   args.push('snykResolvedDepsJson', '-q');
@@ -732,6 +723,10 @@ function buildArgs(
       `-PconfAttr=${quot}${options['configuration-attributes']}${quot}`,
     );
   }
+  if (options.initScript) {
+    const formattedInitScript = formatArgWithWhiteSpace(options.initScript);
+    args.push('--init-script', formattedInitScript);
+  }
 
   if (!options.daemon) {
     args.push('--no-daemon');
@@ -755,13 +750,6 @@ function buildArgs(
 
   if (options.args) {
     args.push(...options.args);
-  }
-
-  if (initScriptPath) {
-    const formattedInitScriptPath = formatArgWithWhiteSpace(
-      path.resolve(initScriptPath),
-    );
-    args.push('-I ' + formattedInitScriptPath);
   }
 
   // There might be a legacy --configuration option in 'args'.
