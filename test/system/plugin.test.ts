@@ -9,6 +9,7 @@ import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import { CallGraph } from '@snyk/cli-interface/legacy/common';
 
 const rootNoWrapper = fixtureDir('no wrapper');
+const withInitScript = fixtureDir('with-init-script');
 
 test('run inspect()', async (t) => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
@@ -20,6 +21,41 @@ test('run inspect()', async (t) => {
 
   t.ok(
     nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
+    'correct version found',
+  );
+});
+
+test('run inspect() with gradle init script', async (t) => {
+  const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
+    initScript: path.join(rootNoWrapper, 'init.gradle'),
+  });
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(
+    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
+    'correct version found',
+  );
+});
+
+test('run inspect() with on project that depends on gradle init script', async (t) => {
+  const result = await inspect('.', path.join(withInitScript, 'build.gradle'), {
+    initScript: path.join(withInitScript, 'init.gradle'),
+  });
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  t.ok(nodeIds.length > 0, 'dependency tree is not empty');
+  t.ok(
+    nodeIds.indexOf('commons-collections:commons-collections@3.2.1') !== -1,
     'correct version found',
   );
 });
@@ -63,7 +99,7 @@ test('run inspect() with reachableVulns', async (t) => {
     path.join(rootNoWrapper, 'build.gradle'),
     {
       reachableVulns: true,
-      initScript: 'init.gradle',
+      initScript: path.join(rootNoWrapper, 'init.gradle'),
     },
   );
 
@@ -76,7 +112,7 @@ test('run inspect() with reachableVulns', async (t) => {
     javaCallGraphBuilderStub.calledWith(
       path.join('.', rootNoWrapper),
       'gradle',
-      'init.gradle',
+      path.join(rootNoWrapper, 'init.gradle'),
     ),
     'call graph builder was called with the correct path and init file',
   );
