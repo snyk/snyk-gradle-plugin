@@ -99,10 +99,12 @@ test('run inspect() with reachableVulns', async (t) => {
     {
       reachableVulns: true,
       initScript: path.join(rootNoWrapper, 'init.gradle'),
+      'configuration-attributes':
+        'buildtype:release,usage:java-runtime,newdim:appA',
     },
   );
 
-  // test with init script param
+  // test with init script param/configuration attributes
   t.ok(
     javaCallGraphBuilderStub.calledTwice,
     'called to the call graph builder',
@@ -112,6 +114,7 @@ test('run inspect() with reachableVulns', async (t) => {
       path.join('.', rootNoWrapper),
       'gradle',
       formatArgWithWhiteSpace(path.join(rootNoWrapper, 'init.gradle')), // arg should be normalized with quotes
+      'buildtype:release,usage:java-runtime,newdim:appA',
     ),
     'call graph builder was called with the correct path and init file',
   );

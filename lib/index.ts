@@ -125,11 +125,18 @@ export async function inspect(
       );
     }
 
+    let confAttrs: string | undefined;
+
+    if (options['configuration-attributes']) {
+      confAttrs = options['configuration-attributes'];
+    }
+
     debugLog(`getting call graph from path ${targetPath}`);
     callGraph = await javaCallGraphBuilder.getCallGraphGradle(
       path.dirname(targetPath),
       command,
       initScriptPath,
+      confAttrs,
     );
     debugLog('got call graph successfully');
   }
