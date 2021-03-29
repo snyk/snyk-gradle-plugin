@@ -87,10 +87,6 @@ class SnykGraph {
             if (!parentNode) {
                 return
             }
-            // avoids cyclic
-            if (parentNode && parentNode.parentIds.contains(childId)) {
-                return
-            }
         }
         def childNode = this.setNode(childId, null)
         if (!childNode || childNode.parentIds.contains(parentId)) {

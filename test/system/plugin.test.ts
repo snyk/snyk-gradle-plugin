@@ -2,7 +2,6 @@ import * as path from 'path';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
 import { inspect, formatArgWithWhiteSpace } from '../../lib';
-import * as subProcess from '../../lib/sub-process';
 import * as fs from 'fs';
 import * as sinon from 'sinon';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
@@ -162,16 +161,8 @@ test('multi-config: both compile and runtime deps picked up by default', async (
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
-  const gradleVersionOutput = await subProcess.execute('gradle', ['-v'], {});
-  const isGradleVersionLessThan4 =
-    parseInt(gradleVersionOutput.match(/Gradle (\d+)\.\d+(\.\d+)?/)![1], 10) <
-    4;
+  t.ok(graphObject.graph.nodes[0].deps.length === 6, 'top level deps');
 
-  if (isGradleVersionLessThan4) {
-    t.ok(graphObject.graph.nodes[0].deps.length === 16, 'top level deps');
-  } else {
-    t.ok(graphObject.graph.nodes[0].deps.length === 14, 'top level deps');
-  }
   t.ok(result.dependencyGraph.getPkgs().length === 42, 'same dependencies');
 });
 
