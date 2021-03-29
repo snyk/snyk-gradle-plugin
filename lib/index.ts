@@ -8,7 +8,6 @@ import * as chalk from 'chalk';
 import { DepGraph, DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
-import { findCycles } from './find-cycles';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import debugModule = require('debug');
 
@@ -258,26 +257,13 @@ export async function buildGraph(
     return depGraphBuilder.build();
   }
 
-  const childrenChain = new Map();
-  const ancestorsChain = new Map();
-
   for (const id of Object.keys(snykGraph)) {
-    const { name, version, parentIds } = snykGraph[id];
+    const { name, version } = snykGraph[id];
     const nodeId = `${name}@${version}`;
 
     depGraphBuilder.addPkgNode({ name, version }, nodeId);
-
-    if (parentIds && nodeId) {
-      for (const parentId of parentIds) {
-        const currentChildren = childrenChain.get(parentId) || [];
-        const currentAncestors = ancestorsChain.get(parentId) || [];
-        childrenChain.set(parentId, [...currentChildren, nodeId]);
-        ancestorsChain.set(nodeId, [...currentAncestors, parentId]);
-      }
-    }
   }
 
-  const parentlessDueOfCycles = new Set();
   // Edges
   for (const id of Object.keys(snykGraph)) {
     snykGraph[id].parentIds = Array.from(
@@ -293,23 +279,6 @@ export async function buildGraph(
           const { name, version } = snykGraph[parentId];
           parentId = `${name}@${version}`;
         }
-
-        if (!parentId || !nodeId || parentId === nodeId) {
-          continue;
-        }
-        const alreadyVisited = new Set();
-        const hasCycles = findCycles(
-          ancestorsChain,
-          childrenChain,
-          parentId,
-          nodeId,
-          alreadyVisited,
-        );
-
-        if (hasCycles) {
-          parentlessDueOfCycles.add(nodeId);
-          continue;
-        }
         depGraphBuilder.connectDep(parentId, nodeId);
       }
     } else {
@@ -317,12 +286,6 @@ export async function buildGraph(
     }
   }
 
-  //@boost temporary solution while we do not allow cycles (jvm supports cycles)
-  parentlessDueOfCycles.forEach((child: string) => {
-    depGraphBuilder.connectDep('root-node', child);
-  });
-  childrenChain.clear();
-  ancestorsChain.clear();
   return depGraphBuilder.build();
 }
 

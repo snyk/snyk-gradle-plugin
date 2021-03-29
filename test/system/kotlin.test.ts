@@ -4,17 +4,12 @@ import { test } from 'tap';
 
 import { inspect } from '../../lib';
 
-let kotlinSupported = true;
-const GRADLE_VERSION = process.env.GRADLE_VERSION;
-if (GRADLE_VERSION) {
-  const major = parseInt(GRADLE_VERSION.split('.')[0]);
-  if (major < 5) {
-    kotlinSupported = false;
-  }
-}
+const gradleVersionFromProcess = process.env.GRADLE_VERSION;
+const gradleVersionInUse = parseInt(gradleVersionFromProcess?.split('.')[0]);
+const isKotlinSupported = gradleVersionInUse < 5 ? false : true;
 
 // Timeout is 150 seconds because Gradle .kts builds are slower than usual
-if (kotlinSupported) {
+if (isKotlinSupported) {
   test(
     'build.gradle.kts files are supported',
     { timeout: 150000 },
@@ -52,18 +47,17 @@ if (kotlinSupported) {
         JSON.stringify(result.dependencyGraph),
       );
 
-      t.ok(
-        graphObject.graph.nodes[0].deps.length === 3,
-        'top level deps count',
-      );
+      const { deps: directDependencies } = graphObject.graph.nodes[0];
+      t.ok(directDependencies.length === 2, 'direct dependencies count');
+
+      const expectedDirectDependencies = [
+        { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21' },
+        { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
+      ];
 
       t.deepEqual(
-        graphObject.graph.nodes[0].deps,
-        [
-          { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21' },
-          { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib@1.3.21' },
-          { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
-        ],
+        directDependencies,
+        expectedDirectDependencies,
         'validate that top level dependencies are the correct ones',
       );
     },
