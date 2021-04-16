@@ -398,9 +398,7 @@ async function getInjectedScriptPath(): Promise<{
   // Copying the injectable script into a temp file.
   try {
     const tmpInitGradle = tmp.fileSync({ postfix: '-init.gradle' });
-    fs.createReadStream(initGradleAsset).pipe(
-      fs.createWriteStream('', { fd: tmpInitGradle!.fd }),
-    );
+    fs.writeSync(tmpInitGradle.fd, fs.readFileSync(initGradleAsset));
     return {
       injectedScripPath: tmpInitGradle.name,
       cleanupCallback: tmpInitGradle.removeCallback,
