@@ -54,7 +54,7 @@ commands:
   install_gradle_windows:
     description: Install gradle
     steps:
-      - run: choco install gradle
+      - run: choco install gradle --version=6.0
   install_sdkman:
     description: Install SDKMAN
     steps:
