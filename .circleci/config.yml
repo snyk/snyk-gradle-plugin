@@ -174,18 +174,6 @@ workflows:
 
     # UNIX tests
     - test-unix:
-        name: Unix Tests for Gradle=6 JDK=13 Node=12
-        context: nodejs-install
-        gradle_version: "6.0"
-        jdk_version: "13"
-        node_version: "12"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
         name: Unix Tests for Gradle=6.0 JDK=13 Node=12
         context: nodejs-install
         gradle_version: "6.0"
