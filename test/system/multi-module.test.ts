@@ -15,7 +15,7 @@ test('multi-project, explicitly targeting a subproject build file', async (t) =>
     'subproj',
     'sub project is "subproj"',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, []);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -44,7 +44,7 @@ test('multi-project, ran from root, targeting subproj', async (t) => {
     'subproj',
     'new root project is "subproj"',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, []);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -68,7 +68,7 @@ test('multi-project, ran from a subproject directory', async (t) => {
     'subproj',
     'root project is "subproj"',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, []);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -96,7 +96,7 @@ test('multi-project: only sub-project has deps and they are returned', async (t)
     './subproj',
     'sub project name is included in the root pkg name',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -127,7 +127,7 @@ test('multi-project: only sub-project has deps, none returned for main', async (
     'root-proj',
     'returned new project name is not sub-project',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
@@ -162,10 +162,7 @@ if (wrapperIsCompatibleWithJvm) {
       'returned project name is not sub-project',
     );
     t.equal(result.meta!.versionBuildInfo!.gradleVersion, '5.4.1');
-    t.deepEqual(result.plugin.meta!.allSubProjectNames, [
-      'root-proj',
-      'subproj',
-    ]);
+    t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
     const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
@@ -206,7 +203,7 @@ test('multi-project: only sub-project has deps and they are returned space needs
     options,
   );
 
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   t.match(
     result.dependencyGraph.rootPkg.name,
@@ -310,7 +307,6 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
   );
 
   t.deepEqual(result.plugin.meta!.allSubProjectNames, [
-    'root-proj',
     'subproj',
     'subproj-fail',
   ]);
@@ -448,7 +444,7 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
     'root-proj',
     'new root project name is "root-proj"',
   );
-  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['root-proj', 'subproj']);
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, ['subproj']);
 
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node

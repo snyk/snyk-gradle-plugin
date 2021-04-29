@@ -181,10 +181,16 @@ allprojects { everyProj ->
                 println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
                 def projectsDict = [:]
                 def defaultProjectName = task.project.name
+                def allSubProjectNames = []
+                allprojects.each { project -> 
+                    if(project.name != defaultProjectName) { 
+                        allSubProjectNames.add(project.name) 
+                    } 
+                }
                 def result = [
                     'defaultProject': defaultProjectName,
                     'projects': projectsDict,
-                    'allSubProjectNames': allprojects.collect { it.name }
+                    'allSubProjectNames': allSubProjectNames
                 ]
 
                 def shouldScanProject = {
