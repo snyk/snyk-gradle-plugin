@@ -192,7 +192,7 @@ export interface JsonDepsScriptResult {
   defaultProject: string;
   projects: ProjectsDict;
   allSubProjectNames: string[];
-  versionBuildInfo: VersionBuildInfo;
+  versionBuildInfo?: VersionBuildInfo;
 }
 
 interface SnykGraph {
@@ -206,8 +206,8 @@ interface ProjectsDict {
 }
 
 interface GradleProjectInfo {
-  depGraph: DepGraph;
-  snykGraph: { [name: string]: SnykGraph }; // snykGraph from gradle task
+  depGraph?: DepGraph;
+  snykGraph?: { [name: string]: SnykGraph }; // snykGraph from gradle task
   targetFile: string;
   projectVersion: string;
 }
@@ -302,43 +302,57 @@ async function getAllDepsOneProject(
 }> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
-  if (subProject) {
-    const { depGraph, meta } = getDepsSubProject(subProject, allProjectDeps);
-    return {
-      depGraph,
-      allSubProjectNames,
-      gradleProjectName: meta.gradleProjectName,
-      versionBuildInfo: allProjectDeps.versionBuildInfo,
-    };
-  }
 
-  const { projects, defaultProject } = allProjectDeps;
-  const { depGraph } = projects[defaultProject];
-  return {
-    depGraph,
-    allSubProjectNames,
-    gradleProjectName: defaultProject,
-    versionBuildInfo: allProjectDeps.versionBuildInfo,
-  };
+  return subProject
+    ? getSubProject(subProject, allProjectDeps, allSubProjectNames)
+    : getRootProject(allProjectDeps, allSubProjectNames);
 }
 
-function getDepsSubProject(
+function getSubProject(
   subProject: string,
-  allProjectDeps: JsonDepsScriptResult,
-): { depGraph: DepGraph; meta: any } {
-  const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
-
+  allProjectDeps,
+  allSubProjectNames: string[],
+): {
+  depGraph: DepGraph;
+  allSubProjectNames: string[];
+  gradleProjectName: string;
+  versionBuildInfo: VersionBuildInfo;
+} {
   if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
     throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
   }
 
-  const depGraph = allProjectDeps.projects[subProject].depGraph;
+  const { depGraph } = allProjectDeps.projects[subProject];
+  const { versionBuildInfo } = allProjectDeps;
+  const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
 
   return {
     depGraph,
-    meta: {
-      gradleProjectName,
-    },
+    allSubProjectNames,
+    gradleProjectName,
+    versionBuildInfo,
+  };
+}
+
+function getRootProject(
+  allProjectDeps,
+  allSubProjectNames: string[],
+): {
+  depGraph: DepGraph;
+  allSubProjectNames: string[];
+  gradleProjectName: string;
+  versionBuildInfo: VersionBuildInfo;
+} {
+  const { projects, defaultProject, versionBuildInfo } = allProjectDeps;
+  const { depGraph } = projects[defaultProject];
+
+  const gradleProjectName = defaultProject;
+
+  return {
+    depGraph,
+    allSubProjectNames,
+    gradleProjectName,
+    versionBuildInfo,
   };
 }
 
@@ -348,20 +362,23 @@ async function getAllDepsAllProjects(
   options: Options,
 ): Promise<ScannedProject[]> {
   const allProjectDeps = await getAllDeps(root, targetFile, options);
-  return Object.keys(allProjectDeps.projects).map((proj) => {
-    const defaultProject = allProjectDeps.defaultProject;
+  return Object.keys(allProjectDeps.projects).map((projectId) => {
+    const { defaultProject } = allProjectDeps;
     const gradleProjectName =
-      proj === defaultProject ? defaultProject : `${defaultProject}/${proj}`;
+      projectId === defaultProject
+        ? defaultProject
+        : `${defaultProject}/${projectId}`;
     return {
       targetFile: targetFileFilteredForCompatibility(
-        allProjectDeps.projects[proj].targetFile,
+        allProjectDeps.projects[projectId].targetFile,
       ),
       meta: {
         gradleProjectName,
+        projectName: gradleProjectName,
         versionBuildInfo: allProjectDeps.versionBuildInfo,
-        targetFile: allProjectDeps.projects[proj].targetFile,
+        targetFile: allProjectDeps.projects[projectId].targetFile,
       },
-      depGraph: allProjectDeps.projects[proj].depGraph,
+      depGraph: allProjectDeps.projects[projectId].depGraph,
     };
   });
 }
@@ -495,36 +512,17 @@ async function getAllDeps(
     if (cleanupCallback) {
       cleanupCallback();
     }
-    const extractedJson = extractJsonFromScriptOutput(stdoutText);
+    const extractedJSON = extractJsonFromScriptOutput(stdoutText);
     const jsonAttrsPretty = getGradleAttributesPretty(stdoutText);
     logger(
       `The following attributes and their possible values were found in your configurations: ${jsonAttrsPretty}`,
     );
     const versionBuildInfo = getVersionBuildInfo(gradleVersionOutput);
     if (versionBuildInfo) {
-      extractedJson.versionBuildInfo = versionBuildInfo;
+      extractedJSON.versionBuildInfo = versionBuildInfo;
     }
 
-    // processing snykGraph from gradle task to depGraph
-    for (const projectId in extractedJson.projects) {
-      const { snykGraph, projectVersion } = extractedJson.projects[projectId];
-
-      let projectName = path.basename(root);
-
-      if (projectId !== extractedJson.defaultProject) {
-        projectName = `${path.basename(root)}/${projectId}`;
-      }
-
-      extractedJson.projects[projectId].depGraph = await buildGraph(
-        snykGraph,
-        projectName,
-        projectVersion,
-      );
-      // this property usage ends here
-      delete extractedJson.projects[projectId].snykGraph;
-    }
-
-    return extractedJson;
+    return await processProjectsInExtractedJSON(root, extractedJSON);
   } catch (error0) {
     const error: Error = error0;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -606,6 +604,41 @@ ${blackOnYellow('===== DEBUG INFORMATION END =====')}
 ${chalk.red.bold(mainErrorMessage)}`;
     throw error;
   }
+}
+
+export async function processProjectsInExtractedJSON(
+  root: string,
+  extractedJSON: JsonDepsScriptResult,
+) {
+  for (const projectId in extractedJSON.projects) {
+    const { defaultProject } = extractedJSON;
+    const { snykGraph, projectVersion } = extractedJSON.projects[projectId];
+
+    if (!snykGraph) {
+      continue;
+    }
+
+    const isValidRootDir = root !== null && root !== undefined;
+    const isSubProject = projectId !== defaultProject;
+
+    let projectName = isValidRootDir ? path.basename(root) : defaultProject;
+
+    if (isSubProject) {
+      projectName = isValidRootDir
+        ? `${path.basename(root)}/${projectId}`
+        : `${defaultProject}/${projectId}`;
+    }
+
+    extractedJSON.projects[projectId].depGraph = await buildGraph(
+      snykGraph,
+      projectName,
+      projectVersion,
+    );
+    // this property usage ends here
+    delete extractedJSON.projects[projectId].snykGraph;
+  }
+
+  return extractedJSON;
 }
 
 function toCamelCase(input: string) {
