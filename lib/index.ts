@@ -304,12 +304,11 @@ async function getAllDepsOneProject(
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
 
   return subProject
-    ? getSubProject(root, subProject, allProjectDeps, allSubProjectNames)
-    : getRootProject(root, allProjectDeps, allSubProjectNames);
+    ? getSubProject(subProject, allProjectDeps, allSubProjectNames)
+    : getRootProject(allProjectDeps, allSubProjectNames);
 }
 
 function getSubProject(
-  root: string,
   subProject: string,
   allProjectDeps,
   allSubProjectNames: string[],
@@ -336,7 +335,6 @@ function getSubProject(
 }
 
 function getRootProject(
-  root: string,
   allProjectDeps,
   allSubProjectNames: string[],
 ): {
@@ -620,10 +618,15 @@ export async function processProjectsInExtractedJSON(
       continue;
     }
 
-    let projectName = path.basename(root);
+    const isValidRootDir = root !== null && root !== undefined;
+    const isSubProject = projectId !== defaultProject;
 
-    if (projectId !== defaultProject) {
-      projectName = `${path.basename(root)}/${projectId}`;
+    let projectName = isValidRootDir ? path.basename(root) : defaultProject;
+
+    if (isSubProject) {
+      projectName = isValidRootDir
+        ? `${path.basename(root)}/${projectId}`
+        : `${defaultProject}/${projectId}`;
     }
 
     extractedJSON.projects[projectId].depGraph = await buildGraph(

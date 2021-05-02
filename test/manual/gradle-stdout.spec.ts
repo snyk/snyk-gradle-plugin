@@ -6,6 +6,8 @@ describe('findProjectsInExtractedJSON', () => {
 
   it.each`
     rootDir        | targetFile
+    ${null}        | ${'build.gradle'}
+    ${undefined}   | ${'build.gradle'}
     ${fakeRootDir} | ${path.join(fakeRootDir, 'build.gradle')}
   `(
     'project with targetFile `$targetFile` have valid name when rootDir is `$rootDir`',
