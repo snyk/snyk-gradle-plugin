@@ -7,12 +7,12 @@
       "info": { "name": ".", "version": "unspecified" }
     },
     {
-      "id": "org.scalaj:scalaj-http_2.13@2.4.2",
-      "info": { "name": "org.scalaj:scalaj-http_2.13", "version": "2.4.2" }
-    },
-    {
       "id": "org.scala-lang:scala-library@2.13.4",
       "info": { "name": "org.scala-lang:scala-library", "version": "2.13.4" }
+    },
+    {
+      "id": "org.scalaj:scalaj-http_2.13@2.4.2",
+      "info": { "name": "org.scalaj:scalaj-http_2.13", "version": "2.4.2" }
     },
     {
       "id": "io.gatling.highcharts:gatling-charts-highcharts@3.5.0",
@@ -377,40 +377,10 @@
         "nodeId": "root-node",
         "pkgId": ".@unspecified",
         "deps": [
-          { "nodeId": "org.scalaj:scalaj-http_2.13@2.4.2" },
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
-          { "nodeId": "io.gatling.highcharts:gatling-charts-highcharts@3.5.0" },
-          { "nodeId": "io.gatling:gatling-app@3.5.0" },
-          { "nodeId": "io.gatling:gatling-http@3.5.0" },
-          { "nodeId": "io.gatling:gatling-core@3.5.0" },
-          { "nodeId": "com.typesafe.akka:akka-actor_2.13@2.6.10" },
-          { "nodeId": "io.gatling:gatling-commons@3.5.0" },
-          { "nodeId": "io.gatling:gatling-commons-shared@3.5.0" },
-          { "nodeId": "io.netty:netty-transport-native-epoll@4.1.55.Final" },
-          { "nodeId": "com.typesafe.scala-logging:scala-logging_2.13@3.9.2" },
-          { "nodeId": "ch.qos.logback:logback-classic@1.2.3" },
-          { "nodeId": "com.fasterxml.jackson.core:jackson-databind@2.12.0" },
-          { "nodeId": "io.burt:jmespath-jackson@0.5.0" },
-          { "nodeId": "org.simpleflatmapper:lightning-csv@8.2.3" },
-          { "nodeId": "com.github.ben-manes.caffeine:caffeine@2.8.8" },
-          { "nodeId": "io.pebbletemplates:pebble@3.1.4" },
-          { "nodeId": "org.jodd:jodd-lagarto@6.0.2" },
-          { "nodeId": "io.gatling:gatling-http-client@3.5.0" },
-          { "nodeId": "io.netty:netty-handler-proxy@4.1.55.Final" },
-          { "nodeId": "io.netty:netty-resolver-dns@4.1.55.Final" },
-          { "nodeId": "io.gatling:gatling-jms@3.5.0" },
-          { "nodeId": "io.gatling:gatling-redis@3.5.0" },
-          { "nodeId": "net.debasishg:redisclient_2.13@3.30" },
-          { "nodeId": "io.gatling:gatling-graphite@3.5.0" },
-          { "nodeId": "io.gatling:gatling-charts@3.5.0" },
-          { "nodeId": "io.gatling:gatling-recorder@3.5.0" },
-          { "nodeId": "org.bouncycastle:bcpkix-jdk15on@1.67" }
+          { "nodeId": "org.scalaj:scalaj-http_2.13@2.4.2" },
+          { "nodeId": "io.gatling.highcharts:gatling-charts-highcharts@3.5.0" }
         ]
-      },
-      {
-        "nodeId": "org.scalaj:scalaj-http_2.13@2.4.2",
-        "pkgId": "org.scalaj:scalaj-http_2.13@2.4.2",
-        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
       },
       {
         "nodeId": "org.scala-lang:scala-library@2.13.4",
@@ -418,16 +388,31 @@
         "deps": []
       },
       {
+        "nodeId": "org.scalaj:scalaj-http_2.13@2.4.2",
+        "pkgId": "org.scalaj:scalaj-http_2.13@2.4.2",
+        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
+      },
+      {
         "nodeId": "io.gatling.highcharts:gatling-charts-highcharts@3.5.0",
         "pkgId": "io.gatling.highcharts:gatling-charts-highcharts@3.5.0",
-        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
+        "deps": [
+          { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-app@3.5.0" },
+          { "nodeId": "io.gatling:gatling-recorder@3.5.0" }
+        ]
       },
       {
         "nodeId": "io.gatling:gatling-app@3.5.0",
         "pkgId": "io.gatling:gatling-app@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
-          { "nodeId": "io.gatling:gatling-jdbc@3.5.0" }
+          { "nodeId": "io.gatling:gatling-http@3.5.0" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
+          { "nodeId": "io.gatling:gatling-jms@3.5.0" },
+          { "nodeId": "io.gatling:gatling-jdbc@3.5.0" },
+          { "nodeId": "io.gatling:gatling-redis@3.5.0" },
+          { "nodeId": "io.gatling:gatling-graphite@3.5.0" },
+          { "nodeId": "io.gatling:gatling-charts@3.5.0" }
         ]
       },
       {
@@ -435,7 +420,9 @@
         "pkgId": "io.gatling:gatling-http@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
-          { "nodeId": "net.sf.saxon:Saxon-HE@10.3" }
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
+          { "nodeId": "net.sf.saxon:Saxon-HE@10.3" },
+          { "nodeId": "io.gatling:gatling-http-client@3.5.0" }
         ]
       },
       {
@@ -444,14 +431,22 @@
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
           { "nodeId": "com.typesafe.akka:akka-slf4j_2.13@2.6.10" },
+          { "nodeId": "com.typesafe.akka:akka-actor_2.13@2.6.10" },
+          { "nodeId": "io.gatling:gatling-commons@3.5.0" },
           { "nodeId": "io.gatling:gatling-jsonpath@3.5.0" },
           {
             "nodeId": "org.scala-lang.modules:scala-parser-combinators_2.13@1.1.2"
           },
+          { "nodeId": "com.fasterxml.jackson.core:jackson-databind@2.12.0" },
           { "nodeId": "com.github.scopt:scopt_2.13@3.7.1" },
           { "nodeId": "com.softwaremill.quicklens:quicklens_2.13@1.6.1" },
+          { "nodeId": "io.burt:jmespath-jackson@0.5.0" },
+          { "nodeId": "org.simpleflatmapper:lightning-csv@8.2.3" },
+          { "nodeId": "com.github.ben-manes.caffeine:caffeine@2.8.8" },
+          { "nodeId": "io.pebbletemplates:pebble@3.1.4" },
           { "nodeId": "io.netty:netty-handler@4.1.55.Final" },
-          { "nodeId": "net.sf.saxon:Saxon-HE@10.3" }
+          { "nodeId": "net.sf.saxon:Saxon-HE@10.3" },
+          { "nodeId": "org.jodd:jodd-lagarto@6.0.2" }
         ]
       },
       {
@@ -459,6 +454,7 @@
         "pkgId": "com.typesafe.akka:akka-slf4j_2.13@2.6.10",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "com.typesafe.akka:akka-actor_2.13@2.6.10" },
           { "nodeId": "org.slf4j:slf4j-api@1.7.30" }
         ]
       },
@@ -494,13 +490,19 @@
           { "nodeId": "com.typesafe:config@1.4.1" },
           { "nodeId": "org.slf4j:slf4j-api@1.7.30" },
           { "nodeId": "io.gatling:gatling-commons-shared-unstable@3.5.0" },
-          { "nodeId": "org.typelevel:spire-macros_2.13@0.17.0" }
+          { "nodeId": "io.gatling:gatling-commons-shared@3.5.0" },
+          { "nodeId": "org.typelevel:spire-macros_2.13@0.17.0" },
+          { "nodeId": "com.typesafe.scala-logging:scala-logging_2.13@3.9.2" },
+          { "nodeId": "ch.qos.logback:logback-classic@1.2.3" }
         ]
       },
       {
         "nodeId": "io.gatling:gatling-commons-shared-unstable@3.5.0",
         "pkgId": "io.gatling:gatling-commons-shared-unstable@3.5.0",
-        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
+        "deps": [
+          { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-commons-shared@3.5.0" }
+        ]
       },
       {
         "nodeId": "io.gatling:gatling-commons-shared@3.5.0",
@@ -517,6 +519,7 @@
         "pkgId": "io.gatling:gatling-netty-util@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.netty:netty-transport-native-epoll@4.1.55.Final" },
           { "nodeId": "io.netty:netty-buffer@4.1.55.Final" }
         ]
       },
@@ -609,7 +612,8 @@
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
           {
             "nodeId": "org.scala-lang.modules:scala-parser-combinators_2.13@1.1.2"
-          }
+          },
+          { "nodeId": "com.fasterxml.jackson.core:jackson-databind@2.12.0" }
         ]
       },
       {
@@ -654,7 +658,10 @@
       {
         "nodeId": "io.burt:jmespath-jackson@0.5.0",
         "pkgId": "io.burt:jmespath-jackson@0.5.0",
-        "deps": [{ "nodeId": "io.burt:jmespath-core@0.5.0" }]
+        "deps": [
+          { "nodeId": "com.fasterxml.jackson.core:jackson-databind@2.12.0" },
+          { "nodeId": "io.burt:jmespath-core@0.5.0" }
+        ]
       },
       {
         "nodeId": "io.burt:jmespath-core@0.5.0",
@@ -747,10 +754,15 @@
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
           { "nodeId": "org.slf4j:slf4j-api@1.7.30" },
           { "nodeId": "io.gatling:gatling-netty-util@3.5.0" },
+          { "nodeId": "io.netty:netty-transport-native-epoll@4.1.55.Final" },
           { "nodeId": "io.netty:netty-buffer@4.1.55.Final" },
+          { "nodeId": "com.typesafe.scala-logging:scala-logging_2.13@3.9.2" },
+          { "nodeId": "ch.qos.logback:logback-classic@1.2.3" },
           { "nodeId": "io.netty:netty-handler@4.1.55.Final" },
+          { "nodeId": "io.netty:netty-handler-proxy@4.1.55.Final" },
           { "nodeId": "io.netty:netty-codec-http@4.1.55.Final" },
           { "nodeId": "io.netty:netty-codec-http2@4.1.55.Final" },
+          { "nodeId": "io.netty:netty-resolver-dns@4.1.55.Final" },
           { "nodeId": "io.netty:netty-tcnative-boringssl-static@2.0.35.Final" }
         ]
       },
@@ -832,6 +844,7 @@
         "pkgId": "io.gatling:gatling-jms@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
           { "nodeId": "javax.jms:javax.jms-api@2.0.1" },
           { "nodeId": "com.eatthepath:fast-uuid@0.1" }
         ]
@@ -849,12 +862,19 @@
       {
         "nodeId": "io.gatling:gatling-jdbc@3.5.0",
         "pkgId": "io.gatling:gatling-jdbc@3.5.0",
-        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
+        "deps": [
+          { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" }
+        ]
       },
       {
         "nodeId": "io.gatling:gatling-redis@3.5.0",
         "pkgId": "io.gatling:gatling-redis@3.5.0",
-        "deps": [{ "nodeId": "org.scala-lang:scala-library@2.13.4" }]
+        "deps": [
+          { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
+          { "nodeId": "net.debasishg:redisclient_2.13@3.30" }
+        ]
       },
       {
         "nodeId": "net.debasishg:redisclient_2.13@3.30",
@@ -875,6 +895,7 @@
         "pkgId": "io.gatling:gatling-graphite@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
           { "nodeId": "org.hdrhistogram:HdrHistogram@2.1.12" }
         ]
       },
@@ -888,6 +909,7 @@
         "pkgId": "io.gatling:gatling-charts@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
           { "nodeId": "com.tdunning:t-digest@3.1" }
         ]
       },
@@ -901,8 +923,13 @@
         "pkgId": "io.gatling:gatling-recorder@3.5.0",
         "deps": [
           { "nodeId": "org.scala-lang:scala-library@2.13.4" },
+          { "nodeId": "io.gatling:gatling-http@3.5.0" },
+          { "nodeId": "io.gatling:gatling-core@3.5.0" },
+          { "nodeId": "com.typesafe.akka:akka-actor_2.13@2.6.10" },
+          { "nodeId": "com.fasterxml.jackson.core:jackson-databind@2.12.0" },
           { "nodeId": "io.netty:netty-codec-http@4.1.55.Final" },
-          { "nodeId": "org.scala-lang.modules:scala-swing_2.13@3.0.0" }
+          { "nodeId": "org.scala-lang.modules:scala-swing_2.13@3.0.0" },
+          { "nodeId": "org.bouncycastle:bcpkix-jdk15on@1.67" }
         ]
       },
       {
