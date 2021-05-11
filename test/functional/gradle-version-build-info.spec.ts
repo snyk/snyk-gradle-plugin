@@ -68,9 +68,8 @@ describe('Gradle Version Build Info', () => {
       'Ant:          Apache Ant(TM) version 1.9.13 compiled on July 10 2018\n' +
       'JVM:          9.0.4 (Oracle Corporation 9.0.4+11)\n' +
       'OS:           Mac OS X 10.15 x86_64';
-    const versionBuildInfo = testableMethods.getVersionBuildInfo(
-      expectedGradleOutput,
-    )!;
+    const versionBuildInfo =
+      testableMethods.getVersionBuildInfo(expectedGradleOutput)!;
 
     expect(versionBuildInfo).toEqual({
       gradleVersion: '5.4.1',
