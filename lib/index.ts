@@ -447,9 +447,9 @@ function getVersionBuildInfo(
   gradleVersionOutput: string,
 ): VersionBuildInfo | undefined {
   try {
-    const cleanedVersionOutput: string = cleanupVersionOutput(
-      gradleVersionOutput,
-    );
+    const cleanedVersionOutput: string =
+      cleanupVersionOutput(gradleVersionOutput);
+
     if (cleanedVersionOutput !== '') {
       const gradleOutputArray = cleanedVersionOutput.split(/\r\n|\r|\n/);
       // from first 3 new lines, we get the gradle version
@@ -463,9 +463,8 @@ function getVersionBuildInfo(
         .map((value) => value.split(/(.*): (.*)/))
         .forEach(
           (splitValue) =>
-            (metaBuildVersion[
-              toCamelCase(splitValue[1].trim())
-            ] = splitValue[2].trim()),
+            (metaBuildVersion[toCamelCase(splitValue[1].trim())] =
+              splitValue[2].trim()),
         );
       return {
         gradleVersion,
@@ -618,7 +617,8 @@ export async function processProjectsInExtractedJSON(
       continue;
     }
 
-    const isValidRootDir = root !== null && root !== undefined;
+    const invalidValues = [null, undefined, ''];
+    const isValidRootDir = invalidValues.indexOf(root) === -1;
     const isSubProject = projectId !== defaultProject;
 
     let projectName = isValidRootDir ? path.basename(root) : defaultProject;

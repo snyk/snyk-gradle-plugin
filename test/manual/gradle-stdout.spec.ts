@@ -6,6 +6,7 @@ describe('findProjectsInExtractedJSON', () => {
 
   it.each`
     rootDir        | targetFile
+    ${''}          | ${'build.gradle'}
     ${null}        | ${'build.gradle'}
     ${undefined}   | ${'build.gradle'}
     ${fakeRootDir} | ${path.join(fakeRootDir, 'build.gradle')}
@@ -35,14 +36,11 @@ describe('findProjectsInExtractedJSON', () => {
         allSubProjectNames: [],
       };
 
-      const {
-        defaultProject,
-        projects,
-        allSubProjectNames,
-      } = await processProjectsInExtractedJSON(
-        rootDir,
-        jsonExtractedFromGradleStdout,
-      );
+      const { defaultProject, projects, allSubProjectNames } =
+        await processProjectsInExtractedJSON(
+          rootDir,
+          jsonExtractedFromGradleStdout,
+        );
 
       expect(defaultProject).toEqual('tardis-master');
       expect(projects['tardis-master']?.targetFile).toEqual(`${targetFile}`);
