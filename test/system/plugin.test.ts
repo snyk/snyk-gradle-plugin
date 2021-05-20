@@ -1,11 +1,7 @@
 import * as path from 'path';
 import { fixtureDir } from '../common';
 import { test } from 'tap';
-import { inspect, formatArgWithWhiteSpace } from '../../lib';
-import * as fs from 'fs';
-import * as sinon from 'sinon';
-import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
-import { CallGraph } from '@snyk/cli-interface/legacy/common';
+import { inspect } from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const withInitScript = fixtureDir('with-init-script');
@@ -57,76 +53,6 @@ test('run inspect() with on project that depends on gradle init script', async (
     nodeIds.indexOf('commons-collections:commons-collections@3.2.1') !== -1,
     'correct version found',
   );
-});
-
-test('run inspect() with reachableVulns', async (t) => {
-  const gradleCallGraph = JSON.parse(
-    fs.readFileSync(
-      path.join(fixtureDir('call-graphs'), 'simple.json'),
-      'utf-8',
-    ),
-  );
-  const javaCallGraphBuilderStub = sinon
-    .stub(javaCallGraphBuilder, 'getCallGraphGradle')
-    .resolves(gradleCallGraph as CallGraph);
-  const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
-    reachableVulns: true,
-  });
-
-  const pkgs = result.dependencyGraph.getDepPkgs();
-  const nodeIds: string[] = [];
-  Object.keys(pkgs).forEach((id) => {
-    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
-  });
-
-  t.ok(
-    nodeIds.indexOf('com.android.tools:annotations@25.3.0') !== -1,
-    'correct version found',
-  );
-  t.ok(javaCallGraphBuilderStub.calledOnce, 'called to the call graph builder');
-  t.ok(
-    javaCallGraphBuilderStub.calledWith(
-      path.join('.', rootNoWrapper),
-      'gradle',
-    ),
-    'call graph builder was called with the correct path',
-  );
-  t.same(gradleCallGraph, result.callGraph, 'returns expected callgraph');
-
-  const resultWithInit = await inspect(
-    '.',
-    path.join(rootNoWrapper, 'build.gradle'),
-    {
-      reachableVulns: true,
-      initScript: path.join(rootNoWrapper, 'init.gradle'),
-      'configuration-attributes':
-        'buildtype:release,usage:java-runtime,newdim:appA',
-    },
-  );
-
-  // test with init script param/configuration attributes
-  t.ok(
-    javaCallGraphBuilderStub.calledTwice,
-    'called to the call graph builder',
-  );
-  t.ok(
-    javaCallGraphBuilderStub.calledWith(
-      path.join('.', rootNoWrapper),
-      'gradle',
-      formatArgWithWhiteSpace(path.join(rootNoWrapper, 'init.gradle')), // arg should be normalized with quotes
-      'buildtype:release,usage:java-runtime,newdim:appA',
-    ),
-    'call graph builder was called with the correct path and init file',
-  );
-  t.same(
-    gradleCallGraph,
-    resultWithInit.callGraph,
-    'returns expected callgraph',
-  );
-
-  t.teardown(() => {
-    javaCallGraphBuilderStub.restore();
-  });
 });
 
 test('multi-config: both compile and runtime deps picked up by default', async (t) => {
