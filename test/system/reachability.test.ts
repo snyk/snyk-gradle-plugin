@@ -113,6 +113,29 @@ test('reachableVulns', async (t) => {
     );
   });
 
+  t.test('with timeout', async (t) => {
+    const result = await inspect(
+      '.',
+      path.join(rootNoWrapper, 'build.gradle'),
+      {
+        reachableVulns: true,
+        callGraphBuilderTimeout: 20,
+      },
+    );
+
+    t.ok(
+      javaCallGraphBuilderStub.calledWith(
+        path.join('.', rootNoWrapper),
+        'gradle',
+        undefined,
+        undefined,
+        20000,
+      ),
+      'call graph builder was called with timeout',
+    );
+    t.same(gradleCallGraph, result.callGraph, 'returns expected callgraph');
+  });
+
   t.teardown(() => {
     javaCallGraphBuilderStub.restore();
   });

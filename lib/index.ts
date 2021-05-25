@@ -64,6 +64,7 @@ export interface GradleInspectOptions {
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
   reachableVulns?: boolean;
+  callGraphBuilderTimeout?: number;
   initScript?: string;
 }
 
@@ -132,11 +133,16 @@ export async function inspect(
       confAttrs = options['configuration-attributes'];
     }
 
+    const timeout = options?.callGraphBuilderTimeout
+      ? options?.callGraphBuilderTimeout * 1000
+      : undefined;
+
     callGraph = await getCallGraph(
       targetPath,
       command,
       initScriptPath,
       confAttrs,
+      timeout,
     );
   }
 
@@ -769,6 +775,7 @@ async function getCallGraph(
   command: string,
   initScriptPath?: string,
   confAttrs?: string,
+  timeout?: number,
 ): Promise<CallGraphResult> {
   try {
     debugLog(`getting call graph from path ${targetPath}`);
@@ -777,6 +784,7 @@ async function getCallGraph(
       command,
       initScriptPath,
       confAttrs,
+      timeout,
     );
     debugLog('got call graph successfully');
     return callGraph;
