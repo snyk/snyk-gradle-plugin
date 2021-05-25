@@ -13,6 +13,7 @@ import debugModule = require('debug');
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
+type CallGraphResult = legacyCommon.CallGraphResult;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
@@ -63,6 +64,7 @@ export interface GradleInspectOptions {
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
   reachableVulns?: boolean;
+  callGraphBuilderTimeout?: number;
   initScript?: string;
 }
 
@@ -111,7 +113,7 @@ export async function inspect(
     meta: {},
   };
 
-  let callGraph: CallGraph | undefined;
+  let callGraph: CallGraphResult | undefined;
   const targetPath = path.join(root, targetFile);
 
   if (options.reachableVulns) {
@@ -131,14 +133,17 @@ export async function inspect(
       confAttrs = options['configuration-attributes'];
     }
 
-    debugLog(`getting call graph from path ${targetPath}`);
-    callGraph = await javaCallGraphBuilder.getCallGraphGradle(
-      path.dirname(targetPath),
+    const timeout = options?.callGraphBuilderTimeout
+      ? options?.callGraphBuilderTimeout * 1000
+      : undefined;
+
+    callGraph = await getCallGraph(
+      targetPath,
       command,
       initScriptPath,
       confAttrs,
+      timeout,
     );
-    debugLog('got call graph successfully');
   }
 
   if (api.isMultiSubProject(options)) {
@@ -763,6 +768,33 @@ function buildArgs(
   });
 
   return args;
+}
+
+async function getCallGraph(
+  targetPath: string,
+  command: string,
+  initScriptPath?: string,
+  confAttrs?: string,
+  timeout?: number,
+): Promise<CallGraphResult> {
+  try {
+    debugLog(`getting call graph from path ${targetPath}`);
+    const callGraph: CallGraph = await javaCallGraphBuilder.getCallGraphGradle(
+      path.dirname(targetPath),
+      command,
+      initScriptPath,
+      confAttrs,
+      timeout,
+    );
+    debugLog('got call graph successfully');
+    return callGraph;
+  } catch (e) {
+    debugLog('call graph error: ' + e);
+    return {
+      message: e.message,
+      innerError: e.innerError || e,
+    };
+  }
 }
 
 export const exportsForTests = {
