@@ -5,7 +5,7 @@ import { inspect, formatArgWithWhiteSpace } from '../../lib';
 import * as fs from 'fs';
 import * as sinon from 'sinon';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
-import { CallGraph } from '@snyk/cli-interface/legacy/common';
+import { CallGraph, CallGraphError } from '@snyk/cli-interface/legacy/common';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 
@@ -115,5 +115,30 @@ test('reachableVulns', async (t) => {
 
   t.teardown(() => {
     javaCallGraphBuilderStub.restore();
+  });
+});
+
+test('failure modes', async (t) => {
+  t.test('gracefully fails', async (t) => {
+    const errorMessage = 'Call graph error';
+    const javaCallGraphBuilderFailedStub = sinon
+      .stub(javaCallGraphBuilder, 'getCallGraphGradle')
+      .rejects(new Error(errorMessage));
+
+    const result = await inspect(
+      '.',
+      path.join(rootNoWrapper, 'build.gradle'),
+      {
+        reachableVulns: true,
+      },
+    );
+
+    t.same(
+      errorMessage,
+      (result.callGraph as CallGraphError).message,
+      'get correct error message',
+    );
+
+    javaCallGraphBuilderFailedStub.restore();
   });
 });
