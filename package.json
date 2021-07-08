@@ -19,8 +19,9 @@
     "lint": "eslint --color --cache '{lib,test}/**/*.{js,ts}' && prettier --check '{lib,test}/**/*.{js,ts}'",
     "format": "prettier --write '{lib,test}/**/*.{js,ts}'",
     "prepare": "npm run build",
-    "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system",
+    "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system && npm run test-jest-system",
     "test-functional": "jest test/functional -b",
+    "test-jest-system": "jest test/jest-system -b",
     "test-system": "tap --node-arg=-r --node-arg=ts-node/register -R spec --timeout=360 ./test/system/*.test.[tj]s",
     "test-manual": "jest test/manual -b"
   },

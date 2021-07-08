@@ -1,6 +1,6 @@
 import { inspect } from '../../lib';
 import * as path from 'path';
-import { fixtureDir } from '../common';
+import { findDepGraphNodeIds, fixtureDir } from '../common';
 
 describe('handling build files for multi-projects', () => {
   //snyk monitor --file="../test/fixtures/multi-project/subproj/build.gradle"
@@ -109,6 +109,23 @@ describe('handling build files for multi-projects', () => {
     //what is this test testing? then should change the name so it's more indicative!
     //build.gradle file is empty- is this why the check in line 169 for empty deps?, we're just testing correct gradle version and subproj appearance?
     //why the double parsing on line 168?
-    it('multi-project: using gradle via wrapper', async () => {});
+    it('multi-project: using gradle via wrapper', async () => {
+      const result = await inspect(
+        '.',
+        path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'),
+      );
+      expect(result.dependencyGraph.rootPkg.name).toBe('.');
+      expect(result.meta!.gradleProjectName).toBe('root-proj');
+      expect(result.meta!.versionBuildInfo!.gradleVersion).toBe('5.4.1');
+      expect(result.plugin.meta!.allSubProjectNames).toStrictEqual(['subproj']);
+      // old way: double parsing to have access to internal depGraph data, no methods available to properly
+      // return the deps nodeIds list that belongs to a node
+      const graphObject: any = JSON.parse(
+        JSON.stringify(result.dependencyGraph),
+      );
+      expect(graphObject.graph.nodes[0].deps.length === 0).toBeTruthy();
+      //new way
+      let nodeIds = findDepGraphNodeIds(result);
+    });
   }
 });
