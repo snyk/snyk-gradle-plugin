@@ -358,7 +358,7 @@ workflows:
     - release:
         name: Release
         context: nodejs-app-release
-        node_version: "10"
+        node_version: "14.17.6"
         filters:
           branches:
             only:
