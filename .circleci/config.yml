@@ -64,6 +64,7 @@ commands:
             curl -s "https://get.sdkman.io?rcupdate=false" | bash
             echo -e '\nsource "/home/circleci/.sdkman/bin/sdkman-init.sh"' >> $BASH_ENV
             source $BASH_ENV
+            sdk list java
   install_gradle_unix:
     description: Install gradle
     parameters:
@@ -83,7 +84,7 @@ commands:
     steps:
       - run:
           name: Installing JDK
-          command: sdk install java $(sdk list java | grep -o -m1 "<< parameters.jdk_version >>\.[0-9\.]\+hs-adpt")
+          command: sdk install java << parameters.jdk_version >>
   install_jdk_windows:
     description: Install JDK
     parameters:
@@ -177,7 +178,7 @@ workflows:
         name: Unix Tests for Gradle=6.0 JDK=13 Node=12
         context: nodejs-install
         gradle_version: "6.0"
-        jdk_version: "13"
+        jdk_version: "13.0.2.j9-adpt"
         node_version: "12"
         requires:
           - Lint
@@ -189,7 +190,7 @@ workflows:
         name: Unix Tests for Gradle=6.0 JDK=12 Node=10
         context: nodejs-install
         gradle_version: "6.0"
-        jdk_version: "12"
+        jdk_version: "12.0.2.j9-adpt"
         node_version: "10"
         requires:
           - Lint
@@ -201,7 +202,7 @@ workflows:
         name: Unix Tests for Gradle=6.0 JDK=11 Node=8
         context: nodejs-install
         gradle_version: "6.0"
-        jdk_version: "11"
+        jdk_version: "11.0.11.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -213,7 +214,7 @@ workflows:
         name: Unix Tests for Gradle=2.14 JDK=8 Node=8
         context: nodejs-install
         gradle_version: "2.14"
-        jdk_version: "8"
+        jdk_version: "8.0.292.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -225,7 +226,7 @@ workflows:
         name: Unix Tests for Gradle=3.4.1 JDK=8 Node=8
         context: nodejs-install
         gradle_version: "3.4.1"
-        jdk_version: "8"
+        jdk_version: "8.0.292.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -237,7 +238,7 @@ workflows:
         name: Unix Tests for Gradle=4.10.3 JDK=8 Node=8
         context: nodejs-install
         gradle_version: "4.10.3"
-        jdk_version: "8"
+        jdk_version: "8.0.292.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -249,7 +250,7 @@ workflows:
         name: Unix Tests for Gradle=4.10.3 JDK=11 Node=8
         context: nodejs-install
         gradle_version: "4.10.3"
-        jdk_version: "11"
+        jdk_version: "11.0.11.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -261,7 +262,7 @@ workflows:
         name: Unix Tests for Gradle=4.10.3 JDK=13 Node=8
         context: nodejs-install
         gradle_version: "4.10.3"
-        jdk_version: "13"
+        jdk_version: "13.0.2.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -273,7 +274,7 @@ workflows:
         name: Unix Tests for Gradle=5.3.1 JDK=8 Node=8
         context: nodejs-install
         gradle_version: "5.3.1"
-        jdk_version: "8"
+        jdk_version: "8.0.292.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -285,7 +286,7 @@ workflows:
         name: Unix Tests for Gradle=5.3.1 JDK=11 Node=8
         context: nodejs-install
         gradle_version: "5.3.1"
-        jdk_version: "11"
+        jdk_version: "11.0.11.j9-adpt"
         node_version: "8"
         requires:
           - Lint
@@ -297,7 +298,7 @@ workflows:
         name: Unix Tests for Gradle=5.6.4 JDK=12 Node=8
         context: nodejs-install
         gradle_version: "5.6.4"
-        jdk_version: "12"
+        jdk_version: "12.0.2.j9-adpt"
         node_version: "8"
         requires:
           - Lint
