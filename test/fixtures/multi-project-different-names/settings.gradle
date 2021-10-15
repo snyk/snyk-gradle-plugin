@@ -1,0 +1,2 @@
+rootProject.name = 'gradle-sandbox'
+include ':lib-top', ':greeter', ':greeter:lib'

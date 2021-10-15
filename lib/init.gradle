@@ -102,14 +102,14 @@ def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
             dep.each { d ->
                 def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
                 if (!graph.nodes.get(childId)) {
-                def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
-                graph.setNode(childId, childDependency)
+                    def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
+                    graph.setNode(childId, childDependency)
                 }
                 //  In Gradle 2, there can be several instances of the same dependency present at each level,
                 //  each for a different configuration. In this case, we need to merge the dependencies.
                 if (!currentChain.contains(childId) && d.children) {
-                currentChain.add(childId)
-                loadGraph(d.children, graph, childId, currentChain)
+                    currentChain.add(childId)
+                    loadGraph(d.children, graph, childId, currentChain)
                 }
                 graph.setEdge(parentId, childId)
             }
@@ -125,27 +125,64 @@ def getSnykGraph(Iterable deps) {
     return graph.nodes
 }
 
-def configsSuccessfullyResolved(configurations) { 
-    def resolvedConfigurations = [];
-    configurations.each({ configuration ->
-           try {
-            configuration.resolvedConfiguration.firstLevelModuleDependencies;
-            resolvedConfigurations.add(configuration);
-           } catch(Exception ex) {    
-             // Swallowing it
-           }
+def snykEcho(msg) {
+    println("SNYKECHO $msg")
+}
+
+def matchesAttributeFilter(conf, confAttrSpec) {
+    if (!conf.hasProperty('attributes')) {
+        // Gradle before version 3 does not support attributes
+        return true
+    }
+    def matches = true
+    def attrs = conf.attributes
+    attrs.keySet().each({ attr ->
+        def attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
+        confAttrSpec.each({ keyValueFilter ->
+            // attr.name is a class name, e.g. com.android.build.api.attributes.BuildTypeAttr
+            if (attr.name.toLowerCase().contains(keyValueFilter[0]) && attrValueAsString != keyValueFilter[1]) {
+                matches = false
+            }
+        })
     })
-    return resolvedConfigurations;
+    return matches
+}
+
+def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
+    def matching = confs.findAll({ it.name =~ confNameFilter })
+    if (confAttrSpec == null) {
+        // We don't have an attribute spec to match
+        return matching
+    }
+    return matching.findAll({ matchesAttributeFilter(it, confAttrSpec) })
+}
+
+def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
+    def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
+    if (GradleVersion.current() < GradleVersion.version('3.0')) {
+        proj.configurations.each({ snykEcho("conf.name=$it.name") })
+        return matching
+    }
+    proj.configurations.each({ snykEcho("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
+    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
+    // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
+    // if we cannot find dependencies that can be only resolved but not consumable
+    // we try to find configs that are simultaneously resolvable and consumable
+    // to prevent dependency resolution conflicts (e.g. Cannot choose between the following variants) 
+    // we avoid the coexistence of (canBeResolved: true, canBeConsumed: false) and (canBeResolved: true, canBeConsumed: true) configs
+    def resolvable = matching.findAll({ it.canBeResolved == true })
+    snykEcho("resolvableConfigs=$resolvable")
+    return resolvable
 }
 
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
 def snykDepsConfExecuted = false
-allprojects { everyProj ->
+allprojects { currProj ->
+    snykEcho("Current project: $currProj.name")
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
-
         def confNameFilter = (project.hasProperty('configuration')
             ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
             : /.*/
@@ -155,146 +192,118 @@ allprojects { everyProj ->
             : null
         )
 
-        def matchesAttributeFilter
-        matchesAttributeFilter = { conf ->
-            if (!conf.hasProperty('attributes')) {
-                // Gradle before version 3 does not support attributes
-                return true
-            }
-            def matches = true
-            def attrs = conf.attributes
-            attrs.keySet().each({ attr ->
-                def attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
-                confAttrSpec.each({ keyValueFilter ->
-                    // attr.name is a class name, e.g. com.android.build.api.attributes.BuildTypeAttr
-                    if (attr.name.toLowerCase().contains(keyValueFilter[0])
-                            && attrValueAsString != keyValueFilter[1]) {
-                        matches = false
-                            }
-                })
-            })
-            return matches
-        }
-
         doLast { task ->
-            if (!snykDepsConfExecuted) {
-                println('SNYKECHO snykResolvedDepsJson task is executing via doLast')
-                def projectsDict = [:]
-                def defaultProjectName = task.project.name
-                def allSubProjectNames = []
-                allprojects.each { project -> 
-                    if(project.name != defaultProjectName) { 
-                        allSubProjectNames.add(project.name) 
-                    } 
-                }
-                def result = [
-                    'defaultProject': defaultProjectName,
-                    'projects': projectsDict,
-                    'allSubProjectNames': allSubProjectNames
-                ]
-
-                def shouldScanProject = {
-                    onlyProj == null ||
-                    (onlyProj == '.' && it.name == defaultProjectName) ||
-                    it.name == onlyProj
-                }
-
-                // First pass: scan all configurations that match the attribute filter and collect all attributes
-                // from them, to use unambiguous values of the attributes on the merged configuration.
-                //
-                // Why we need to scan all sub-projects: if a project A depends on B, and only B has some
-                // configurations with attribute C, we still might need attribute C in our configuration
-                // when resolving the project A, so that it selects a concrete variant of dependency B.
-                def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
-                def attributesAsStrings = [:] // Map<String, Set<string>>
-                rootProject.allprojects.each { proj ->
-                    proj.configurations.findAll({ it.name =~ confNameFilter && matchesAttributeFilter(it) }).each { conf ->
-                            if (!conf.hasProperty('attributes')) {
-                                // Gradle before version 3 does not support attributes
-                                return
+            if (snykDepsConfExecuted) {
+                return
+            }
+            snykEcho('snykResolvedDepsJson task is executing via doLast')
+            // snykEcho("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
+            // First pass: scan all configurations that match the attribute filter and collect all attributes
+            // from them, to use unambiguous values of the attributes on the merged configuration.
+            //
+            // Why we need to scan all sub-projects: if a project A depends on B, and only B has some
+            // configurations with attribute C, we still might need attribute C in our configuration
+            // when resolving the project A, so that it selects a concrete variant of dependency B.
+            def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
+            def attributesAsStrings = [:] // Map<String, Set<string>>
+            rootProject.allprojects.each { proj ->
+                findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
+                    .each { conf ->
+                        if (!conf.hasProperty('attributes')) {
+                            // Gradle before version 3 does not support attributes
+                            return
+                        }
+                        def attrs = conf.attributes
+                        attrs.keySet().each({ attr ->
+                            def value = attrs.getAttribute(attr)
+                            if (!allConfigurationAttributes.containsKey(attr)) {
+                                allConfigurationAttributes[attr] = new HashSet()
+                                attributesAsStrings[attr.name] = new HashSet()
                             }
-                            def attrs = conf.attributes
-                            attrs.keySet().each({ attr ->
-                                def value = attrs.getAttribute(attr)
-                                if (!allConfigurationAttributes.containsKey(attr)) {
-                                    allConfigurationAttributes[attr] = new HashSet()
-                                    attributesAsStrings[attr.name] = new HashSet()
-                                }
-                                allConfigurationAttributes[attr].add(value)
-                                attributesAsStrings[attr.name].add(value.toString())
-                            })
+                            allConfigurationAttributes[attr].add(value)
+                            attributesAsStrings[attr.name].add(value.toString())
+                        })
                     }
+            }
+
+            def defaultProjectName = task.project.name
+            def allSubProjectNames = []
+            def seenSubprojects = [:]
+            allprojects
+                .findAll({ it.name != defaultProjectName })
+                .each({
+                    def projKey = it.name
+                    if (seenSubprojects.get(projKey)) {
+                        projKey = it.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                        if (projKey == "") {
+                            projKey = defaultProjectName
+                        }
+                    }
+                    allSubProjectNames.add(projKey)
+                    seenSubprojects[projKey] = true
+                })
+            def shouldScanProject = {
+                onlyProj == null ||
+                (onlyProj == '.' && it.name == defaultProjectName) ||
+                it.name == onlyProj
+            }
+            def projectsDict = [:]
+
+            snykEcho("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
+
+            // These will be used to suggest attribute filtering to the user if the scan fails
+            // due to ambiguous resolution of dependency variants
+            def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
+            println("JSONATTRS $jsonAttrs")
+
+            rootProject.allprojects.findAll(shouldScanProject).each { proj ->
+                snykEcho("processing project: name=$proj.name; path=$proj.path")
+
+                def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
+                def resolvedConfigs = []
+                resolvableConfigs.each({ config ->
+                    def resConf = config.resolvedConfiguration
+                    snykEcho("config `$config.name' resolution has errors: ${resConf.hasError()}")
+                    if (!resConf.hasError()) {
+                        resolvedConfigs.add(resConf)
+                        snykEcho("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
+                    }
+                })
+                if (resolvedConfigs.isEmpty() && !proj.configurations.isEmpty()) {
+                    throw new RuntimeException('Matching configurations not found: ' + confNameFilter +
+                            ', available configurations for project ' + proj + ': '
+                            + proj.configurations.collect { it.name })
                 }
 
-                // These will be used to suggest attribute filtering to the user if the scan fails
-                // due to ambiguous resolution of dependency variants
-                println('JSONATTRS ' + JsonOutput.toJson(attributesAsStrings))
-
-                rootProject.allprojects.findAll(shouldScanProject).each { proj ->
-                    println('SNYKECHO processing project: ' + proj.name)
-
-                    def projectConfigs = null 
-                    def filteredProjectConfigs = null
-
-                    // Gradle v3.0+ contains concepts as attributes, config canBeResolved, that does not exist in legacy versions
-                    final GradleVersion gradleVersionInUse = GradleVersion.current();
-                    final GradleVersion gradleVersion3 = GradleVersion.version('3.0');
-                    final isGradleVersion3Plus = gradleVersionInUse >= gradleVersion3;
-
-                    if(isGradleVersion3Plus) {
-                        // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
-                        // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
-                        if (confAttrSpec != null) {
-                            // Drop all the configrations that don't match the attribute filter
-                            filteredProjectConfigs = proj.configurations.findAll({ it.canBeResolved == true && it.canBeConsumed == false && it.name =~ confNameFilter && matchesAttributeFilter(it)  })
-
-                            if(filteredProjectConfigs.size() == 0) {
-                                filteredProjectConfigs = proj.configurations
-                                .findAll({ it.canBeResolved == true && it.canBeConsumed == true && it.name =~ confNameFilter && matchesAttributeFilter(it) })
-                            }
-
-                        projectConfigs = configsSuccessfullyResolved(filteredProjectConfigs)
-                        } else {
-                            // if we cannot find dependencies that can be only resolved but not consumable
-                            // we try to find configs that are simultaneously resolvable and consumable
-                            // to prevent dependency resolution conflicts (e.g. Cannot choose between the following variants) 
-                            // we avoid the coexistence of (canBeResolved: true, canBeConsumed: false) and (canBeResolved: true, canBeConsumed: true) configs
-                            filteredProjectConfigs = proj.configurations.findAll({ it.canBeResolved == true && it.canBeConsumed == false && it.name =~ confNameFilter  })
-                            if(filteredProjectConfigs.size() == 0) {
-                                filteredProjectConfigs = proj.configurations
-                                .findAll({ it.canBeResolved == true && it.canBeConsumed == true && it.name =~ confNameFilter  })
-                            }
-                            projectConfigs =  configsSuccessfullyResolved(filteredProjectConfigs)
-                        }       
-                    } else {
-                        def configsFilteredByConfName = proj.configurations.findAll({ it.name =~ confNameFilter })
-                        projectConfigs =  configsSuccessfullyResolved(configsFilteredByConfName)
-                    }
+                def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
+                snykEcho("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 
-                    if (projectConfigs.size() == 0 && proj.configurations.size() > 0) {
-                        throw new RuntimeException('Matching configurations not found: ' + confNameFilter +
-                                ', available configurations for project ' + proj + ': '
-                                + proj.configurations.collect { it.name })
-                    }
-
-                    if (projectConfigs != null) {
-                        println('SNYKECHO resolving configuration ' + projectConfigs.name)
-                        def gradleFirstLevelDeps = projectConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ it.size() > 0 })
-                        println('SNYKECHO converting gradle graph to snyk-graph format')
-                        projectsDict[proj.name] = [
-                            'targetFile': findProject(proj.path).buildFile.toString(),
-                            'snykGraph': getSnykGraph(gradleFirstLevelDeps),
-                            'projectVersion': proj.version.toString()
-                        ]
-                    } else {
-                        projectsDict[proj.name] = [
-                            'targetFile': findProject(proj.path).buildFile.toString()
-                        ]
+                snykEcho('converting gradle graph to snyk-graph format')
+                def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
+                def projKey = proj.name
+                if (projectsDict.get(projKey)) {
+                    snykEcho("The deps dict already has a project with key `$projKey'; using the full path")
+                    projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                    if (projKey == "") {
+                        snykEcho("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
+                        projKey = defaultProjectName
                     }
                 }
-                println('JSONDEPS ' + JsonOutput.toJson(result))
-                snykDepsConfExecuted = true
+                projectsDict[projKey] = [
+                    'targetFile': findProject(proj.path).buildFile.toString(),
+                    'snykGraph': projGraph,
+                    'projectVersion': proj.version.toString()
+                ]
+            }
+
+            def result = [
+                'defaultProject': defaultProjectName,
+                'projects': projectsDict,
+                'allSubProjectNames': allSubProjectNames
+            ]
+            def jsonDeps = JsonOutput.toJson(result)
+            println("JSONDEPS $jsonDeps")
+            snykDepsConfExecuted = true
         }
     }
-}
 }
