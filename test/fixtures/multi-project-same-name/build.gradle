@@ -1,0 +1,3 @@
+allprojects {
+  task allDependencies(type: DependencyReportTask) {}
+}

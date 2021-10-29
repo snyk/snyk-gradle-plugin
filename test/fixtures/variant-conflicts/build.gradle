@@ -1,0 +1,16 @@
+plugins {
+    id 'io.gatling.gradle' version "3.5.0"
+}
+
+build.dependsOn gatlingClasses
+
+dependencies {
+    gatling group: 'org.scalaj', name: 'scalaj-http_2.13', version: '2.4.2'
+}
+
+gatling {
+    simulations = {
+        exclude "**/paxos/BaseSimulation.scala"
+        exclude "**/paxos/Configuration.scala"
+    }
+}

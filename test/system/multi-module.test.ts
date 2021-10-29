@@ -488,3 +488,83 @@ test('multi-project-dependency-cycle: scanning all subprojects works fine', asyn
     }
   }
 });
+
+test('multi-project: use full path for subprojects with the same name', async (t) => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-same-name'), 'build.gradle'),
+    { gradleAcceptLegacyConfigRoles: true },
+  );
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, [
+    'greeter',
+    'lib',
+    'greeter/lib',
+  ]);
+});
+
+test('multi-project: use flat naming when subprojects have different names', async (t) => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
+    { gradleAcceptLegacyConfigRoles: true },
+  );
+  t.deepEqual(result.plugin.meta!.allSubProjectNames, [
+    'greeter',
+    'lib-top',
+    'lib',
+  ]);
+});
+
+test('multi-project: correct deps for subprojects with the same name', async (t) => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-same-name'), 'build.gradle'),
+    { allSubProjects: true, gradleAcceptLegacyConfigRoles: true },
+  );
+
+  const projectDeps = {};
+  for (const p of result.scannedProjects) {
+    projectDeps[p.meta.projectName] = p.depGraph
+      .getDepPkgs()
+      .map((d) => `${d.name}@${d.version}`);
+  }
+
+  const greeterGraph = projectDeps['gradle-sandbox/greeter'];
+  t.equal(greeterGraph.length, 1);
+  t.deepEqual(greeterGraph, ['org.apache.commons:commons-collections4@4.4']);
+
+  const libGraph = projectDeps['gradle-sandbox/lib'];
+  t.equal(libGraph.length, 1);
+  t.deepEqual(libGraph, ['org.apache.commons:commons-lang3@3.12.0']);
+
+  const greeterLibGraph = projectDeps['gradle-sandbox/greeter/lib'];
+  t.equal(greeterLibGraph.length, 1);
+  t.deepEqual(greeterLibGraph, ['commons-io:commons-io@2.11.0']);
+});
+
+test('multi-project: correct deps when subprojects have different names', async (t) => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
+    { allSubProjects: true, gradleAcceptLegacyConfigRoles: true },
+  );
+
+  const projectDeps = {};
+  for (const p of result.scannedProjects) {
+    projectDeps[p.meta.projectName] = p.depGraph
+      .getDepPkgs()
+      .map((d) => `${d.name}@${d.version}`);
+  }
+
+  const greeterGraph = projectDeps['gradle-sandbox/greeter'];
+  t.equal(greeterGraph.length, 1);
+  t.deepEqual(greeterGraph, ['org.apache.commons:commons-collections4@4.4']);
+
+  const libGraph = projectDeps['gradle-sandbox/lib-top'];
+  t.equal(libGraph.length, 1);
+  t.deepEqual(libGraph, ['org.apache.commons:commons-lang3@3.12.0']);
+
+  const greeterLibGraph = projectDeps['gradle-sandbox/lib'];
+  t.equal(greeterLibGraph.length, 1);
+  t.deepEqual(greeterLibGraph, ['commons-io:commons-io@2.11.0']);
+});
