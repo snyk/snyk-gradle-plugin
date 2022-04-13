@@ -322,7 +322,7 @@ workflows:
         name: Unix Tests for Gradle=5.6.4 JDK=17 Node=8
         context: nodejs-install
         gradle_version: "5.6.4"
-        jdk_version: "17"
+        jdk_version: "17.0.2-open"
         node_version: "8"
         requires:
           - Lint
@@ -368,7 +368,7 @@ workflows:
     - test-windows:
         name: Windows Tests for JDK=17 Node=12
         context: nodejs-install
-        jdk_version: "17"
+        jdk_version: "17.0.2-open"
         node_version: "12.0.0"
         requires:
           - Lint
