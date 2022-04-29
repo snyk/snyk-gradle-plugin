@@ -12,7 +12,7 @@ module.exports = {
   ], // Remove when all tests are using Jest
   globals: {
     'ts-jest': {
-      tsConfig: '<rootDir>/test/manual/tsconfig.json',
+      tsconfig: '<rootDir>/test/manual/tsconfig.json',
     },
   },
   modulePathIgnorePatterns: ['<rootDir>/test/.*fixtures'],
