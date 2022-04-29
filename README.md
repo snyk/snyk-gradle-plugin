@@ -33,11 +33,8 @@ Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/36
 
 | Node | Supported |
 | ---- | --------- |
-| 6    | ✅        |
-| 8    | ✅        |
-| 10   | ✅        |
 | 12   | ✅        |
-| 14   | ❓        |
+| 14   | ✅        |
 | 16   | ✅        |
 
 ## Supported Java & Gradle versions
