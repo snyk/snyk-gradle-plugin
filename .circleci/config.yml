@@ -175,7 +175,7 @@ workflows:
 
       # UNIX tests
       - test-unix:
-          name: Unix Tests for Gradle=6.0 JDK=13 Node=14
+          name: Unix Tests for Gradle=6.0 JDK=13 Node=16
           context: nodejs-install
           gradle_version: '6.0'
           jdk_version: '13.0.2.j9-adpt'
