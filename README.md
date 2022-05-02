@@ -37,6 +37,8 @@ Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/36
 | 8    | ✅        |
 | 10   | ✅        |
 | 12   | ✅        |
+| 14   | ✅        |
+| 16   | ✅        |
 
 ## Supported Java & Gradle versions
 
