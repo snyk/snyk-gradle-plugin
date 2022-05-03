@@ -319,7 +319,7 @@ workflows:
               ignore:
                 - master
       - test-unix:
-          name: Unix Tests for Gradle=6.0 JDK=11 Node=8
+          name: Unix Tests for Gradle=7.4.1 JDK=11 Node=8
           context: nodejs-install
           gradle_version: '7.4.1'
           jdk_version: '11.0.11.j9-adpt'
