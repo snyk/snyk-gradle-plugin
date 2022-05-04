@@ -9,6 +9,7 @@ module.exports = {
     '<rootDir>/test/*.spec.ts',
     '<rootDir>/test/manual/*.spec.ts',
     '<rootDir>/test/functional/*.spec.ts',
+    '<rootDir>/test/system/*.test.ts',
   ], // Remove when all tests are using Jest
   globals: {
     'ts-jest': {
