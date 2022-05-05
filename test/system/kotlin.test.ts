@@ -40,5 +40,5 @@ if (isKotlinSupported) {
       { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
     ];
     expect(directDependencies).toEqual(expectedDirectDependencies);
-  }, 150_000);
+  });
 }
