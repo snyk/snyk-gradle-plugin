@@ -20,10 +20,9 @@
     "lint": "eslint --color --cache '{lib,test}/**/*.{js,ts}' && prettier --check '{lib,test}/**/*.{js,ts}'",
     "format": "prettier --write '{lib,test}/**/*.{js,ts}'",
     "prepare": "npm run build",
-    "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system && npm run test-system-tap",
+    "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system",
     "test-functional": "jest test/functional -b",
-    "test-system": "jest -b --testTimeout=15000 test/system/plugin.test.ts test/system/kotlin.test.ts test/system/multi-module.test.ts",
-    "test-system-tap": "tap --node-arg=-r --node-arg=ts-node/register -R spec --timeout=360 ./test/system/darwin.test.ts ./test/system/windows.test.ts ./test/system/failure-states.test.ts ./test/system/reachability.test.ts",
+    "test-system": "jest test/system -b  --testTimeout=15000",
     "test-manual": "jest test/manual -b"
   },
   "author": "snyk.io",
