@@ -1,53 +1,47 @@
 import * as path from 'path';
 import { fixtureDir } from '../common';
-import { test } from 'tap';
-
 import { inspect } from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 
-test('malformed build.gradle', async (t) => {
-  await t.rejects(
-    inspect(
+test('malformed build.gradle', async () => {
+  try {
+    await inspect(
       '.',
       path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
       { args: ['--configuration', 'compileClasspath'] },
-    ),
-    /unexpected token/,
-  );
+    );
+  } catch (Error) {
+    expect(Error.message).toMatch('unexpected token');
+  }
 });
 
-test('failing inspect()', async (t) => {
+test('incorrect argument passed to inspect', async () => {
   try {
     await inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
       args: ['--dearGradlePleaseCrash'],
     });
-    t.fail('Expected error');
   } catch (error) {
-    t.match(
-      error.message,
+    expect(error.message).toMatch(
       'Please ensure you are calling the `snyk` command with correct arguments',
-      'proper error message',
     );
-    t.match(
-      error.message,
-      /Gradle \d+\.\d+(\.\d+)?/,
-      'the error message has Gradle version',
-    );
+    expect(error.message).toMatch(/Gradle \d+\.\d+(\.\d+)?/);
   }
 });
 
-test('multi-project: error on missing sub-project', async (t) => {
+test('multi-project: error on missing sub-project', async () => {
   const options = {
     subProject: 'non-existent',
   };
-  await t.rejects(
-    inspect(
+  try {
+    await inspect(
       '.',
       path.join(fixtureDir('multi-project'), 'build.gradle'),
       options,
-    ),
-    /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,
-    'error message is as expected',
-  );
+    );
+  } catch (Error) {
+    expect(Error.message).toMatch(
+      /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,
+    );
+  }
 });
