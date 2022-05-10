@@ -252,7 +252,7 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
   ).toBeGreaterThanOrEqual(-1);
 });
 
-test.only('allSubProjects incompatible with gradle-sub-project', async () => {
+test('allSubProjects incompatible with gradle-sub-project', async () => {
   expect(
     inspect('.', path.join(multiProject, 'build.gradle'), {
       allSubProjects: true,
