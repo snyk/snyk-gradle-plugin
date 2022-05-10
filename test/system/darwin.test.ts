@@ -1,66 +1,47 @@
-import * as os from 'os';
 import * as path from 'path';
-import { fixtureDir } from '../common';
-import { test, Test } from 'tap';
-import { stub, SinonStub } from 'sinon';
-import * as subProcess from '../../lib/sub-process';
+import { fixtureDir, stubPlatform } from '../common';
 import { inspect } from '../../lib';
+import * as subProcess from '../../lib/sub-process';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
+let subProcessExecSpy;
 
-test('darwin without wrapper', async (t) => {
-  stubPlatform('darwin', t);
-  stubSubProcessExec(t);
+beforeAll(() => {
+  stubPlatform('darwin');
+  subProcessExecSpy = jest.spyOn(subProcess, 'execute');
+  subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
+});
 
+afterEach(() => {
+  jest.clearAllMocks();
+});
+
+test('darwin without wrapper', async () => {
   try {
     await inspect(rootNoWrapper, 'build.gradle');
-    t.fail('Expected failure');
   } catch {
-    const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    t.same(cmd, 'gradle', 'invokes gradle directly');
+    expect(subProcessExecSpy.mock.calls[0][0]).toBe('gradle');
   }
 });
 
-test('darwin with wrapper', async (t) => {
-  stubPlatform('darwin', t);
-  stubSubProcessExec(t);
-
+test('darwin with wrapper', async () => {
   try {
     await inspect(rootWithWrapper, 'build.gradle');
-    t.fail('Expected failure');
   } catch {
-    const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = "'" + path.join(rootWithWrapper, 'gradlew') + "'";
-    t.same(cmd, expectedCmd, 'invokes wrapper script');
+    expect(subProcessExecSpy.mock.calls[0][0]).toBe(
+      "'" + path.join(rootWithWrapper, 'gradlew') + "'",
+    );
   }
 });
 
-test('darwin with wrapper in root', async (t) => {
-  stubPlatform('darwin', t);
-  stubSubProcessExec(t);
-
+test('darwin with wrapper in root', async () => {
   try {
     await inspect(subWithWrapper, path.join('app', 'build.gradle'));
-    t.fail('Expected failure');
   } catch {
-    const cmd = (subProcess.execute as SinonStub).getCall(0).args[0];
-    const expectedCmd = "'" + path.join(subWithWrapper, 'gradlew') + "'";
-    t.same(cmd, expectedCmd, 'invokes wrapper script');
+    expect(subProcessExecSpy.mock.calls[0][0]).toBe(
+      "'" + path.join(subWithWrapper, 'gradlew') + "'",
+    );
   }
 });
-
-function stubPlatform(platform: string, t: Test) {
-  stub(os, 'platform').callsFake(() => {
-    return platform;
-  });
-  t.teardown((os.platform as SinonStub).restore);
-}
-
-function stubSubProcessExec(t: Test) {
-  stub(subProcess, 'execute').callsFake(() => {
-    return Promise.reject(new Error('abort'));
-  });
-  t.teardown((subProcess.execute as SinonStub).restore);
-}
