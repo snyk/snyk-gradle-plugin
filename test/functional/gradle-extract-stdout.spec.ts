@@ -21,14 +21,10 @@ JSONDEPS {"hello": "world"}
     }
   });
 
-  it('extractJsonFromScriptOutput throws on multiple JSONDEPS', () => {
+  it('extractJsonFromScriptOutput returns first on multiple JSONDEPS', () => {
     const output = 'JSONDEPS {"hello": "world"}\nJSONDEPS ["one more thing"]';
-    try {
-      testableMethods.extractJsonFromScriptOutput(output);
-    } catch ({ message }) {
-      const errorMessage = `More than one line with "JSONDEPS " prefix was returned; full output:\n${output}`;
-      expect(message).toBe(errorMessage);
-    }
+    const result = testableMethods.extractJsonFromScriptOutput(output);
+    expect(result).toEqual({ hello: 'world' });
   });
 
   it('getGradleAttributesPretty returns undefined when throws', async () => {
