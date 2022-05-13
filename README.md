@@ -13,7 +13,7 @@ This plugin provides dependency metadata for Gradle projects that use `gradle` a
 
 # Documentation
 
-Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/360003817357-Snyk-for-Java) documentation
+Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-source/language-and-package-manager-support/snyk-for-java-gradle-maven) documentation
 
 # Support
 
@@ -33,9 +33,6 @@ Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/36
 
 | Node | Supported |
 | ---- | --------- |
-| 6    | ✅        |
-| 8    | ✅        |
-| 10   | ✅        |
 | 12   | ✅        |
 | 14   | ✅        |
 | 16   | ✅        |
