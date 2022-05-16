@@ -41,4 +41,6 @@ if (isKotlinSupported) {
     ];
     expect(directDependencies).toEqual(expectedDirectDependencies);
   });
+} else {
+  test('build.gradle.kts are not supported with Gradle version < 5', () => {});
 }
