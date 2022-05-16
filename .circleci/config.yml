@@ -7,13 +7,13 @@ defaults: &defaults
   parameters:
     gradle_version:
       type: string
-      default: ""
+      default: ''
     jdk_version:
       type: string
-      default: ""
+      default: ''
     node_version:
       type: string
-      default: ""
+      default: ''
   working_directory: ~/snyk-gradle-plugin
 
 windows_defaults: &windows_defaults
@@ -21,6 +21,19 @@ windows_defaults: &windows_defaults
     npm_config_loglevel: silent
   executor:
     name: win/default
+
+test_matrix_unix: &test_matrix_unix
+  matrix:
+    parameters:
+      node_version: ['12', '16']
+      jdk_version: ['8.0.292.j9-adpt']
+      gradle_version: ['3.4.1', '4.10', '5.5', '6.2.1']
+test_matrix_win: &test_matrix_win
+  matrix:
+    parameters:
+      node_version: ['12', '16']
+      jdk_version: ['8']
+      gradle_version: ['4.10', '5.5', '6.2.1']
 
 commands:
   install_deps:
@@ -34,7 +47,7 @@ commands:
     parameters:
       node_version:
         type: string
-        default: ""
+        default: ''
     steps:
       - run:
           name: Install correct version of Node
@@ -53,8 +66,12 @@ commands:
           command: npm --version
   install_gradle_windows:
     description: Install gradle
+    parameters:
+      gradle_version:
+        type: string
+        default: ''
     steps:
-      - run: choco install gradle --version=6.0
+      - run: choco install gradle --version=<< parameters.gradle_version >>
   install_sdkman:
     description: Install SDKMAN
     steps:
@@ -64,12 +81,13 @@ commands:
             curl -s "https://get.sdkman.io?rcupdate=false" | bash
             echo -e '\nsource "/home/circleci/.sdkman/bin/sdkman-init.sh"' >> $BASH_ENV
             source $BASH_ENV
+            sdk list java
   install_gradle_unix:
     description: Install gradle
     parameters:
       gradle_version:
         type: string
-        default: ""
+        default: ''
     steps:
       - run:
           name: Installing Gradle
@@ -79,17 +97,17 @@ commands:
     parameters:
       jdk_version:
         type: string
-        default: ""
+        default: ''
     steps:
       - run:
           name: Installing JDK
-          command: sdk install java $(sdk list java | grep -o -m1 "<< parameters.jdk_version >>\.[0-9\.]\+hs-adpt")
+          command: sdk install java << parameters.jdk_version >>
   install_jdk_windows:
     description: Install JDK
     parameters:
       jdk_version:
         type: string
-        default: ""
+        default: ''
     steps:
       - run:
           name: Installing JDK
@@ -107,7 +125,6 @@ jobs:
       - run:
           name: Run lint
           command: npm run lint
-
   test-windows:
     <<: *defaults
     <<: *windows_defaults
@@ -120,7 +137,8 @@ jobs:
           node_version: << parameters.node_version >>
       - install_jdk_windows:
           jdk_version: << parameters.jdk_version >>
-      - install_gradle_windows
+      - install_gradle_windows:
+          gradle_version: << parameters.gradle_version >>
       - install_deps
       - show_node_version
       - run:
@@ -163,190 +181,37 @@ workflows:
   version: 2
   test_and_release:
     jobs:
-    - lint:
-        name: Lint
-        context: nodejs-install
-        node_version: "10"
-        filters:
-          branches:
-            ignore:
-              - master
+      - lint:
+          name: Lint
+          context: nodejs-install
+          node_version: '10'
+          filters:
+            branches:
+              ignore:
+                - master
+      - test-unix:
+          name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
+          context: nodejs-install
+          <<: *test_matrix_unix
+          filters:
+            branches:
+              ignore:
+                - master
+      - test-windows:
+          name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
+          context: nodejs-install
+          <<: *test_matrix_win
+          filters:
+            branches:
+              ignore:
+                - master
 
-    # UNIX tests
-    - test-unix:
-        name: Unix Tests for Gradle=6.0 JDK=13 Node=12
-        context: nodejs-install
-        gradle_version: "6.0"
-        jdk_version: "13"
-        node_version: "12"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=6.0 JDK=12 Node=10
-        context: nodejs-install
-        gradle_version: "6.0"
-        jdk_version: "12"
-        node_version: "10"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=6.0 JDK=11 Node=8
-        context: nodejs-install
-        gradle_version: "6.0"
-        jdk_version: "11"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=2.14 JDK=8 Node=8
-        context: nodejs-install
-        gradle_version: "2.14"
-        jdk_version: "8"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=3.4.1 JDK=8 Node=8
-        context: nodejs-install
-        gradle_version: "3.4.1"
-        jdk_version: "8"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=4.10.3 JDK=8 Node=8
-        context: nodejs-install
-        gradle_version: "4.10.3"
-        jdk_version: "8"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=4.10.3 JDK=11 Node=8
-        context: nodejs-install
-        gradle_version: "4.10.3"
-        jdk_version: "11"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=4.10.3 JDK=13 Node=8
-        context: nodejs-install
-        gradle_version: "4.10.3"
-        jdk_version: "13"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=5.3.1 JDK=8 Node=8
-        context: nodejs-install
-        gradle_version: "5.3.1"
-        jdk_version: "8"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=5.3.1 JDK=11 Node=8
-        context: nodejs-install
-        gradle_version: "5.3.1"
-        jdk_version: "11"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-unix:
-        name: Unix Tests for Gradle=5.6.4 JDK=12 Node=8
-        context: nodejs-install
-        gradle_version: "5.6.4"
-        jdk_version: "12"
-        node_version: "8"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-
-    # Windows
-    - test-windows:
-        name: Windows Tests for JDK=8 Node=8
-        context: nodejs-install
-        jdk_version: "8"
-        node_version: "8.17.0"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-windows:
-        name: Windows Tests for JDK=8 Node=10
-        context: nodejs-install
-        jdk_version: "8"
-        node_version: "10.21.0"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-    - test-windows:
-        name: Windows Tests for JDK=8 Node=12
-        context: nodejs-install
-        jdk_version: "8"
-        node_version: "12.0.0"
-        requires:
-          - Lint
-        filters:
-          branches:
-            ignore:
-              - master
-
-    # Release
-    - release:
-        name: Release
-        context: nodejs-app-release
-        node_version: "10"
-        filters:
-          branches:
-            only:
-              - master
+      # Release
+      - release:
+          name: Release
+          context: nodejs-app-release
+          node_version: '14.17.6'
+          filters:
+            branches:
+              only:
+                - master

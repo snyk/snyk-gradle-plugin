@@ -2,9 +2,14 @@ import * as path from 'path';
 import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
 
-// TODO fix me by applying env var ANDROID_SDK_ROOT (ANDROID_HOME was deprecated)
+// This test requires: env var ANDROID_SDK_ROOT (ANDROID_HOME was deprecated) and Android SDK installed on local machine
+// TODO: delete the test or emulate android sdk in CI/CD in order to run it properly
 describe.skip('android multi-variant build', () => {
-  expect(process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME).toBeTruthy();
+  test('process.env.ANDROID_SDK_ROOT is set', () => {
+    expect(
+      process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME,
+    ).toBeTruthy();
+  });
 
   test('we cannot inspect naively', async () => {
     await expect(
