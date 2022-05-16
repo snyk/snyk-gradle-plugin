@@ -1,19 +1,19 @@
 ![Snyk logo](https://snyk.io/style/asset/logo/snyk-print.svg)
 
-***
+---
 
 Snyk helps you find, fix and monitor for known vulnerabilities in your dependencies, both on an ad hoc basis and as part of your CI (Build) system.
 
 | :information_source: This repository is only a plugin to be used with the Snyk CLI tool. To use this plugin to test and fix vulnerabilities in your project, install the Snyk CLI tool first. Head over to [snyk.io](https://github.com/snyk/snyk) to get started. |
-| --- |
-
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
 # Snyk Gradle CLI Plugin
 
 This plugin provides dependency metadata for Gradle projects that use `gradle` and have a `build.gradle` file.
 
 # Documentation
-Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/360003817357-Snyk-for-Java) documentation
+
+Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-source/language-and-package-manager-support/snyk-for-java-gradle-maven) documentation
 
 # Support
 
@@ -23,36 +23,34 @@ Please refer to the [Snyk for Java](https://support.snyk.io/hc/en-us/articles/36
 
 ## Supported OS
 
-| OS     |  Supported |
-|--------|------------|
-| Windows| ✅          |
-| Linux  | ✅          |
-| OSX    | ️✅          |
+| OS      | Supported |
+| ------- | --------- |
+| Windows | ✅        |
+| Linux   | ✅        |
+| OSX     | ️✅       |
 
 ## Supported Node versions
 
-| Node  |  Supported |
-|-------|------------|
-| 6     | ✅          |
-| 8     | ✅          |
-| 10    | ✅          |
-| 12    | ✅          |
+| Node | Supported |
+| ---- | --------- |
+| 12   | ✅        |
+| 14   | ✅        |
+| 16   | ✅        |
 
 ## Supported Java & Gradle versions
 
-| Java / Gradle  |2.*|3.*|4.*|5.*|6.0|
-|----------------|---|---|---|---|---|
-| 8 (LTS)        | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 9              | ❌ | ❌ | ❓ | ❓ | ❓ |
-| 10             | ❌ | ❌ | ❓ | ❓ | ❓ |
-| 11 (LTS)       | ❌ | ❌ | ✅ | ✅ | ✅ |
-| 12             | ❌ | ❌ | ❓ | ✅ | ️✅ |
-| 13             | ❌ | ❌ | ✅ | ❌ | ✅ |
-
+| Java / Gradle | 2.\* | 3.\* | 4.\* | 5.\* | 6.0 |
+| ------------- | ---- | ---- | ---- | ---- | --- |
+| 8 (LTS)       | ✅   | ✅   | ✅   | ✅   | ✅  |
+| 9             | ❌   | ❌   | ❓   | ❓   | ❓  |
+| 10            | ❌   | ❌   | ❓   | ❓   | ❓  |
+| 11 (LTS)      | ❌   | ❌   | ✅   | ✅   | ✅  |
+| 12            | ❌   | ❌   | ❓   | ✅   | ️✅ |
+| 13            | ❌   | ❌   | ✅   | ❌   | ✅  |
 
 # Supported Snyk command line arguments:
 
-* `--gradle-sub-project=foo` return dependencies for a specific subproject (by default, return only the
+- `--gradle-sub-project=foo` return dependencies for a specific subproject (by default, return only the
   dependencies for the top-level project)
 
 Additional command line arguments:

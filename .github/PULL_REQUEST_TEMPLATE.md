@@ -1,23 +1,23 @@
-- [ ] Ready for review
-- [ ] Follows CONTRIBUTING rules
-- [ ] Reviewed by Snyk internal team
+- [ ] Tests written and linted
+- [ ] Documentation written
+- [ ] Commit history is tidy
 
-#### What does this PR do?
+### What this does
 
+_Explain why this PR exists_
 
-#### Where should the reviewer start?
+### Notes for the reviewer
 
+_Instructions on how to run this locally, background context, what to review, questions…_
 
 #### How should this be manually tested?
 
+### More information
 
-#### Any background context you want to provide?
+- [Jira ticket SC-0000](https://snyksec.atlassian.net/browse/SC-0000)
 
+### Screenshots
 
-#### What are the relevant tickets?
-
-
-#### Screenshots
-
+_Visuals that may help the reviewer_
 
 #### Additional questions

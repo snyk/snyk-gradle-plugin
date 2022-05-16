@@ -240,10 +240,14 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   lines.forEach((l) => {
     if (/^JSONDEPS /.test(l)) {
       if (jsonLine !== null) {
-        throw new Error(
-          'More than one line with "JSONDEPS " prefix was returned; full output:\n' +
-            stdoutText,
-        );
+        debugLog('More than one line with "JSONDEPS " prefix was returned;');
+        debugLog('First line: ' + jsonLine);
+        debugLog('Current line:' + l.substr(9));
+        // TODO (@tardis): the init.gradle should protect against this using 'snykDepsConfExecuted' flag
+        // the longer term fix here is to make multiple snyk graph outputs impossible by interacting with
+        // Gradle API in a more consistent way.
+        // For now, assume the first JSONDEPS found was correct
+        return;
       }
       jsonLine = l.substr(9);
     }
