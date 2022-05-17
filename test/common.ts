@@ -11,5 +11,7 @@ export function stubPlatform(platform: string) {
   stub(os, 'platform').callsFake(() => {
     return platform;
   });
-  (os.platform as SinonStub).restore;
+  return function restorePlatform() {
+    (os.platform as SinonStub).restore();
+  };
 }

@@ -7,11 +7,16 @@ const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
 let subProcessExecSpy;
+let restorePlatform;
 
 beforeAll(() => {
-  stubPlatform('win32');
+  restorePlatform = stubPlatform('win32');
   subProcessExecSpy = jest.spyOn(subProcess, 'execute');
   subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
+});
+
+afterAll(() => {
+  restorePlatform();
 });
 
 afterEach(() => {
