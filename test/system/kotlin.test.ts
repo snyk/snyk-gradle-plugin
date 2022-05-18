@@ -8,9 +8,9 @@ const gradleVersionInUse: number = parseInt(
 );
 const isKotlinSupported: boolean = gradleVersionInUse < 5 ? false : true;
 
-// Timeout is 150 seconds because Gradle .kts builds are slower than usual
+// Gradle .kts builds are slower than usual so timeout is set to 150 sec in package.json
 if (isKotlinSupported) {
-  test('build.gradle.kts files are supported', async () => {
+  test('build.gradle.kts files are supported with Gradle version > 5', async () => {
     const result = await inspect(
       '.',
       path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'),

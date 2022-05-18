@@ -23,30 +23,23 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-test('windows with wrapper in root', async () => {
-  try {
-    await inspect(subWithWrapper, path.join('app', 'build.gradle'));
-  } catch {
-    expect(subProcessExecSpy.mock.calls[0][0]).toBe(
-      '"' + path.join(subWithWrapper, 'gradlew.bat') + '"',
-    );
-  }
+test('windows with wrapper in root invokes wrapper bat', async () => {
+  await expect(
+    inspect(subWithWrapper, path.join('app', 'build.gradle')),
+  ).rejects.toThrow();
+  expect(subProcessExecSpy.mock.calls[0][0]).toBe(
+    '"' + path.join(subWithWrapper, 'gradlew.bat') + '"',
+  );
 });
 
-test('windows with wrapper', async () => {
-  try {
-    await inspect(rootWithWrapper, 'build.gradle');
-  } catch {
-    expect(subProcessExecSpy.mock.calls[0][0]).toBe(
-      '"' + path.join(rootWithWrapper, 'gradlew.bat') + '"',
-    );
-  }
+test('windows with wrapper invokes wrapper bat', async () => {
+  await expect(inspect(rootWithWrapper, 'build.gradle')).rejects.toThrow();
+  expect(subProcessExecSpy.mock.calls[0][0]).toBe(
+    '"' + path.join(rootWithWrapper, 'gradlew.bat') + '"',
+  );
 });
 
-test('windows without wrapper', async () => {
-  try {
-    await inspect(rootNoWrapper, 'build.gradle');
-  } catch {
-    expect(subProcessExecSpy.mock.calls[0][0]).toBe('gradle');
-  }
+test('windows without wrapper invokes gradle directly', async () => {
+  await expect(inspect(rootNoWrapper, 'build.gradle')).rejects.toThrow();
+  expect(subProcessExecSpy.mock.calls[0][0]).toBe('gradle');
 });
