@@ -22,7 +22,7 @@
     "prepare": "npm run build",
     "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system",
     "test-functional": "jest test/functional -b",
-    "test-system": "tap --node-arg=-r --node-arg=ts-node/register -R spec --timeout=360 ./test/system/*.test.[tj]s",
+    "test-system": "jest test/system -b  --testTimeout=150000",
     "test-manual": "jest test/manual -b"
   },
   "author": "snyk.io",
@@ -40,7 +40,6 @@
     "jest": "^27.5.1",
     "prettier": "^2.3.1",
     "sinon": "^2.4.1",
-    "tap": "^12.6.1",
     "ts-jest": "^27.1.4",
     "ts-node": "^8.3.0",
     "typescript": "^4.2.0"
