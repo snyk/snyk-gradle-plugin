@@ -67,16 +67,6 @@ export interface GradleInspectOptions {
   reachableVulns?: boolean;
   callGraphBuilderTimeout?: number;
   initScript?: string;
-
-  // Best practices for recent version of Gradle are to avoid configs that are
-  // both resolvable _and_ consumable, i.e. canBeResolved == true &&
-  // canBeConsumed == true. Legacy projects will have these, so CLI scan might
-  // report less dependencies than the users expect. This flag allows the users
-  // to relax the configuration filtering strategy. This runs the risk that
-  // there will be configuration variant conflicts, but the user should know
-  // what they get themselves into.
-  // See: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
-  gradleAcceptLegacyConfigRoles?: boolean;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -364,12 +354,6 @@ async function printIfEcho(line: string) {
   }
 }
 
-function getPluginFileName(options: Options): string {
-  return options.gradleAcceptLegacyConfigRoles
-    ? 'init.gradle'
-    : 'legacy-init.gradle';
-}
-
 async function injectedPlugin(scriptName: string): Promise<{
   injectedPluginFilePath: string;
   cleanupCallback?: () => void;
@@ -476,9 +460,8 @@ async function getAllDepsWithPlugin(
   options: Options,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const pluginFileName = getPluginFileName(options);
   const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
-    pluginFileName,
+    'init.gradle',
   );
   const args = buildArgs(root, targetFile, injectedPluginFilePath, options);
 
@@ -789,5 +772,4 @@ export const exportsForTests = {
   getVersionBuildInfo,
   toCamelCase,
   getGradleAttributesPretty,
-  getPluginFileName,
 };

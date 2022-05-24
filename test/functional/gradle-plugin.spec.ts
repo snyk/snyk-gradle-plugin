@@ -7,25 +7,6 @@ const quot = isWin ? '"' : "'";
 const JEST_TIMEOUT = 15000;
 
 describe('Gradle Plugin', () => {
-  it('uses the correct plugin file', () => {
-    expect(testableMethods.getPluginFileName({})).toEqual('legacy-init.gradle');
-    expect(
-      testableMethods.getPluginFileName({
-        gradleAcceptLegacyConfigRoles: false,
-      }),
-    ).toEqual('legacy-init.gradle');
-    expect(
-      testableMethods.getPluginFileName({
-        gradleAcceptLegacyConfigRoles: undefined,
-      }),
-    ).toEqual('legacy-init.gradle');
-    expect(
-      testableMethods.getPluginFileName({
-        gradleAcceptLegacyConfigRoles: true,
-      }),
-    ).toEqual('init.gradle');
-  });
-
   it('check build args (plain console output)', () => {
     const result = testableMethods.buildArgs('.', null, '/tmp/init.gradle', {});
     expect(result).toEqual([
