@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "org.springframework:spring-web@5.3.10",
+      "info": {
+        "name": "org.springframework:spring-web",
+        "version": "5.3.10"
+      }
+    },
+    {
+      "id": "org.springframework:spring-beans@5.3.17",
+      "info": {
+        "name": "org.springframework:spring-beans",
+        "version": "5.3.17"
+      }
+    },
+    {
+      "id": "org.springframework:spring-core@5.3.17",
+      "info": {
+        "name": "org.springframework:spring-core",
+        "version": "5.3.17"
+      }
+    },
+    {
+      "id": "org.springframework:spring-jcl@5.3.17",
+      "info": {
+        "name": "org.springframework:spring-jcl",
+        "version": "5.3.17"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": [
+          {
+            "nodeId": "org.springframework:spring-web@5.3.10"
+          },
+          {
+            "nodeId": "org.springframework:spring-beans@5.3.17"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.springframework:spring-web@5.3.10",
+        "pkgId": "org.springframework:spring-web@5.3.10",
+        "deps": [
+          {
+            "nodeId": "org.springframework:spring-beans@5.3.17:pruned"
+          },
+          {
+            "nodeId": "org.springframework:spring-core@5.3.17"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.springframework:spring-beans@5.3.17",
+        "pkgId": "org.springframework:spring-beans@5.3.17",
+        "deps": [
+          {
+            "nodeId": "org.springframework:spring-core@5.3.17:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.springframework:spring-core@5.3.17",
+        "pkgId": "org.springframework:spring-core@5.3.17",
+        "deps": [
+          {
+            "nodeId": "org.springframework:spring-jcl@5.3.17"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.springframework:spring-jcl@5.3.17",
+        "pkgId": "org.springframework:spring-jcl@5.3.17",
+        "deps": []
+      },
+      {
+        "nodeId": "org.springframework:spring-beans@5.3.17:pruned",
+        "pkgId": "org.springframework:spring-beans@5.3.17",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.springframework:spring-core@5.3.17:pruned",
+        "pkgId": "org.springframework:spring-core@5.3.17",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      }
+    ]
+  }
+}
