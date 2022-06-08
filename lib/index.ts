@@ -283,36 +283,52 @@ export async function buildGraph(
     return depGraphBuilder.build();
   }
 
-  for (const id of Object.keys(snykGraph)) {
-    const { name, version } = snykGraph[id];
-    const nodeId = `${name}@${version}`;
+  const visited: string[] = [];
+  const queue: QueueItem[] = [];
+  queue.push(...findChildren('root-node', snykGraph)); // queue direct dependencies
 
-    depGraphBuilder.addPkgNode({ name, version }, nodeId);
-  }
-
-  // Edges
-  for (const id of Object.keys(snykGraph)) {
-    snykGraph[id].parentIds = Array.from(
-      new Set(snykGraph[id].parentIds).values(),
-    );
-    const { name, version, parentIds } = snykGraph[id];
-    const nodeId = `${name}@${version}`;
-
-    if (parentIds && parentIds.length > 0) {
-      for (let parentId of parentIds) {
-        // case of missing assign version
-        if (!parentId.includes('@') && snykGraph[parentId]) {
-          const { name, version } = snykGraph[parentId];
-          parentId = `${name}@${version}`;
-        }
-        depGraphBuilder.connectDep(parentId, nodeId);
-      }
-    } else {
-      depGraphBuilder.connectDep('root-node', nodeId);
+  // breadth first search
+  while (queue.length > 0) {
+    const item = queue.shift();
+    if (!item) continue;
+    const { id, parentId } = item;
+    const node = snykGraph[id];
+    if (!node) continue;
+    const { name = 'unknown', version = 'unknown' } = node;
+    if (visited.indexOf(id) > -1) {
+      const prunedId = id + ':pruned';
+      depGraphBuilder.addPkgNode({ name, version }, prunedId, {
+        labels: { pruned: 'true' },
+      });
+      depGraphBuilder.connectDep(parentId, prunedId);
+      continue; // don't queue any more children
     }
+    depGraphBuilder.addPkgNode({ name, version }, id);
+    depGraphBuilder.connectDep(parentId, id);
+    queue.push(...findChildren(id, snykGraph)); // queue children
+    visited.push(id);
   }
 
   return depGraphBuilder.build();
+}
+
+interface QueueItem {
+  id: string;
+  parentId: string;
+}
+
+function findChildren(
+  parentId: string,
+  snykGraph: { [dependencyId: string]: SnykGraph },
+): QueueItem[] {
+  const result: QueueItem[] = [];
+  for (const id of Object.keys(snykGraph)) {
+    const node = snykGraph[id];
+    if (node?.parentIds?.indexOf(parentId) > -1) {
+      result.push({ id, parentId });
+    }
+  }
+  return result;
 }
 
 async function getAllDepsOneProject(
