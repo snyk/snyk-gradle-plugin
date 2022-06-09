@@ -1,14 +1,29 @@
 {
   "schemaVersion": "1.2.0",
-  "pkgManager": { "name": "gradle" },
+  "pkgManager": {
+    "name": "gradle"
+  },
   "pkgs": [
     {
       "id": "goof-project@unspecified",
-      "info": { "name": "goof-project", "version": "unspecified" }
+      "info": {
+        "name": "goof-project",
+        "version": "unspecified"
+      }
     },
     {
       "id": "ch.qos.logback:logback-core@1.0.13",
-      "info": { "name": "ch.qos.logback:logback-core", "version": "1.0.13" }
+      "info": {
+        "name": "ch.qos.logback:logback-core",
+        "version": "1.0.13"
+      }
+    },
+    {
+      "id": "androidx.collection:collection@1.1.0",
+      "info": {
+        "name": "androidx.collection:collection",
+        "version": "1.1.0"
+      }
     },
     {
       "id": "parent.of.grandparent.dependency@1.0.13",
@@ -19,11 +34,10 @@
     },
     {
       "id": "fake.dependency@1.0.13",
-      "info": { "name": "fake.dependency", "version": "1.0.13" }
-    },
-    {
-      "id": "androidx.collection:collection@1.1.0",
-      "info": { "name": "androidx.collection:collection", "version": "1.1.0" }
+      "info": {
+        "name": "fake.dependency",
+        "version": "1.0.13"
+      }
     }
   ],
   "graph": {
@@ -33,39 +47,101 @@
         "nodeId": "root-node",
         "pkgId": "goof-project@unspecified",
         "deps": [
-          { "nodeId": "ch.qos.logback:logback-core@1.0.13" },
-          { "nodeId": "androidx.collection:collection@1.1.0" }
+          {
+            "nodeId": "ch.qos.logback:logback-core@1.0.13"
+          },
+          {
+            "nodeId": "androidx.collection:collection@1.1.0"
+          }
         ]
       },
       {
         "nodeId": "ch.qos.logback:logback-core@1.0.13",
         "pkgId": "ch.qos.logback:logback-core@1.0.13",
         "deps": [
-          { "nodeId": "parent.of.grandparent.dependency@1.0.13" },
-          { "nodeId": "fake.dependency@1.0.13" },
-          { "nodeId": "androidx.collection:collection@1.1.0" }
+          {
+            "nodeId": "parent.of.grandparent.dependency@1.0.13"
+          },
+          {
+            "nodeId": "fake.dependency@1.0.13"
+          },
+          {
+            "nodeId": "androidx.collection:collection@1.1.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "androidx.collection:collection@1.1.0",
+        "pkgId": "androidx.collection:collection@1.1.0",
+        "deps": [
+          {
+            "nodeId": "fake.dependency@1.0.13:pruned"
+          }
         ]
       },
       {
         "nodeId": "parent.of.grandparent.dependency@1.0.13",
         "pkgId": "parent.of.grandparent.dependency@1.0.13",
         "deps": [
-          { "nodeId": "fake.dependency@1.0.13" },
-          { "nodeId": "androidx.collection:collection@1.1.0" }
+          {
+            "nodeId": "fake.dependency@1.0.13:pruned"
+          },
+          {
+            "nodeId": "androidx.collection:collection@1.1.0:pruned"
+          }
         ]
       },
       {
         "nodeId": "fake.dependency@1.0.13",
         "pkgId": "fake.dependency@1.0.13",
         "deps": [
-          { "nodeId": "ch.qos.logback:logback-core@1.0.13" },
-          { "nodeId": "parent.of.grandparent.dependency@1.0.13" }
+          {
+            "nodeId": "ch.qos.logback:logback-core@1.0.13:pruned"
+          },
+          {
+            "nodeId": "parent.of.grandparent.dependency@1.0.13:pruned"
+          }
         ]
       },
       {
-        "nodeId": "androidx.collection:collection@1.1.0",
+        "nodeId": "androidx.collection:collection@1.1.0:pruned",
         "pkgId": "androidx.collection:collection@1.1.0",
-        "deps": [{ "nodeId": "fake.dependency@1.0.13" }]
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "fake.dependency@1.0.13:pruned",
+        "pkgId": "fake.dependency@1.0.13",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "ch.qos.logback:logback-core@1.0.13:pruned",
+        "pkgId": "ch.qos.logback:logback-core@1.0.13",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "parent.of.grandparent.dependency@1.0.13:pruned",
+        "pkgId": "parent.of.grandparent.dependency@1.0.13",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
       }
     ]
   }
