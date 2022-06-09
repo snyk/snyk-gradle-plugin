@@ -50,8 +50,8 @@ describe('findProjectsInExtractedJSON', () => {
       });
       expect(projects['tardis-master']?.depGraph.getPkgs()).toEqual([
         { name: 'tardis-master', version: 'unspecified' },
-        { name: 'com.tardis:b', version: '1.0.13' },
         { name: 'com.tardis:a', version: '1.5.0' },
+        { name: 'com.tardis:b', version: '1.0.13' },
       ]);
       expect(allSubProjectNames).toEqual([]);
     },

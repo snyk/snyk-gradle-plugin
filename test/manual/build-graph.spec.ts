@@ -33,6 +33,6 @@ describe('handle cyclic dependencies while build dep-graph', () => {
       .reduce((acc, pkg) => acc + depGraph.countPathsToRoot(pkg), 0);
 
     expect(allPathsAreReacheableFromRoot).toBeTruthy();
-    expect(depGraph.equals(expectedDepGraph)).toBeTruthy();
+    expect(expectedDepGraph.equals(depGraph)).toBeTruthy();
   });
 });
