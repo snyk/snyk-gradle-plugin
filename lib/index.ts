@@ -5,11 +5,12 @@ import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
-import { DepGraph, DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
+import { DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import debugModule = require('debug');
+import { buildGraph, SnykGraph } from './graph';
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -217,19 +218,13 @@ export interface JsonDepsScriptResult {
   versionBuildInfo?: VersionBuildInfo;
 }
 
-interface SnykGraph {
-  name: string;
-  version: string;
-  parentIds: string[];
-}
-
 interface ProjectsDict {
   [project: string]: GradleProjectInfo;
 }
 
 interface GradleProjectInfo {
   depGraph?: DepGraph;
-  snykGraph?: { [name: string]: SnykGraph }; // snykGraph from gradle task
+  snykGraph?: SnykGraph; // snykGraph from gradle init task
   targetFile: string;
   projectVersion: string;
 }
@@ -264,71 +259,6 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
       ' characters',
   );
   return JSON.parse(jsonLine!);
-}
-
-export async function buildGraph(
-  snykGraph: { [dependencyId: string]: SnykGraph },
-  projectName: string,
-  projectVersion: string,
-) {
-  const pkgManager: PkgManager = { name: 'gradle' };
-  const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
-
-  const depGraphBuilder = new DepGraphBuilder(pkgManager, {
-    name: projectName,
-    version: projectVersion || '0.0.0',
-  });
-
-  if (isEmptyGraph) {
-    return depGraphBuilder.build();
-  }
-
-  const visited: string[] = [];
-  const queue: QueueItem[] = [];
-  queue.push(...findChildren('root-node', snykGraph)); // queue direct dependencies
-
-  // breadth first search
-  while (queue.length > 0) {
-    const item = queue.shift();
-    if (!item) continue;
-    const { id, parentId } = item;
-    const node = snykGraph[id];
-    if (!node) continue;
-    const { name = 'unknown', version = 'unknown' } = node;
-    if (visited.indexOf(id) > -1) {
-      const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode({ name, version }, prunedId, {
-        labels: { pruned: 'true' },
-      });
-      depGraphBuilder.connectDep(parentId, prunedId);
-      continue; // don't queue any more children
-    }
-    depGraphBuilder.addPkgNode({ name, version }, id);
-    depGraphBuilder.connectDep(parentId, id);
-    queue.push(...findChildren(id, snykGraph)); // queue children
-    visited.push(id);
-  }
-
-  return depGraphBuilder.build();
-}
-
-interface QueueItem {
-  id: string;
-  parentId: string;
-}
-
-function findChildren(
-  parentId: string,
-  snykGraph: { [dependencyId: string]: SnykGraph },
-): QueueItem[] {
-  const result: QueueItem[] = [];
-  for (const id of Object.keys(snykGraph)) {
-    const node = snykGraph[id];
-    if (node?.parentIds?.indexOf(parentId) > -1) {
-      result.push({ id, parentId });
-    }
-  }
-  return result;
 }
 
 async function getAllDepsOneProject(
