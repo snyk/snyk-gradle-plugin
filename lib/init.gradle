@@ -44,13 +44,15 @@ import org.gradle.util.GradleVersion
 
 // interface GradleProjectInfo {
 //   depGraph: DepGraph;
-//   snykGraph: { [name: string]: SnykGraph };
+//   snykGraph: SnykGraph;
 //   targetFile: string;
 // }
-// export interface SnykGraph {
-//   name: string;
-//   version: string;
-//   parentIds: string[];
+// interface SnykGraph {
+//   [id: string]: {
+//     name: string;
+//     version: string;
+//     parentIds: string[];
+//   };
 // }
 
 class SnykGraph {
