@@ -1,0 +1,12 @@
+plugins {
+  id 'java'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'org.springframework:spring-web:5.3.10'
+  implementation 'org.springframework:spring-beans:5.3.17'
+} 

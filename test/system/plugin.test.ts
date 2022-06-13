@@ -1,4 +1,6 @@
+import * as fs from 'fs';
 import * as path from 'path';
+import * as depGraphLib from '@snyk/dep-graph';
 import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
 
@@ -195,4 +197,14 @@ test('custom dependency resolution via configurations* is NOT supported (known p
   expect(
     nodeIds.indexOf('com.android.tools:annotations@25.2.0'),
   ).toBeGreaterThanOrEqual(-1); // 25.2.0 instead of 25.3.0 due of dependency conflict resolution
+});
+
+test('repeated transitive lines terminated at duplicate node and labeled pruned', async () => {
+  const pathToFixture = fixtureDir('pruned-spring-app');
+  const result = await inspect('.', path.join(pathToFixture, 'build.gradle'));
+  const expectedJson = JSON.parse(
+    fs.readFileSync(path.join(pathToFixture, 'dep-graph.json'), 'utf-8'),
+  );
+  const expected = depGraphLib.createFromJSON(expectedJson);
+  expect(result.dependencyGraph?.equals(expected)).toBe(true);
 });
