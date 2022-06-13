@@ -42,7 +42,7 @@ export async function buildGraph(
     const node = snykGraph[id];
     if (!node) continue;
     const { name = 'unknown', version = 'unknown' } = node;
-    if (visited.indexOf(id) > -1) {
+    if (visited.includes(id)) {
       const prunedId = id + ':pruned';
       depGraphBuilder.addPkgNode({ name, version }, prunedId, {
         labels: { pruned: 'true' },
@@ -66,7 +66,7 @@ export function findChildren(
   const result: QueueItem[] = [];
   for (const id of Object.keys(snykGraph)) {
     const node = snykGraph[id];
-    if (node?.parentIds?.indexOf(parentId) > -1) {
+    if (node?.parentIds?.includes(parentId)) {
       result.push({ id, parentId });
     }
   }
