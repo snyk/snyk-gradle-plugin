@@ -23,21 +23,24 @@ if (isKotlinSupported) {
       nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
     });
 
-    expect(
-      nodeIds.indexOf('org.jetbrains.kotlin:kotlin-stdlib-common@1.3.21') !==
-        -1,
-    ).toBeTruthy();
+    const expectedNodeId = 'org.jetbrains.kotlin:kotlin-stdlib-common@1.3.21';
+    expect(nodeIds).toContain(expectedNodeId);
 
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
     const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
 
     const { deps: directDependencies } = graphObject.graph.nodes[0];
-    expect(directDependencies.length === 2).toBeTruthy();
-
     const expectedDirectDependencies = [
       { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21' },
+      { nodeId: 'org.jetbrains.kotlin:kotlin-compiler-embeddable@1.3.21' },
       { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
+      {
+        nodeId:
+          'org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@1.3.21',
+      },
+      { nodeId: 'org.jetbrains.kotlin:kotlin-allopen@1.3.21' },
+      { nodeId: 'org.jetbrains.kotlin:kotlin-noarg@1.3.21' },
     ];
     expect(directDependencies).toEqual(expectedDirectDependencies);
   });

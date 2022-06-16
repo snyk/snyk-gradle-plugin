@@ -393,7 +393,6 @@ test('multi-project: use full path for subprojects with the same name', async ()
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-project-same-name'), 'build.gradle'),
-    { gradleAcceptLegacyConfigRoles: true },
   );
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
@@ -406,7 +405,6 @@ test('multi-project: use flat naming when subprojects have different names', asy
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
-    { gradleAcceptLegacyConfigRoles: true },
   );
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
@@ -419,7 +417,7 @@ test('multi-project: correct deps for subprojects with the same name', async () 
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-project-same-name'), 'build.gradle'),
-    { allSubProjects: true, gradleAcceptLegacyConfigRoles: true },
+    { allSubProjects: true },
   );
 
   const projectDeps = {};
@@ -446,7 +444,7 @@ test('multi-project: correct deps when subprojects have different names', async 
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
-    { allSubProjects: true, gradleAcceptLegacyConfigRoles: true },
+    { allSubProjects: true },
   );
 
   const projectDeps = {};
