@@ -127,8 +127,11 @@ def getSnykGraph(Iterable deps) {
     return graph.nodes
 }
 
-def snykEcho(msg) {
-    println("SNYKECHO $msg")
+def debugLog(msg) {
+    def debug = System.getenv('DEBUG') ?: ''
+    if (debug.length() > 0) {
+        println("SNYKECHO $msg")
+    }
 }
 
 def matchesAttributeFilter(conf, confAttrSpec) {
@@ -162,10 +165,10 @@ def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
 def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
     if (GradleVersion.current() < GradleVersion.version('3.0')) {
-        proj.configurations.each({ snykEcho("conf.name=$it.name") })
+        proj.configurations.each({ debugLog("conf.name=$it.name") })
         return matching
     }
-    proj.configurations.each({ snykEcho("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
+    proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
     // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
     // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
     // if we cannot find dependencies that can be only resolved but not consumable
@@ -173,7 +176,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     // to prevent dependency resolution conflicts (e.g. Cannot choose between the following variants) 
     // we avoid the coexistence of (canBeResolved: true, canBeConsumed: false) and (canBeResolved: true, canBeConsumed: true) configs
     def resolvable = matching.findAll({ it.canBeResolved == true })
-    snykEcho("resolvableConfigs=$resolvable")
+    debugLog("resolvableConfigs=$resolvable")
     return resolvable
 }
 
@@ -182,7 +185,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
 // only ever run it once, for the "starting" project.
 def snykDepsConfExecuted = false
 allprojects { currProj ->
-    snykEcho("Current project: $currProj.name")
+    debugLog("Current project: $currProj.name")
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
         def confNameFilter = (project.hasProperty('configuration')
@@ -198,8 +201,8 @@ allprojects { currProj ->
             if (snykDepsConfExecuted) {
                 return
             }
-            snykEcho('snykResolvedDepsJson task is executing via doLast')
-            // snykEcho("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
+            debugLog('snykResolvedDepsJson task is executing via doLast')
+            // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
             // First pass: scan all configurations that match the attribute filter and collect all attributes
             // from them, to use unambiguous values of the attributes on the merged configuration.
             //
@@ -251,7 +254,7 @@ allprojects { currProj ->
             }
             def projectsDict = [:]
 
-            snykEcho("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
+            debugLog("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
 
             // These will be used to suggest attribute filtering to the user if the scan fails
             // due to ambiguous resolution of dependency variants
@@ -259,16 +262,16 @@ allprojects { currProj ->
             println("JSONATTRS $jsonAttrs")
 
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
-                snykEcho("processing project: name=$proj.name; path=$proj.path")
+                debugLog("processing project: name=$proj.name; path=$proj.path")
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
                 def resolvedConfigs = []
                 resolvableConfigs.each({ config ->
                     def resConf = config.resolvedConfiguration
-                    snykEcho("config `$config.name' resolution has errors: ${resConf.hasError()}")
+                    debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
                     if (!resConf.hasError()) {
                         resolvedConfigs.add(resConf)
-                        snykEcho("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
+                        debugLog("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
                     }
                 })
                 if (resolvedConfigs.isEmpty() && !proj.configurations.isEmpty()) {
@@ -278,16 +281,16 @@ allprojects { currProj ->
                 }
 
                 def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
-                snykEcho("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
+                debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 
-                snykEcho('converting gradle graph to snyk-graph format')
+                debugLog('converting gradle graph to snyk-graph format')
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
-                    snykEcho("The deps dict already has a project with key `$projKey'; using the full path")
+                    debugLog("The deps dict already has a project with key `$projKey'; using the full path")
                     projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
                     if (projKey == "") {
-                        snykEcho("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
+                        debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
                         projKey = defaultProjectName
                     }
                 }
