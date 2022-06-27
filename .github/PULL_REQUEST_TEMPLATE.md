@@ -12,8 +12,6 @@ _Instructions on how to run this locally, background context, what to review, qu
 
 #### How should this be manually tested?
 
-### More information
-
 ### Screenshots
 
 _Visuals that may help the reviewer_
