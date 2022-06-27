@@ -12,10 +12,6 @@ _Instructions on how to run this locally, background context, what to review, qu
 
 #### How should this be manually tested?
 
-### More information
-
-- [Jira ticket SC-0000](https://snyksec.atlassian.net/browse/SC-0000)
-
 ### Screenshots
 
 _Visuals that may help the reviewer_
