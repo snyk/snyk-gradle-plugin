@@ -1,0 +1,13 @@
+plugins {
+  id 'application'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+    implementation libs.groovy.core
+    implementation libs.groovy.json
+    implementation libs.groovy.nio
+}

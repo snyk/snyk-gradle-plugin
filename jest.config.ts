@@ -14,6 +14,5 @@ export default async (): Promise<Config.InitialOptions> => {
         tsconfig: '<rootDir>/test/manual/tsconfig.json',
       },
     },
-    modulePathIgnorePatterns: ['<rootDir>/test/.*fixtures'],
   };
 };

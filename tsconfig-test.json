@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
-      "outDir": "./dist-test",
-      "pretty": true,
-      "target": "es2017",
-      "lib": [
-        "es2017",
-      ],
-      "module": "commonjs",
-      "allowJs": false,
-      "sourceMap": true,
-      "strict": false,
-      "declaration": true,
-      "importHelpers": true,
-      "typeRoots": ["./node_modules/@types", "./typings"],
+    "outDir": "./dist-test",
+    "pretty": true,
+    "target": "es2017",
+    "lib": ["es2017"],
+    "module": "commonjs",
+    "allowJs": false,
+    "sourceMap": true,
+    "strict": false,
+    "declaration": true,
+    "importHelpers": true,
+    "typeRoots": ["./node_modules/@types", "./typings"]
   },
-  "include": [
-      "./test/**/*",
-  ]
+  "include": ["./test/**/*"]
 }

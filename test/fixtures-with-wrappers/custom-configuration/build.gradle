@@ -1,0 +1,16 @@
+repositories {
+    flatDir {
+        dirs 'extraLibs'
+    }
+}
+
+configurations {
+    // configuration that holds jars to include in the jar
+    extraLibs
+}
+
+dependencies {
+    extraLibs group: 'org.mockito', name: 'mockito-core', version: '4.6.1'
+    extraLibs group: 'org.scala-lang', name: 'scala-library', version: '2.13.8'
+    extraLibs group: 'org.slf4j', name: 'slf4j-api', version: '+'
+}

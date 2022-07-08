@@ -165,6 +165,41 @@ jobs:
           name: Run tests
           command: npm test
 
+  test-fixtures-with-wrappers-unix:
+    <<: *defaults
+    docker:
+      - image: circleci/node:16
+    environment:
+      JDK: 17.0.3.6.1-amzn
+    steps:
+      - checkout
+      - install_sdkman
+      - install_jdk_unix:
+          jdk_version: 17.0.3.6.1-amzn
+      - install_deps
+      - show_node_version
+      - run:
+          name: Run tests
+          command: npm run test-fixtures
+
+  test-fixtures-with-wrappers-windows:
+    <<: *defaults
+    <<: *windows_defaults
+    environment:
+      JDK: '17'
+    steps:
+      - run: git config --global core.autocrlf false
+      - checkout
+      - install_node_npm:
+          node_version: '16'
+      - install_jdk_windows:
+          jdk_version: '17'
+      - install_deps
+      - show_node_version
+      - run:
+          name: Run tests
+          command: npm run test-fixtures
+
   release:
     <<: *defaults
     docker:
@@ -205,8 +240,21 @@ workflows:
             branches:
               ignore:
                 - master
+      - test-fixtures-with-wrappers-unix:
+          name: Test Fixtures OS=Unix Node=16 JDK=17.0.3.6.1-amzn Gradle=7.4.2
+          context: nodejs-install
+          filters:
+            branches:
+              ignore:
+                - master
+      - test-fixtures-with-wrappers-windows:
+          name: Test Fixtures OS=Windows Node=16 JDK=17 Gradle=7.4.2
+          context: nodejs-install
+          filters:
+            branches:
+              ignore:
+                - master
 
-      # Release
       - release:
           name: Release
           context: nodejs-app-release

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": []
+      }
+    ]
+  }
+}

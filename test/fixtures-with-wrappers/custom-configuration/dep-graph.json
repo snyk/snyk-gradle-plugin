@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "org.mockito:mockito-core@4.6.1",
+      "info": {
+        "name": "org.mockito:mockito-core",
+        "version": "4.6.1"
+      }
+    },
+    {
+      "id": "org.scala-lang:scala-library@2.13.8",
+      "info": {
+        "name": "org.scala-lang:scala-library",
+        "version": "2.13.8"
+      }
+    },
+    {
+      "id": "org.slf4j:slf4j-api@1.7.36",
+      "info": {
+        "name": "org.slf4j:slf4j-api",
+        "version": "1.7.36"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": [
+          {
+            "nodeId": "org.mockito:mockito-core@4.6.1"
+          },
+          {
+            "nodeId": "org.scala-lang:scala-library@2.13.8"
+          },
+          {
+            "nodeId": "org.slf4j:slf4j-api@1.7.36"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.mockito:mockito-core@4.6.1",
+        "pkgId": "org.mockito:mockito-core@4.6.1",
+        "deps": []
+      },
+      {
+        "nodeId": "org.scala-lang:scala-library@2.13.8",
+        "pkgId": "org.scala-lang:scala-library@2.13.8",
+        "deps": []
+      },
+      {
+        "nodeId": "org.slf4j:slf4j-api@1.7.36",
+        "pkgId": "org.slf4j:slf4j-api@1.7.36",
+        "deps": []
+      }
+    ]
+  }
+}
