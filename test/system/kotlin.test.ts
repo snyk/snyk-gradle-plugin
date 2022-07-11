@@ -43,7 +43,7 @@ if (isKotlinSupported) {
       { nodeId: 'org.jetbrains.kotlin:kotlin-noarg@1.3.21' },
     ];
     expect(directDependencies).toEqual(expectedDirectDependencies);
-  });
+  }, 200000);
 } else {
   test('build.gradle.kts are not supported with Gradle version < 5', () => {});
 }

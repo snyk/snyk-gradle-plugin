@@ -1,0 +1,3 @@
+rootProject.name = 'no-build-gradle-in-root'
+
+include 'subproj'

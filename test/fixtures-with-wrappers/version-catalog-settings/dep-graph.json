@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "org.codehaus.groovy:groovy@3.0.5",
+      "info": {
+        "name": "org.codehaus.groovy:groovy",
+        "version": "3.0.5"
+      }
+    },
+    {
+      "id": "org.codehaus.groovy:groovy-json@3.0.5",
+      "info": {
+        "name": "org.codehaus.groovy:groovy-json",
+        "version": "3.0.5"
+      }
+    },
+    {
+      "id": "org.codehaus.groovy:groovy-nio@3.0.5",
+      "info": {
+        "name": "org.codehaus.groovy:groovy-nio",
+        "version": "3.0.5"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": [
+          {
+            "nodeId": "org.codehaus.groovy:groovy@3.0.5"
+          },
+          {
+            "nodeId": "org.codehaus.groovy:groovy-json@3.0.5"
+          },
+          {
+            "nodeId": "org.codehaus.groovy:groovy-nio@3.0.5"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.codehaus.groovy:groovy@3.0.5",
+        "pkgId": "org.codehaus.groovy:groovy@3.0.5",
+        "deps": []
+      },
+      {
+        "nodeId": "org.codehaus.groovy:groovy-json@3.0.5",
+        "pkgId": "org.codehaus.groovy:groovy-json@3.0.5",
+        "deps": [
+          {
+            "nodeId": "org.codehaus.groovy:groovy@3.0.5:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.codehaus.groovy:groovy-nio@3.0.5",
+        "pkgId": "org.codehaus.groovy:groovy-nio@3.0.5",
+        "deps": [
+          {
+            "nodeId": "org.codehaus.groovy:groovy@3.0.5:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.codehaus.groovy:groovy@3.0.5:pruned",
+        "pkgId": "org.codehaus.groovy:groovy@3.0.5",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -8,6 +8,8 @@ __pycache__/
 package-lock.json
 test/fixtures/**/build
 npm-debug.log
+.DS_Store
+coverage
 
 # Diagnostic reports (https://nodejs.org/api/report.html) 
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

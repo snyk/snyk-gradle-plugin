@@ -1,0 +1,36 @@
+
+plugins {
+    // Apply the application plugin to add support for building a CLI application in Java.
+    id 'application'
+}
+
+repositories {
+    // Use Maven Central for resolving dependencies.
+    mavenCentral {
+        content {
+            // this repository contains everything BUT artifacts with group starting with "my.company"
+            excludeGroupByRegex "org.checkerframework.*"
+        }
+    }
+    jcenter()
+}
+
+dependencies {
+    // This dependency is used by the application.
+    implementation 'com.google.guava:guava:30.1.1-jre'
+}
+
+testing {
+    suites {
+        // Configure the built-in test suite
+        test {
+            // Use JUnit4 test framework
+            useJUnit('4.13.2')
+        }
+    }
+}
+
+application {
+    // Define the main class for the application.
+    mainClass = 'single.module.project.App'
+}

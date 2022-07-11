@@ -22,6 +22,7 @@
     "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system",
     "test-functional": "jest test/functional -b",
     "test-system": "jest test/system -b  --testTimeout=150000",
+    "test-fixtures": "tsc -p tsconfig-test.json && jest test/system/fixtures-with-wrappers.test.ts -b  --testTimeout=150000",
     "test-manual": "jest test/manual -b"
   },
   "author": "snyk.io",

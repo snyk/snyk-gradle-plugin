@@ -1,0 +1,14 @@
+plugins {
+  id 'application'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation platform('org.springframework.boot:spring-boot-dependencies:1.5.8.RELEASE')
+
+  implementation 'com.google.code.gson:gson'
+  implementation 'dom4j:dom4j'
+}

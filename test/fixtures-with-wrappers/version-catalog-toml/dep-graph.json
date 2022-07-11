@@ -1,0 +1,258 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "org.mockito:mockito-core@4.5.1",
+      "info": {
+        "name": "org.mockito:mockito-core",
+        "version": "4.5.1"
+      }
+    },
+    {
+      "id": "org.mockito:mockito-inline@4.5.1",
+      "info": {
+        "name": "org.mockito:mockito-inline",
+        "version": "4.5.1"
+      }
+    },
+    {
+      "id": "org.junit.jupiter:junit-jupiter@5.8.2",
+      "info": {
+        "name": "org.junit.jupiter:junit-jupiter",
+        "version": "5.8.2"
+      }
+    },
+    {
+      "id": "net.bytebuddy:byte-buddy@1.12.9",
+      "info": {
+        "name": "net.bytebuddy:byte-buddy",
+        "version": "1.12.9"
+      }
+    },
+    {
+      "id": "net.bytebuddy:byte-buddy-agent@1.12.9",
+      "info": {
+        "name": "net.bytebuddy:byte-buddy-agent",
+        "version": "1.12.9"
+      }
+    },
+    {
+      "id": "org.junit.jupiter:junit-jupiter-params@5.8.2",
+      "info": {
+        "name": "org.junit.jupiter:junit-jupiter-params",
+        "version": "5.8.2"
+      }
+    },
+    {
+      "id": "org.junit.jupiter:junit-jupiter-api@5.8.2",
+      "info": {
+        "name": "org.junit.jupiter:junit-jupiter-api",
+        "version": "5.8.2"
+      }
+    },
+    {
+      "id": "org.junit:junit-bom@5.8.2",
+      "info": {
+        "name": "org.junit:junit-bom",
+        "version": "5.8.2"
+      }
+    },
+    {
+      "id": "org.apiguardian:apiguardian-api@1.1.2",
+      "info": {
+        "name": "org.apiguardian:apiguardian-api",
+        "version": "1.1.2"
+      }
+    },
+    {
+      "id": "org.junit.platform:junit-platform-commons@1.8.2",
+      "info": {
+        "name": "org.junit.platform:junit-platform-commons",
+        "version": "1.8.2"
+      }
+    },
+    {
+      "id": "org.opentest4j:opentest4j@1.2.0",
+      "info": {
+        "name": "org.opentest4j:opentest4j",
+        "version": "1.2.0"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": [
+          {
+            "nodeId": "org.mockito:mockito-core@4.5.1"
+          },
+          {
+            "nodeId": "org.mockito:mockito-inline@4.5.1"
+          },
+          {
+            "nodeId": "org.junit.jupiter:junit-jupiter@5.8.2"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.mockito:mockito-core@4.5.1",
+        "pkgId": "org.mockito:mockito-core@4.5.1",
+        "deps": [
+          {
+            "nodeId": "net.bytebuddy:byte-buddy@1.12.9"
+          },
+          {
+            "nodeId": "net.bytebuddy:byte-buddy-agent@1.12.9"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.mockito:mockito-inline@4.5.1",
+        "pkgId": "org.mockito:mockito-inline@4.5.1",
+        "deps": [
+          {
+            "nodeId": "org.mockito:mockito-core@4.5.1:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.junit.jupiter:junit-jupiter@5.8.2",
+        "pkgId": "org.junit.jupiter:junit-jupiter@5.8.2",
+        "deps": [
+          {
+            "nodeId": "org.junit.jupiter:junit-jupiter-params@5.8.2"
+          },
+          {
+            "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2"
+          },
+          {
+            "nodeId": "org.junit:junit-bom@5.8.2"
+          }
+        ]
+      },
+      {
+        "nodeId": "net.bytebuddy:byte-buddy@1.12.9",
+        "pkgId": "net.bytebuddy:byte-buddy@1.12.9",
+        "deps": []
+      },
+      {
+        "nodeId": "net.bytebuddy:byte-buddy-agent@1.12.9",
+        "pkgId": "net.bytebuddy:byte-buddy-agent@1.12.9",
+        "deps": []
+      },
+      {
+        "nodeId": "org.mockito:mockito-core@4.5.1:pruned",
+        "pkgId": "org.mockito:mockito-core@4.5.1",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.junit.jupiter:junit-jupiter-params@5.8.2",
+        "pkgId": "org.junit.jupiter:junit-jupiter-params@5.8.2",
+        "deps": [
+          {
+            "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned"
+          },
+          {
+            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
+          },
+          {
+            "nodeId": "org.apiguardian:apiguardian-api@1.1.2"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
+        "pkgId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
+        "deps": [
+          {
+            "nodeId": "org.junit.platform:junit-platform-commons@1.8.2"
+          },
+          {
+            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
+          },
+          {
+            "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
+          },
+          {
+            "nodeId": "org.opentest4j:opentest4j@1.2.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.junit:junit-bom@5.8.2",
+        "pkgId": "org.junit:junit-bom@5.8.2",
+        "deps": []
+      },
+      {
+        "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned",
+        "pkgId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.junit:junit-bom@5.8.2:pruned",
+        "pkgId": "org.junit:junit-bom@5.8.2",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.apiguardian:apiguardian-api@1.1.2",
+        "pkgId": "org.apiguardian:apiguardian-api@1.1.2",
+        "deps": []
+      },
+      {
+        "nodeId": "org.junit.platform:junit-platform-commons@1.8.2",
+        "pkgId": "org.junit.platform:junit-platform-commons@1.8.2",
+        "deps": [
+          {
+            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
+          },
+          {
+            "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned",
+        "pkgId": "org.apiguardian:apiguardian-api@1.1.2",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.opentest4j:opentest4j@1.2.0",
+        "pkgId": "org.opentest4j:opentest4j@1.2.0",
+        "deps": []
+      }
+    ]
+  }
+}

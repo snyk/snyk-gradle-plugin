@@ -1,0 +1,17 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+repositories{
+    mavenCentral()
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+dependencies {
+    implementation 'org.codehaus.groovy:groovy:[3.0.0,3.0.4)'
+    runtimeOnly 'com.google.guava:guava:+'
+}

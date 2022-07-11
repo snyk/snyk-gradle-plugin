@@ -37,16 +37,14 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 | 14   | ✅        |
 | 16   | ✅        |
 
-## Supported Java & Gradle versions
+## Supported Gradle versions
 
-| Java / Gradle | 2.\* | 3.\* | 4.\* | 5.\* | 6.0 |
-| ------------- | ---- | ---- | ---- | ---- | --- |
-| 8 (LTS)       | ✅   | ✅   | ✅   | ✅   | ✅  |
-| 9             | ❌   | ❌   | ❓   | ❓   | ❓  |
-| 10            | ❌   | ❌   | ❓   | ❓   | ❓  |
-| 11 (LTS)      | ❌   | ❌   | ✅   | ✅   | ✅  |
-| 12            | ❌   | ❌   | ❓   | ✅   | ️✅ |
-| 13            | ❌   | ❌   | ✅   | ❌   | ✅  |
+| Gradle | Supported |
+| ------ | --------- |
+| 4      | ✅        |
+| 5      | ✅        |
+| 6      | ✅        |
+| 7      | ✅        |
 
 # Supported Snyk command line arguments:
 

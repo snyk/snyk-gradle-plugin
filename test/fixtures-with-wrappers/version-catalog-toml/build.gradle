@@ -1,0 +1,13 @@
+plugins { 
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation libs.mockito.core
+    implementation libs.mockito.inline
+    implementation libs.junit.jupiter
+}
