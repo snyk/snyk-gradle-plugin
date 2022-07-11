@@ -220,40 +220,20 @@ workflows:
           name: Lint
           context: nodejs-install
           node_version: '10'
-          filters:
-            branches:
-              ignore:
-                - master
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix
-          filters:
-            branches:
-              ignore:
-                - master
       - test-windows:
           name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_win
-          filters:
-            branches:
-              ignore:
-                - master
       - test-fixtures-with-wrappers-unix:
           name: Test Fixtures OS=Unix Node=16 JDK=17.0.3.6.1-amzn Gradle=7.4.2
           context: nodejs-install
-          filters:
-            branches:
-              ignore:
-                - master
       - test-fixtures-with-wrappers-windows:
           name: Test Fixtures OS=Windows Node=16 JDK=17 Gradle=7.4.2
           context: nodejs-install
-          filters:
-            branches:
-              ignore:
-                - master
 
       - release:
           name: Release
