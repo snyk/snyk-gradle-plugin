@@ -35,10 +35,10 @@ import org.gradle.util.GradleVersion
 
 // interface JsonDepsScriptResult {
 //   defaultProject: string;
-//   projects: ProjectsDict;
+//   projects: Projects;
 //   allSubProjectNames: string[];
 // }
-// interface ProjectsDict {
+// interface Projects {
 //   [project: string]: GradleProjectInfo;
 // }
 
@@ -102,9 +102,9 @@ class SnykGraph {
 def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
     deps.each { dep ->
             dep.each { d ->
-                def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+                String childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
                 if (!graph.nodes.get(childId)) {
-                    def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
+                    Map childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
                     graph.setNode(childId, childDependency)
                 }
                 //  In Gradle 2, there can be several instances of the same dependency present at each level,
@@ -127,25 +127,25 @@ def getSnykGraph(Iterable deps) {
     return graph.nodes
 }
 
-def debugLog(msg) {
-    def debug = System.getenv('DEBUG') ?: ''
+void debugLog(msg) {
+    String debug = System.getenv('DEBUG') ?: ''
     if (debug.length() > 0) {
         println("SNYKECHO $msg")
     }
 }
 
-def matchesAttributeFilter(conf, confAttrSpec) {
+Boolean matchesAttributeFilter(conf, confAttrSpec) {
     if (!conf.hasProperty('attributes')) {
         // Gradle before version 3 does not support attributes
         return true
     }
-    def matches = true
+    Boolean matches = true
     def attrs = conf.attributes
     attrs.keySet().each({ attr ->
-        def attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
+        String attrValue = attrs.getAttribute(attr).toString().toLowerCase()
         confAttrSpec.each({ keyValueFilter ->
             // attr.name is a class name, e.g. com.android.build.api.attributes.BuildTypeAttr
-            if (attr.name.toLowerCase().contains(keyValueFilter[0]) && attrValueAsString != keyValueFilter[1]) {
+            if (attr.name.toLowerCase().contains(keyValueFilter[0]) && attrValue != keyValueFilter[1]) {
                 matches = false
             }
         })
@@ -190,7 +190,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
-def snykDepsConfExecuted = false
+Boolean snykDepsConfExecuted = false
 allprojects { currProj ->
     debugLog("Current project: $currProj.name")
     task snykResolvedDepsJson {
@@ -238,9 +238,9 @@ allprojects { currProj ->
                     }
             }
 
-            def defaultProjectName = task.project.name
-            def allSubProjectNames = []
-            def seenSubprojects = [:]
+            String defaultProjectName = task.project.name
+            List allSubProjectNames = []
+            Map seenSubprojects = [:]
             allprojects
                 .findAll({ it.name != defaultProjectName })
                 .each({
@@ -259,7 +259,7 @@ allprojects { currProj ->
                 (onlyProj == '.' && it.name == defaultProjectName) ||
                 it.name == onlyProj
             }
-            def projectsDict = [:]
+            Map projects = [:]
 
             debugLog("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
 
@@ -293,7 +293,7 @@ allprojects { currProj ->
                 debugLog('converting gradle graph to snyk-graph format')
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
                 def projKey = proj.name
-                if (projectsDict.get(projKey)) {
+                if (projects.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
                     projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
                     if (projKey == "") {
@@ -301,16 +301,16 @@ allprojects { currProj ->
                         projKey = defaultProjectName
                     }
                 }
-                projectsDict[projKey] = [
+                projects[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
                     'snykGraph': projGraph,
                     'projectVersion': proj.version.toString()
                 ]
             }
 
-            def result = [
+            Map result = [
                 'defaultProject': defaultProjectName,
-                'projects': projectsDict,
+                'projects': projects,
                 'allSubProjectNames': allSubProjectNames
             ]
             def jsonDeps = JsonOutput.toJson(result)
