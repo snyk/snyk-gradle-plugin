@@ -171,11 +171,18 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
     // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
     // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
-    // if we cannot find dependencies that can be only resolved but not consumable
-    // we try to find configs that are simultaneously resolvable and consumable
-    // to prevent dependency resolution conflicts (e.g. Cannot choose between the following variants) 
-    // we avoid the coexistence of (canBeResolved: true, canBeConsumed: false) and (canBeResolved: true, canBeConsumed: true) configs
-    def resolvable = matching.findAll({ it.canBeResolved == true })
+    // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
+    def resolvable = []
+    matching.each({ it ->
+        if (!it.canBeResolved) { return }
+        try {
+            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode  
+            it.resolvedConfiguration
+            resolvable.add(it)
+        } catch (Exception ex) {
+            // Swallow the error
+        }
+    })
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
 }
