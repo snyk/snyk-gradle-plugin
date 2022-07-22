@@ -58,7 +58,7 @@ import org.gradle.util.GradleVersion
 class SnykGraph {
 
     def nodes
-    def rootId
+    String rootId
     SnykGraph(rootId) {
         this.nodes = [:]
         this.rootId = rootId
@@ -74,12 +74,12 @@ class SnykGraph {
         if (!value) {
             return
         }
-        def vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
+        Map vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
         this.nodes.put(key, vertex)
         return vertex
     }
 
-    def setEdge(parentId, childId) {
+    void setEdge(parentId, childId) {
         if (!parentId || !childId || parentId == childId) {
             return
         }
@@ -99,7 +99,7 @@ class SnykGraph {
 
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
+def loadGraph(Iterable deps, SnykGraph graph, String parentId, HashSet currentChain) {
     deps.each { dep ->
             dep.each { d ->
                 String childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
@@ -119,7 +119,7 @@ def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
 }
 
 def getSnykGraph(Iterable deps) {
-    def rootId = 'root-node'
+    String rootId = 'root-node'
     def graph = new SnykGraph(rootId)
     def currentChain = new HashSet()
     loadGraph(deps, graph, rootId, currentChain)
@@ -129,7 +129,7 @@ def getSnykGraph(Iterable deps) {
 
 void debugLog(msg) {
     String debug = System.getenv('DEBUG') ?: ''
-    if (debug.length() > 0) {
+    if (debug) {
         println("SNYKECHO $msg")
     }
 }
@@ -172,7 +172,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
     // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
     // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
-    def resolvable = []
+    List resolvable = []
     matching.each({ it ->
         if (!it.canBeResolved) { return }
         try {
@@ -195,7 +195,7 @@ allprojects { currProj ->
     debugLog("Current project: $currProj.name")
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
-        def confNameFilter = (project.hasProperty('configuration')
+        String confNameFilter = (project.hasProperty('configuration')
             ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
             : /.*/
         )
@@ -272,9 +272,9 @@ allprojects { currProj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
-                def resolvedConfigs = []
+                List resolvedConfigs = []
                 resolvableConfigs.each({ config ->
-                    def resConf = config.resolvedConfiguration
+                    def resConf = config?.resolvedConfiguration
                     debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
                     if (!resConf.hasError()) {
                         resolvedConfigs.add(resConf)
@@ -292,7 +292,7 @@ allprojects { currProj ->
                 
                 debugLog('converting gradle graph to snyk-graph format')
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
-                def projKey = proj.name
+                String projKey = proj.name
                 if (projects.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
                     projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
