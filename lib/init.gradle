@@ -181,6 +181,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
             resolvable.add(it)
         } catch (Exception ex) {
             // Swallow the error
+            debugLog("Skipping config ${it.name} due to resolvedConfiguration error.")
         }
     })
     debugLog("resolvableConfigs=$resolvable")
