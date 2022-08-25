@@ -195,7 +195,14 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
 def snykDepsConfExecuted = false
-allprojects { currProj ->
+def hash = { File file ->
+    def md = java.security.MessageDigest.getInstance('SHA-1')
+    file.eachByte(1024 * 4) { buffer, len ->
+        md.update(buffer, 0, len)
+    }
+        return md.digest().encodeHex().toString()
+}
+allprojects { Project currProj ->
     debugLog("Current project: $currProj.name")
     task snykResolvedDepsJson {
         def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
@@ -224,7 +231,7 @@ allprojects { currProj ->
             def attributesAsStrings = [:] // Map<String, Set<string>>
             rootProject.allprojects.each { proj ->
                 findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-                    .each { conf ->
+                    .each { Configuration conf ->
                         if (!conf.hasProperty('attributes')) {
                             // Gradle before version 3 does not support attributes
                             return
@@ -289,8 +296,39 @@ allprojects { currProj ->
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
+                // HERE?
+                // resolvedConfigs.each({ config ->
+                //     def getFilesOutput = config.getFiles()
+                //     // def deps = config.getAllDependencies()
 
+                //     // deps.each({ dep -> 
+                //     //     def files = config.files(dep)
+                //     //     println("====FILES====${files}")
+                //     // })
+                //     // println("************${getFilesOutput}")
+                //     getFilesOutput.each({ file ->
+                //         if (file.path.endsWith('.jar')) {
+                //             println("====PATH====${file.path}: ${file.getPath()} : ${file.toPath()}")
+                //             println("====NAME====${file.name} : ${file.getName()}")
+                //             println("====CANONICAL====${file.getCanonicalFile()} : ${file.getCanonicalPath()}")
+                //             println("====HASH====${hash(file)}")
+                //         }
+                //     })
+                // })
                 def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
+                println(">>>>>> nonemptyFirstLevelDeps ${nonemptyFirstLevelDeps}")
+                def depNames = nonemptyFirstLevelDeps.each({deps ->
+                    deps.each({d ->
+                        println("====getName===${d.getName()}")
+                        def moduleArtifacts = d.getModuleArtifacts()
+                        println("====getModuleArtifacts====${moduleArtifacts}")
+                        println("====moduleArtifacts[0].getName()====${moduleArtifacts[0].getExtension()}")
+                        if (moduleArtifacts[0].getExtension() === 'jar') {
+                            println("====hash====${hash(moduleArtifacts[0].getFile())}")
+                        }
+                    })
+                })
+                println(">>>>>> depNames ${depNames}")
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 
                 debugLog('converting gradle graph to snyk-graph format')
