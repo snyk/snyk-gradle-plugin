@@ -1,7 +1,9 @@
+@Grab('com.github.groovy-wslite:groovy-wslite:1.1.2')
 import groovy.json.JsonOutput
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.gradle.util.GradleVersion
+import wslite.rest.*
 
 // Snyk dependency resolution script for Gradle.
 // Tested on Gradle versions from v2.14 to v6.8.1
@@ -191,10 +193,6 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     return resolvable
 }
 
-// We are attaching this task to every project, as this is the only reliable way to run it
-// when we start with a subproject build.gradle. As a consequence, we need to make sure we
-// only ever run it once, for the "starting" project.
-def snykDepsConfExecuted = false
 def hash = { File file ->
     def md = java.security.MessageDigest.getInstance('SHA-1')
     file.eachByte(1024 * 4) { buffer, len ->
@@ -202,6 +200,11 @@ def hash = { File file ->
     }
         return md.digest().encodeHex().toString()
 }
+
+// We are attaching this task to every project, as this is the only reliable way to run it
+// when we start with a subproject build.gradle. As a consequence, we need to make sure we
+// only ever run it once, for the "starting" project.
+def snykDepsConfExecuted = false
 allprojects { Project currProj ->
     debugLog("Current project: $currProj.name")
     task snykResolvedDepsJson {
@@ -296,41 +299,48 @@ allprojects { Project currProj ->
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
-                // HERE?
-                // resolvedConfigs.each({ config ->
-                //     def getFilesOutput = config.getFiles()
-                //     // def deps = config.getAllDependencies()
-
-                //     // deps.each({ dep -> 
-                //     //     def files = config.files(dep)
-                //     //     println("====FILES====${files}")
-                //     // })
-                //     // println("************${getFilesOutput}")
-                //     getFilesOutput.each({ file ->
-                //         if (file.path.endsWith('.jar')) {
-                //             println("====PATH====${file.path}: ${file.getPath()} : ${file.toPath()}")
-                //             println("====NAME====${file.name} : ${file.getName()}")
-                //             println("====CANONICAL====${file.getCanonicalFile()} : ${file.getCanonicalPath()}")
-                //             println("====HASH====${hash(file)}")
-                //         }
-                //     })
-                // })
+                // ---- Maven Search Stuff ----
+                
                 def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
                 println(">>>>>> nonemptyFirstLevelDeps ${nonemptyFirstLevelDeps}")
-                def depNames = nonemptyFirstLevelDeps.each({deps ->
+                nonemptyFirstLevelDeps.each({deps ->
                     deps.each({d ->
-                        println("====getName===${d.getName()}")
+                        def depCoordinate = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+                        println("====getName===${depCoordinate}")
                         def moduleArtifacts = d.getModuleArtifacts()
                         println("====getModuleArtifacts====${moduleArtifacts}")
-                        println("====moduleArtifacts[0].getName()====${moduleArtifacts[0].getExtension()}")
-                        if (moduleArtifacts[0].getExtension() === 'jar') {
-                            println("====hash====${hash(moduleArtifacts[0].getFile())}")
+                        println("====moduleArtifacts[0].getExtension()====${moduleArtifacts[0].getExtension()}")
+                        if (moduleArtifacts[0].getExtension() === 'jar' || moduleArtifacts[0].getExtension() === 'war' || moduleArtifacts[0].getExtension() === 'aar' || moduleArtifacts[0].getExtension() === 'zip') {
+                            // TODO: filter out this project's modules from deps.
+                            def fileHash = hash(moduleArtifacts[0].getFile())
+                            println("====hash====${fileHash}")
+                            // Request to maven search to get official coordinate
+                            // TODO: check if groovy code is run [a]synchronously
+
+                            def client = new RESTClient("https://search.maven.org")
+                            
+                            def path = "/solrsearch/select"
+                            def queryParams = ["q": "1:\"${sha1}\"", "wt": "json"]
+                            def response
+                            try {
+                                response = client.get(path: path, query: queryParams)
+                                println("---------- ${response}")
+                                assert response.statusCode == 200
+                            } catch (RESTClientException e) {
+                                println("!!!!!!!! ${e}")
+                                assert e?.response?.statusCode != 200
+                            }
+                            
+                            // If official coordinate is found add key: depCoordinate val: officialCoordinate
+                            // Later on in the task, where we add direct deps to the graph, use the official coordinate instead of depCoordinate
                         }
                     })
                 })
-                println(">>>>>> depNames ${depNames}")
-                debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 
+                // --------------------------------
+                
+                
+                debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
                 def projKey = proj.name
