@@ -206,10 +206,15 @@ export interface JsonDepsScriptResult {
   projects: ProjectsDict;
   allSubProjectNames: string[];
   versionBuildInfo?: VersionBuildInfo;
+  coordinateMap?: CoordinateMap;
 }
 
 interface ProjectsDict {
   [project: string]: GradleProjectInfo;
+}
+
+interface CoordinateMap {
+  [hash: string]: string;
 }
 
 interface GradleProjectInfo {

@@ -1,9 +1,7 @@
-@Grab('com.github.groovy-wslite:groovy-wslite:1.1.2')
 import groovy.json.JsonOutput
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.gradle.util.GradleVersion
-import wslite.rest.*
 
 // Snyk dependency resolution script for Gradle.
 // Tested on Gradle versions from v2.14 to v6.8.1
@@ -98,33 +96,73 @@ class SnykGraph {
         }
         childNode.parentIds.add(parentId)
     }
-
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
-    deps.each { dep ->
-            dep.each { d ->
-                def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
-                if (!graph.nodes.get(childId)) {
-                    def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
-                    graph.setNode(childId, childDependency)
-                }
-                //  In Gradle 2, there can be several instances of the same dependency present at each level,
-                //  each for a different configuration. In this case, we need to merge the dependencies.
-                if (!currentChain.contains(childId) && d.children) {
-                    currentChain.add(childId)
-                    loadGraph(d.children, graph, childId, currentChain)
-                }
-                graph.setEdge(parentId, childId)
-            }
+class CoordinateMap {
+    def coordinates
+    CoordinateMap() {
+        coordinates = [:]
+    }
+
+    def setCoordinate(key, value) {
+        this.coordinates[key] = value
     }
 }
 
-def getSnykGraph(Iterable deps) {
+
+
+def hash(File file) {
+    def md = java.security.MessageDigest.getInstance('SHA-1')
+    file.eachByte(1024 * 4) { buffer, len ->
+        md.update(buffer, 0, len)
+    }
+        return md.digest().encodeHex().toString()
+}
+
+def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain, coordinateMap) {
+    deps.each { dep ->
+        dep.each { d ->
+            def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+            if (!graph.nodes.get(childId)) {
+                def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
+                graph.setNode(childId, childDependency)
+                
+                def moduleArtifacts = d.getModuleArtifacts()
+                println("----- moduleArtifacts:  ${moduleArtifacts}")
+                if (moduleArtifacts[0]) {
+                    // Q: Why are some of the extensions coming through as "jarr app project dir"?
+                    // Q: Is there an async issue?
+                    // Q: Why aren't more transitives being added to the coordinateMap?
+                    println("----- extension:  ${moduleArtifacts[0].getExtension()}")
+                }
+                if (moduleArtifacts[0] && 
+                    (moduleArtifacts[0].getExtension() === 'jar' || 
+                    moduleArtifacts[0].getExtension() === 'war' || 
+                    moduleArtifacts[0].getExtension() === 'aar' || 
+                    moduleArtifacts[0].getExtension() === 'zip')
+                ) {
+                    // TODO: filter out this project's modules from deps.
+                    def fileHash = hash(moduleArtifacts[0].getFile())
+                    println("====hash====${fileHash}")
+                    coordinateMap.setCoordinate(fileHash, childId);
+                }
+            }
+            //  In Gradle 2, there can be several instances of the same dependency present at each level,
+            //  each for a different configuration. In this case, we need to merge the dependencies.
+            if (!currentChain.contains(childId) && d.children) {
+                currentChain.add(childId)
+                loadGraph(d.children, graph, childId, currentChain, coordinateMap)
+            }
+            graph.setEdge(parentId, childId)
+        }
+    }
+}
+
+def getSnykGraph(Iterable deps, coordinateMap) {
     def rootId = 'root-node'
     def graph = new SnykGraph(rootId)
     def currentChain = new HashSet()
-    loadGraph(deps, graph, rootId, currentChain)
+    loadGraph(deps, graph, rootId, currentChain, coordinateMap)
 
     return graph.nodes
 }
@@ -193,13 +231,6 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     return resolvable
 }
 
-def hash = { File file ->
-    def md = java.security.MessageDigest.getInstance('SHA-1')
-    file.eachByte(1024 * 4) { buffer, len ->
-        md.update(buffer, 0, len)
-    }
-        return md.digest().encodeHex().toString()
-}
 
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
@@ -282,6 +313,8 @@ allprojects { Project currProj ->
             def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
             println("JSONATTRS $jsonAttrs")
 
+            def coordinateMap = new CoordinateMap()
+
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
@@ -299,50 +332,12 @@ allprojects { Project currProj ->
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
-                // ---- Maven Search Stuff ----
                 
                 def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
-                println(">>>>>> nonemptyFirstLevelDeps ${nonemptyFirstLevelDeps}")
-                nonemptyFirstLevelDeps.each({deps ->
-                    deps.each({d ->
-                        def depCoordinate = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
-                        println("====getName===${depCoordinate}")
-                        def moduleArtifacts = d.getModuleArtifacts()
-                        println("====getModuleArtifacts====${moduleArtifacts}")
-                        println("====moduleArtifacts[0].getExtension()====${moduleArtifacts[0].getExtension()}")
-                        if (moduleArtifacts[0].getExtension() === 'jar' || moduleArtifacts[0].getExtension() === 'war' || moduleArtifacts[0].getExtension() === 'aar' || moduleArtifacts[0].getExtension() === 'zip') {
-                            // TODO: filter out this project's modules from deps.
-                            def fileHash = hash(moduleArtifacts[0].getFile())
-                            println("====hash====${fileHash}")
-                            // Request to maven search to get official coordinate
-                            // TODO: check if groovy code is run [a]synchronously
-
-                            def client = new RESTClient("https://search.maven.org")
-                            
-                            def path = "/solrsearch/select"
-                            def queryParams = ["q": "1:\"${sha1}\"", "wt": "json"]
-                            def response
-                            try {
-                                response = client.get(path: path, query: queryParams)
-                                println("---------- ${response}")
-                                assert response.statusCode == 200
-                            } catch (RESTClientException e) {
-                                println("!!!!!!!! ${e}")
-                                assert e?.response?.statusCode != 200
-                            }
-                            
-                            // If official coordinate is found add key: depCoordinate val: officialCoordinate
-                            // Later on in the task, where we add direct deps to the graph, use the official coordinate instead of depCoordinate
-                        }
-                    })
-                })
-                
-                // --------------------------------
-                
                 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
+                def projGraph = getSnykGraph(nonemptyFirstLevelDeps, coordinateMap)
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
@@ -364,6 +359,8 @@ allprojects { Project currProj ->
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames
             ]
+            result["coordinateMap"] = coordinateMap.coordinates
+
             def jsonDeps = JsonOutput.toJson(result)
             println("JSONDEPS $jsonDeps")
             snykDepsConfExecuted = true
