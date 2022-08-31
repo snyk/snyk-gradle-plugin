@@ -98,9 +98,9 @@ class SnykGraph {
     }
 }
 
-class CoordinateMap {
+class Sha1Map {
     def coordinates
-    CoordinateMap() {
+    Sha1Map() {
         coordinates = [:]
     }
 
@@ -119,50 +119,41 @@ def hash(File file) {
         return md.digest().encodeHex().toString()
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain, coordinateMap) {
+def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
         dep.each { d ->
             def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
             if (!graph.nodes.get(childId)) {
                 def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
                 graph.setNode(childId, childDependency)
-                
+
                 def moduleArtifacts = d.getModuleArtifacts()
-                println("----- moduleArtifacts:  ${moduleArtifacts}")
-                if (moduleArtifacts[0]) {
-                    // Q: Why are some of the extensions coming through as "jarr app project dir"?
-                    // Q: Is there an async issue?
-                    // Q: Why aren't more transitives being added to the coordinateMap?
-                    println("----- extension:  ${moduleArtifacts[0].getExtension()}")
-                }
-                if (moduleArtifacts[0] && 
-                    (moduleArtifacts[0].getExtension() === 'jar' || 
-                    moduleArtifacts[0].getExtension() === 'war' || 
-                    moduleArtifacts[0].getExtension() === 'aar' || 
-                    moduleArtifacts[0].getExtension() === 'zip')
-                ) {
+                if (moduleArtifacts[0] && moduleArtifacts[0].getExtension()) {
                     // TODO: filter out this project's modules from deps.
-                    def fileHash = hash(moduleArtifacts[0].getFile())
-                    println("====hash====${fileHash}")
-                    coordinateMap.setCoordinate(fileHash, childId);
+                    try {
+                        def fileHash = hash(moduleArtifacts[0].getFile())
+                        sha1Map.setCoordinate(fileHash, childId);
+                    } catch (Exception e) {
+                        debugLog("Failed to hash artifact ${moduleArtifacts[0]}")
+                    }
                 }
             }
             //  In Gradle 2, there can be several instances of the same dependency present at each level,
             //  each for a different configuration. In this case, we need to merge the dependencies.
             if (!currentChain.contains(childId) && d.children) {
                 currentChain.add(childId)
-                loadGraph(d.children, graph, childId, currentChain, coordinateMap)
+                loadGraph(d.children, graph, childId, currentChain, sha1Map)
             }
             graph.setEdge(parentId, childId)
         }
     }
 }
 
-def getSnykGraph(Iterable deps, coordinateMap) {
+def getSnykGraph(Iterable deps, sha1Map) {
     def rootId = 'root-node'
     def graph = new SnykGraph(rootId)
     def currentChain = new HashSet()
-    loadGraph(deps, graph, rootId, currentChain, coordinateMap)
+    loadGraph(deps, graph, rootId, currentChain, sha1Map)
 
     return graph.nodes
 }
@@ -313,7 +304,7 @@ allprojects { Project currProj ->
             def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
             println("JSONATTRS $jsonAttrs")
 
-            def coordinateMap = new CoordinateMap()
+            def sha1Map = new Sha1Map()
 
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
@@ -337,7 +328,7 @@ allprojects { Project currProj ->
                 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                def projGraph = getSnykGraph(nonemptyFirstLevelDeps, coordinateMap)
+                def projGraph = getSnykGraph(nonemptyFirstLevelDeps, sha1Map)
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
@@ -359,7 +350,7 @@ allprojects { Project currProj ->
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames
             ]
-            result["coordinateMap"] = coordinateMap.coordinates
+            result["sha1Map"] = sha1Map.coordinates
 
             def jsonDeps = JsonOutput.toJson(result)
             println("JSONDEPS $jsonDeps")

@@ -22,7 +22,6 @@ export function execute(
     const proc = childProcess.spawn(command, args, spawnOptions);
     proc.stdout.on('data', (data: Buffer) => {
       const strData = data.toString();
-      console.log('++strData', strData);
       stdout = stdout + strData;
       if (perLineCallback) {
         strData.split('\n').forEach(perLineCallback);
