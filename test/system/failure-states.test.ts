@@ -38,3 +38,11 @@ test('multi-project: error on missing sub-project', async () => {
     /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,
   );
 });
+
+test('error when requested configurations are not found in the project', async () => {
+  await expect(
+    inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
+      'configuration-matching': 'nonExistentConfig',
+    }),
+  ).rejects.toThrowError(/Matching configurations/);
+});
