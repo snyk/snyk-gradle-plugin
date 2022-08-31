@@ -155,6 +155,9 @@ def matchesAttributeFilter(conf, confAttrSpec) {
 
 def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
     def matching = confs.findAll({ it.name =~ confNameFilter })
+    if (matching.isEmpty() && !confs.isEmpty()) {
+        throw new RuntimeException('Matching configurations ' + confNameFilter + ' were not found')  
+    }
     if (confAttrSpec == null) {
         // We don't have an attribute spec to match
         return matching
@@ -282,10 +285,9 @@ allprojects { currProj ->
                         debugLog("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
                     }
                 })
-                if (resolvedConfigs.isEmpty() && !proj.configurations.isEmpty()) {
-                    throw new RuntimeException('Matching configurations not found: ' + confNameFilter +
-                            ', available configurations for project ' + proj + ': '
-                            + proj.configurations.collect { it.name })
+                if (resolvedConfigs.isEmpty() && !resolvableConfigs.isEmpty()) {
+                    throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
+                            ' for project ' + proj + ' could not be resolved.')
                 }
 
                 def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
