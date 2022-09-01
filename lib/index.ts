@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
+import * as needle from 'needle';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
@@ -491,6 +492,47 @@ async function getAllDepsWithPlugin(
   return extractedJSON;
 }
 
+const MAVEN_SEARCH_URL =
+  process.env.MAVEN_SEARCH_URL || 'https://something/resolve-fingerprint';
+
+interface MavenPackageInfo {
+  g: string; // group
+  a: string; // artifact
+  v: string; // version
+}
+
+interface MavenDepsResponse {
+  coordinate: MavenPackageInfo;
+}
+
+async function getMavenPackageInfo(
+  sha1: string,
+  // targetPath: string,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    needle.request(
+      'get',
+      MAVEN_SEARCH_URL,
+      {},
+      { json: true },
+      (err, fullRes, res: MavenDepsResponse) => {
+        if (err) {
+          reject(err);
+        }
+        if (!res) {
+          reject(
+            new Error(
+              `No package found querying '${MAVEN_SEARCH_URL}' for sha1 hash '${sha1}'.`,
+            ),
+          );
+        }
+        const coordinate = `${res.coordinate.g}:${res.coordinate.a}:${res.coordinate.v}`;
+        resolve(coordinate);
+      },
+    );
+  });
+}
+
 async function getAllDeps(
   root: string,
   targetFile: string,
@@ -507,6 +549,19 @@ async function getAllDeps(
     const versionBuildInfo = getVersionBuildInfo(gradleVersion);
     if (versionBuildInfo) {
       extractedJSON.versionBuildInfo = versionBuildInfo;
+    }
+    const coordinateMap = {};
+    if (extractedJSON.sha1Map) {
+      // loop over hashes and find canonical coords
+      const hashPromises = Object.keys(extractedJSON.sha1Map).map(
+        async (hash) => {
+          const coordinate = await getMavenPackageInfo(hash);
+          const key = extractedJSON.sha1Map[hash];
+          coordinateMap[key] = coordinate;
+        },
+      );
+
+      await Promise.all(hashPromises);
     }
     return await processProjectsInExtractedJSON(root, extractedJSON);
   } catch (err) {
