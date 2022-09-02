@@ -401,6 +401,18 @@ test('multi-project: use full path for subprojects with the same name', async ()
   ]);
 });
 
+test('multi-project: do not exclude subprojects with the same name as root', async () => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('subproject-with-same-name-as-root'), 'build.gradle'),
+  );
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    'greeter',
+    'lib',
+    'subproject-with-same-name-as-root',
+  ]);
+});
+
 test('multi-project: use flat naming when subprojects have different names', async () => {
   const result = await inspect(
     '.',
@@ -465,4 +477,32 @@ test('multi-project: correct deps when subprojects have different names', async 
   const greeterLibGraph = projectDeps['gradle-sandbox/lib'];
   expect(greeterLibGraph.length).toBe(1);
   expect(greeterLibGraph).toEqual(['commons-io:commons-io@2.11.0']);
+});
+
+test('multi-project: correct deps for subprojects with the same name as root', async () => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('subproject-with-same-name-as-root'), 'build.gradle'),
+    { allSubProjects: true },
+  );
+
+  const projectDeps = {};
+  for (const p of result.scannedProjects) {
+    projectDeps[p.meta.projectName] = p.depGraph
+      .getDepPkgs()
+      .map((d) => `${d.name}@${d.version}`);
+  }
+
+  const rootGraph = projectDeps['subproject-with-same-name-as-root'];
+  expect(rootGraph.length).toBe(8);
+  expect(rootGraph).toContain('com.google.guava:guava@30.1.1-jre');
+
+  const greeterSubprojGraph =
+    projectDeps[
+      'subproject-with-same-name-as-root/greeter/subproject-with-same-name-as-root'
+    ];
+  expect(greeterSubprojGraph.length).toBe(21);
+  expect(greeterSubprojGraph).toContain(
+    'org.apache.struts:struts2-spring-plugin@2.3.1',
+  );
 });

@@ -246,7 +246,7 @@ allprojects { currProj ->
             def allSubProjectNames = []
             def seenSubprojects = [:]
             allprojects
-                .findAll({ it.name != defaultProjectName })
+                .findAll({ it.path != task.project.path })
                 .each({
                     def projKey = it.name
                     if (seenSubprojects.get(projKey)) {

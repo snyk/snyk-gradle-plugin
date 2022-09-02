@@ -1,0 +1,2 @@
+rootProject.name = 'subproject-with-same-name-as-root'
+include ':lib', ':greeter', ':greeter:subproject-with-same-name-as-root'
