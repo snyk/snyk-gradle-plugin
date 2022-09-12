@@ -218,6 +218,10 @@ interface Sha1Map {
   [hash: string]: string;
 }
 
+export interface CoordinateMap {
+  [originalCoordinate: string]: string;
+}
+
 interface GradleProjectInfo {
   depGraph?: DepGraph;
   snykGraph?: SnykGraph; // snykGraph from gradle init task
@@ -492,31 +496,41 @@ async function getAllDepsWithPlugin(
   return extractedJSON;
 }
 
+// curl -v -H "Authorization: token $DEV_API_KEY" "https://api.dev.snyk.io/rest/maven/coordinates/sha1/c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e"
 const MAVEN_SEARCH_URL =
-  process.env.MAVEN_SEARCH_URL || 'https://something/resolve-fingerprint';
+  process.env.MAVEN_SEARCH_URL ||
+  'https://api.dev.snyk.io/rest/maven/coordinates/sha1';
 
-interface MavenPackageInfo {
-  g: string; // group
-  a: string; // artifact
-  v: string; // version
+// interface MavenPackageInfo {
+//   g: string; // group
+//   a: string; // artifact
+//   v: string; // version
+// }
+
+interface PomCoords {
+  groupId: string;
+  artifactId: string;
+  version: string;
 }
 
-interface MavenDepsResponse {
-  coordinate: MavenPackageInfo;
+interface MavenCoordsResponse {
+  ok: boolean;
+  code: number;
+  coordinate: PomCoords;
 }
 
 async function getMavenPackageInfo(
   sha1: string,
-  // targetPath: string,
+  depCoords: Partial<PomCoords>,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     needle.request(
       'get',
       MAVEN_SEARCH_URL,
-      {},
-      { json: true },
-      (err, fullRes, res: MavenDepsResponse) => {
-        if (err) {
+      { ...depCoords },
+      { headers: { Authorization: 'token ...' } }, // TODO: figure out the token
+      (err, fullRes, res: MavenCoordsResponse) => {
+        if (err || !res.ok) {
           reject(err);
         }
         if (!res) {
@@ -526,11 +540,31 @@ async function getMavenPackageInfo(
             ),
           );
         }
-        const coordinate = `${res.coordinate.g}:${res.coordinate.a}:${res.coordinate.v}`;
+        console.log('+++++MAVEN_SEARCH_URL', MAVEN_SEARCH_URL);
+        console.log('++++res', res);
+        // const coordinate = `${res.coordinate.g}:${res.coordinate.a}:${res.coordinate.v}`;
+        const coordinate = `${res.coordinate.groupId}:${res.coordinate.artifactId}@${res.coordinate.version}`;
         resolve(coordinate);
       },
     );
   });
+}
+
+function splitCoordinate(coordinate: string): Partial<PomCoords> {
+  const splitCoord = coordinate.split(/:|@/);
+  const pomCoord: Partial<PomCoords> = {};
+  if (splitCoord[0]) {
+    pomCoord.groupId = splitCoord[0];
+  }
+  if (splitCoord[1]) {
+    pomCoord.artifactId = splitCoord[1];
+  }
+  // coordinate could have a packaging format
+  // i.e. groupId:artifactId:packaging:version
+  if (splitCoord[splitCoord.length - 1]) {
+    pomCoord.version = splitCoord[splitCoord.length - 1];
+  }
+  return pomCoord;
 }
 
 async function getAllDeps(
@@ -550,20 +584,25 @@ async function getAllDeps(
     if (versionBuildInfo) {
       extractedJSON.versionBuildInfo = versionBuildInfo;
     }
-    const coordinateMap = {};
+    const coordinateMap: CoordinateMap = {};
     if (extractedJSON.sha1Map) {
       // loop over hashes and find canonical coords
       const hashPromises = Object.keys(extractedJSON.sha1Map).map(
         async (hash) => {
-          const coordinate = await getMavenPackageInfo(hash);
-          const key = extractedJSON.sha1Map[hash];
-          coordinateMap[key] = coordinate;
+          const originalCoordinate = extractedJSON.sha1Map[hash];
+          const depCoord = splitCoordinate(originalCoordinate);
+          const coordinate = await getMavenPackageInfo(hash, depCoord);
+          coordinateMap[originalCoordinate] = coordinate;
         },
       );
 
       await Promise.all(hashPromises);
     }
-    return await processProjectsInExtractedJSON(root, extractedJSON);
+    return await processProjectsInExtractedJSON(
+      root,
+      extractedJSON,
+      coordinateMap,
+    );
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -649,6 +688,7 @@ ${chalk.red.bold(mainErrorMessage)}`;
 export async function processProjectsInExtractedJSON(
   root: string,
   extractedJSON: JsonDepsScriptResult,
+  coordinateMap?: CoordinateMap,
 ) {
   for (const projectId in extractedJSON.projects) {
     const { defaultProject } = extractedJSON;
@@ -674,6 +714,7 @@ export async function processProjectsInExtractedJSON(
       snykGraph,
       projectName,
       projectVersion,
+      coordinateMap,
     );
     // this property usage ends here
     delete extractedJSON.projects[projectId].snykGraph;

@@ -1,5 +1,7 @@
 import { DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
 
+import type { CoordinateMap } from './index';
+
 export interface SnykGraph {
   [id: string]: {
     name: string;
@@ -17,6 +19,7 @@ export async function buildGraph(
   snykGraph: SnykGraph,
   projectName: string,
   projectVersion: string,
+  coordinateMap?: CoordinateMap,
 ) {
   const pkgManager: PkgManager = { name: 'gradle' };
   const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
@@ -38,10 +41,22 @@ export async function buildGraph(
   while (queue.length > 0) {
     const item = queue.shift();
     if (!item) continue;
-    const { id, parentId } = item;
+    let { id, parentId } = item;
     const node = snykGraph[id];
     if (!node) continue;
-    const { name = 'unknown', version = 'unknown' } = node;
+    let { name = 'unknown', version = 'unknown' } = node;
+    console.log('========id', id);
+    console.log('========parentId', parentId);
+    console.log('========name', name);
+    if (coordinateMap[id]) {
+      id = coordinateMap[id];
+      const [newName, newVersion] = id.split('@');
+      name = newName;
+      version = newVersion;
+    }
+    if (coordinateMap[parentId]) {
+      parentId = coordinateMap[parentId];
+    }
     if (visited.includes(id)) {
       const prunedId = id + ':pruned';
       depGraphBuilder.addPkgNode({ name, version }, prunedId, {
