@@ -68,6 +68,7 @@ export interface GradleInspectOptions {
   reachableVulns?: boolean;
   callGraphBuilderTimeout?: number;
   initScript?: string;
+  gradleNormalizeDeps?: boolean;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -540,8 +541,6 @@ async function getMavenPackageInfo(
             ),
           );
         }
-        console.log('+++++MAVEN_SEARCH_URL', MAVEN_SEARCH_URL);
-        console.log('++++res', res);
         // const coordinate = `${res.coordinate.g}:${res.coordinate.a}:${res.coordinate.v}`;
         const coordinate = `${res.coordinate.groupId}:${res.coordinate.artifactId}@${res.coordinate.version}`;
         resolve(coordinate);
@@ -767,7 +766,12 @@ function buildArgs(
   options: Options,
 ) {
   const args: string[] = [];
-  args.push('snykResolvedDepsJson', '-q');
+  const taskName = options.gradleNormalizeDeps
+    ? 'snykNormalizedResolvedDepsJson'
+    : 'snykResolvedDepsJson';
+
+  args.push(taskName, '-q');
+
   if (targetFile) {
     if (!fs.existsSync(path.resolve(root, targetFile))) {
       throw new Error('File not found: "' + targetFile + '"');

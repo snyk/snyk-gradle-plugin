@@ -45,9 +45,7 @@ export async function buildGraph(
     const node = snykGraph[id];
     if (!node) continue;
     let { name = 'unknown', version = 'unknown' } = node;
-    console.log('========id', id);
-    console.log('========parentId', parentId);
-    console.log('========name', name);
+
     if (coordinateMap[id]) {
       id = coordinateMap[id];
       const [newName, newVersion] = id.split('@');
