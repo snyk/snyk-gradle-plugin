@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import * as needle from 'needle';
+import * as snykConfig from 'snyk-config';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
@@ -12,6 +13,7 @@ import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import debugModule = require('debug');
 import { buildGraph, SnykGraph } from './graph';
+import { userConfig } from './user-config';
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -19,6 +21,9 @@ type CallGraphResult = legacyCommon.CallGraphResult;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
+
+// TODO: move config into relevant scope
+const config = snykConfig.loadConfig(__dirname + '/../..') as unknown as Config;
 
 function debugLog(s: string) {
   if (logger === null) {
@@ -500,13 +505,7 @@ async function getAllDepsWithPlugin(
 // curl -v -H "Authorization: token $DEV_API_KEY" "https://api.dev.snyk.io/rest/maven/coordinates/sha1/c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e"
 const MAVEN_SEARCH_URL =
   process.env.MAVEN_SEARCH_URL ||
-  'https://api.dev.snyk.io/rest/maven/coordinates/sha1';
-
-// interface MavenPackageInfo {
-//   g: string; // group
-//   a: string; // artifact
-//   v: string; // version
-// }
+  `${config.API_REST_URL}/maven/coordinates/sha1`;
 
 interface PomCoords {
   groupId: string;
@@ -523,30 +522,49 @@ interface MavenCoordsResponse {
 async function getMavenPackageInfo(
   sha1: string,
   depCoords: Partial<PomCoords>,
+  authHeader: string,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     needle.request(
       'get',
-      MAVEN_SEARCH_URL,
+      `${MAVEN_SEARCH_URL}/${sha1}`,
       { ...depCoords },
-      { headers: { Authorization: 'token ...' } }, // TODO: figure out the token
-      (err, fullRes, res: MavenCoordsResponse) => {
-        if (err || !res.ok) {
-          reject(err);
-        }
-        if (!res) {
-          reject(
+      { headers: { Authorization: authHeader } },
+      (err, _, res: MavenCoordsResponse) => {
+        if (err) return reject(err); // TODO: How should we handle error states?
+        if (!res || !res.ok) {
+          return reject(
             new Error(
               `No package found querying '${MAVEN_SEARCH_URL}' for sha1 hash '${sha1}'.`,
             ),
           );
         }
-        // const coordinate = `${res.coordinate.g}:${res.coordinate.a}:${res.coordinate.v}`;
         const coordinate = `${res.coordinate.groupId}:${res.coordinate.artifactId}@${res.coordinate.version}`;
         resolve(coordinate);
       },
     );
   });
+}
+
+interface Config {
+  api: string;
+  TOKEN: string;
+  API_REST_URL: string;
+}
+
+function getAuthHeader(config: Config) {
+  const oauthToken: string | undefined = process.env.SNYK_OAUTH_TOKEN;
+  const dockerToken: string | undefined = process.env.SNYK_DOCKER_TOKEN;
+
+  if (oauthToken) {
+    return `Bearer ${oauthToken}`;
+  }
+  if (dockerToken) {
+    return `Bearer ${dockerToken}`;
+  }
+
+  const token = config.api || config.TOKEN || userConfig.get('api');
+  return `token ${token}`;
 }
 
 function splitCoordinate(coordinate: string): Partial<PomCoords> {
@@ -590,8 +608,17 @@ async function getAllDeps(
         async (hash) => {
           const originalCoordinate = extractedJSON.sha1Map[hash];
           const depCoord = splitCoordinate(originalCoordinate);
-          const coordinate = await getMavenPackageInfo(hash, depCoord);
-          coordinateMap[originalCoordinate] = coordinate;
+          const authHeader = getAuthHeader(config);
+          try {
+            const coordinate = await getMavenPackageInfo(
+              hash,
+              depCoord,
+              authHeader,
+            );
+            coordinateMap[originalCoordinate] = coordinate;
+          } catch (err) {
+            debugLog(err);
+          }
         },
       );
 
