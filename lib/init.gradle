@@ -116,7 +116,26 @@ def hash(File file) {
         return md.digest().encodeHex().toString()
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha1Map) {
+def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
+    deps.each { dep ->
+            dep.each { d ->
+                def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+                if (!graph.nodes.get(childId)) {
+                    def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
+                    graph.setNode(childId, childDependency)
+                }
+                //  In Gradle 2, there can be several instances of the same dependency present at each level,
+                //  each for a different configuration. In this case, we need to merge the dependencies.
+                if (!currentChain.contains(childId) && d.children) {
+                    currentChain.add(childId)
+                    loadGraph(d.children, graph, childId, currentChain)
+                }
+                graph.setEdge(parentId, childId)
+            }
+    }
+}
+
+def loadSha1MapGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
         dep.each { d ->
             def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
@@ -139,20 +158,11 @@ def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha1Map) {
             //  each for a different configuration. In this case, we need to merge the dependencies.
             if (!currentChain.contains(childId) && d.children) {
                 currentChain.add(childId)
-                loadGraph(d.children, graph, childId, currentChain, sha1Map)
+                loadSha1MapGraph(d.children, graph, childId, currentChain, sha1Map)
             }
             graph.setEdge(parentId, childId)
         }
     }
-}
-
-def getSnykGraph(Iterable deps, sha1Map) {
-    def rootId = 'root-node'
-    def graph = new SnykGraph(rootId)
-    def currentChain = new HashSet()
-    loadGraph(deps, graph, rootId, currentChain, sha1Map)
-
-    return graph.nodes
 }
 
 def getSnykGraph(Iterable deps) {
@@ -162,6 +172,16 @@ def getSnykGraph(Iterable deps) {
     loadGraph(deps, graph, rootId, currentChain)
 
     return graph.nodes
+}
+
+def getSnykSha1MapGraph(Iterable deps) {
+    def rootId = 'root-node'
+    def graph = new SnykGraph(rootId)
+    def currentChain = new HashSet()
+    def sha1Map = new Sha1Map()
+    loadSha1MapGraph(deps, graph, rootId, currentChain, sha1Map)
+
+    return [graph: graph.nodes, sha1Map: sha1Map]
 }
 
 def debugLog(msg) {
@@ -436,8 +456,6 @@ allprojects { Project currProj ->
             def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
             println("JSONATTRS $jsonAttrs")
 
-            def sha1Map = new Sha1Map()
-
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
@@ -460,7 +478,7 @@ allprojects { Project currProj ->
                 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                def projGraph = getSnykGraph(nonemptyFirstLevelDeps, sha1Map)
+                def projGraph = getSnykSha1MapGraph(nonemptyFirstLevelDeps)
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
@@ -472,7 +490,7 @@ allprojects { Project currProj ->
                 }
                 projectsDict[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
-                    'snykGraph': projGraph,
+                    'snykGraph': projGraph.graph,
                     'projectVersion': proj.version.toString()
                 ]
             }
@@ -481,8 +499,8 @@ allprojects { Project currProj ->
                 'defaultProject': defaultProjectName,
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames
+                'sha1Map': projGraph.sha1Map.coordinates
             ]
-            result["sha1Map"] = sha1Map.coordinates
 
             def jsonDeps = JsonOutput.toJson(result)
             println("JSONDEPS $jsonDeps")
