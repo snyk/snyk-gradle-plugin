@@ -11,5 +11,8 @@ npm-debug.log
 .DS_Store
 coverage
 
+# config.local
+config.local.json
+
 # Diagnostic reports (https://nodejs.org/api/report.html) 
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

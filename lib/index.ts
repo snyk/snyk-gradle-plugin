@@ -569,7 +569,7 @@ function getAuthHeader(config: Config) {
 
 function splitCoordinate(coordinate: string): Partial<PomCoords> {
   const coordMatch = coordinate.match(
-    /(?<groupId>[\w.]+)[:@]*(?<artifactId>[\w-]+)*[:@]*(?<versionOrPackaging>[\w.]+)*[:@]*(?<versionIfNoPackaging>[\w.]+)*[:@]*([\w.]+)*/,
+    /(?<groupId>[\w.]+)[:@]*(?<artifactId>[\w-]+)*[:@]*(?<versionOrPackaging>[\w.]+)*[:@]*(?<versionIfNoPackaging>[\w.]+)*/,
   );
 
   if (!coordMatch) return {};
@@ -911,4 +911,5 @@ export const exportsForTests = {
   toCamelCase,
   getGradleAttributesPretty,
   splitCoordinate,
+  getMavenPackageInfo,
 };

@@ -55,6 +55,7 @@
     "configstore": "^5.0.0",
     "debug": "^4.1.1",
     "needle": "^3.1.0",
+    "nock": "^13.2.9",
     "snyk-config": "^5.1.0",
     "tmp": "0.2.1",
     "tslib": "^2.0.0"
