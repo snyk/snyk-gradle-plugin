@@ -1,4 +1,4 @@
-const Configstore = require('configstore');
+import Configstore = require('configstore');
 
 export class ConfigStoreWithEnvironmentVariables extends Configstore {
   constructor(id, defaults = undefined, options = {}) {

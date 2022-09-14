@@ -46,14 +46,16 @@ export async function buildGraph(
     if (!node) continue;
     let { name = 'unknown', version = 'unknown' } = node;
 
-    if (coordinateMap[id]) {
-      id = coordinateMap[id];
-      const [newName, newVersion] = id.split('@');
-      name = newName;
-      version = newVersion;
-    }
-    if (coordinateMap[parentId]) {
-      parentId = coordinateMap[parentId];
+    if (coordinateMap) {
+      if (coordinateMap[id]) {
+        id = coordinateMap[id];
+        const [newName, newVersion] = id.split('@');
+        name = newName;
+        version = newVersion;
+      }
+      if (coordinateMap[parentId]) {
+        parentId = coordinateMap[parentId];
+      }
     }
     if (visited.includes(id)) {
       const prunedId = id + ':pruned';
