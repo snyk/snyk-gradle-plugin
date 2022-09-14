@@ -568,19 +568,25 @@ function getAuthHeader(config: Config) {
 }
 
 function splitCoordinate(coordinate: string): Partial<PomCoords> {
-  const splitCoord = coordinate.split(/:|@/);
+  const coordMatch = coordinate.match(
+    /(?<groupId>[\w.]+)[:@]*(?<artifactId>[\w-]+)*[:@]*(?<versionOrPackaging>[\w.]+)*[:@]*(?<versionIfNoPackaging>[\w.]+)*[:@]*([\w.]+)*/,
+  );
+
+  if (!coordMatch) return {};
+  const coordGroups = coordMatch.groups;
+
   const pomCoord: Partial<PomCoords> = {};
-  if (splitCoord[0]) {
-    pomCoord.groupId = splitCoord[0];
+
+  pomCoord.groupId = coordGroups.groupId;
+  if (coordGroups.artifactId) {
+    pomCoord.artifactId = coordGroups.artifactId;
   }
-  if (splitCoord[1]) {
-    pomCoord.artifactId = splitCoord[1];
+  if (coordGroups.versionOrPackaging || coordGroups.versionIfNoPackaging) {
+    pomCoord.version = coordGroups.versionIfNoPackaging
+      ? coordGroups.versionIfNoPackaging
+      : coordGroups.versionOrPackaging;
   }
-  // coordinate could have a packaging format
-  // i.e. groupId:artifactId:packaging:version
-  if (splitCoord[splitCoord.length - 1]) {
-    pomCoord.version = splitCoord[splitCoord.length - 1];
-  }
+
   return pomCoord;
 }
 
@@ -904,4 +910,5 @@ export const exportsForTests = {
   getVersionBuildInfo,
   toCamelCase,
   getGradleAttributesPretty,
+  splitCoordinate,
 };
