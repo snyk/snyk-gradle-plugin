@@ -568,24 +568,13 @@ function getAuthHeader(config: Config) {
 }
 
 function splitCoordinate(coordinate: string): Partial<PomCoords> {
-  const coordMatch = coordinate.match(
-    /(?<groupId>[\w.]+)[:@]*(?<artifactId>[\w-]+)*[:@]*(?<versionOrPackaging>[\w.]+)*[:@]*(?<versionIfNoPackaging>[\w.]+)*/,
-  );
-
-  if (!coordMatch) return {};
-  const coordGroups = coordMatch.groups;
-
+  const coordTest = /^[\w.-]+:[\w.-]+@[\w.-]+$/.test(coordinate);
+  if (!coordTest) return {};
+  const [groupId, artifactId, version] = coordinate.split(/:|@/);
   const pomCoord: Partial<PomCoords> = {};
-
-  pomCoord.groupId = coordGroups.groupId;
-  if (coordGroups.artifactId) {
-    pomCoord.artifactId = coordGroups.artifactId;
-  }
-  if (coordGroups.versionOrPackaging || coordGroups.versionIfNoPackaging) {
-    pomCoord.version = coordGroups.versionIfNoPackaging
-      ? coordGroups.versionIfNoPackaging
-      : coordGroups.versionOrPackaging;
-  }
+  pomCoord.artifactId = artifactId;
+  pomCoord.groupId = groupId;
+  pomCoord.version = version;
 
   return pomCoord;
 }

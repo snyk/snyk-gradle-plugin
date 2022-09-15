@@ -18,13 +18,14 @@ describe('should convert strings to camel case', () => {
 
 describe('should split coordinate strings', () => {
   it.each`
-    input                                             | output                                                                  | msg
-    ${''}                                             | ${{}}                                                                   | ${'should return empty obj for empty string'}
-    ${'groupId'}                                      | ${{ groupId: 'groupId' }}                                               | ${'should return only groupId property for string with just groupId'}
-    ${'groupId:artifactId'}                           | ${{ groupId: 'groupId', artifactId: 'artifactId' }}                     | ${'should return groupId and artifactId for string with just groupId and artifactId'}
-    ${'groupId:artifactId:version'}                   | ${{ groupId: 'groupId', artifactId: 'artifactId', version: 'version' }} | ${'should return object with correct properties for string with groupId, artifactId and version'}
-    ${'groupId:artifactId:packaging:version'}         | ${{ groupId: 'groupId', artifactId: 'artifactId', version: 'version' }} | ${'should return object with correct properties for string with groupId, artifactId, packaging and version'}
-    ${'groupId:artifactId:packaging:version:compile'} | ${{ groupId: 'groupId', artifactId: 'artifactId', version: 'version' }} | ${'should return object with correct properties for string with groupId, artifactId, packaging, version and compile'}
+    input                                       | output                                                                            | msg
+    ${''}                                       | ${{}}                                                                             | ${'should return empty obj for empty string'}
+    ${'a.group.id'}                             | ${{}}                                                                             | ${'should return empty object when only one value'}
+    ${'a.group.id:artifact-id'}                 | ${{}}                                                                             | ${'should return empty object for string when only two colon separated values'}
+    ${'a.group.id@release-1.0.0'}               | ${{}}                                                                             | ${'should return empty object for string when only two @ separated values'}
+    ${'a.group.id:artifact-id:release-1.0.0'}   | ${{}}                                                                             | ${'should return empty object for string when three colon separated values'}
+    ${'a.group.id:artifact-id@release-1.0.0:d'} | ${{}}                                                                             | ${'should return empty object for string with more than three colon or @ separated values'}
+    ${'a.group.id:artifact-id@release-1.0.0'}   | ${{ groupId: 'a.group.id', artifactId: 'artifact-id', version: 'release-1.0.0' }} | ${'should return object with correct properties for string with groupId, artifactId and @version'}
   `('function splitCoordinate $msg', ({ input, output }) => {
     expect(testableMethods.splitCoordinate(input)).toEqual(output);
   });
