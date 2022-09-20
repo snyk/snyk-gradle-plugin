@@ -2,18 +2,15 @@
   "compilerOptions": {
     "outDir": "./dist",
     "pretty": true,
-    "target": "es2018",
-    "lib": ["es2018"],
+    "target": "es2017",
+    "lib": ["es2017"],
     "module": "commonjs",
     "allowJs": false,
     "sourceMap": true,
     "strict": false,
     "declaration": true,
     "importHelpers": true,
-    "typeRoots": ["./node_modules/@types", "./typings"],
-
-    /* Module Resolution Options */
-    "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "typeRoots": ["./node_modules/@types", "./typings"]
   },
   "include": ["./lib/**/*", "typings/tap/index.d.ts"]
 }

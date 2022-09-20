@@ -174,11 +174,11 @@ def getSnykGraph(Iterable deps) {
     return graph.nodes
 }
 
-def getSnykSha1MapGraph(Iterable deps) {
+def getSnykGraphWithSha1Map(Iterable deps, Sha1Map sha1Map) {
+    if (!sha1Map) sha1Map = new Sha1Map()
     def rootId = 'root-node'
     def graph = new SnykGraph(rootId)
     def currentChain = new HashSet()
-    def sha1Map = new Sha1Map()
     loadSha1MapGraph(deps, graph, rootId, currentChain, sha1Map)
 
     return [graph: graph.nodes, sha1Map: sha1Map]
@@ -456,6 +456,8 @@ allprojects { Project currProj ->
             def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
             println("JSONATTRS $jsonAttrs")
 
+            def sha1Map = new Sha1Map()
+
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
@@ -478,7 +480,9 @@ allprojects { Project currProj ->
                 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                def projGraph = getSnykSha1MapGraph(nonemptyFirstLevelDeps)
+                
+                def projGraph = getSnykGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
+
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
@@ -498,8 +502,8 @@ allprojects { Project currProj ->
             def result = [
                 'defaultProject': defaultProjectName,
                 'projects': projectsDict,
-                'allSubProjectNames': allSubProjectNames
-                'sha1Map': projGraph.sha1Map.coordinates
+                'allSubProjectNames': allSubProjectNames,
+                'sha1Map': sha1Map.coordinates
             ]
 
             def jsonDeps = JsonOutput.toJson(result)

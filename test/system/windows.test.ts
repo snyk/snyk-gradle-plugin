@@ -1,5 +1,6 @@
+import * as os from 'os';
 import * as path from 'path';
-import { fixtureDir, stubPlatform } from '../common';
+import { fixtureDir } from '../common';
 import * as subProcess from '../../lib/sub-process';
 import { inspect } from '../../lib';
 
@@ -7,16 +8,17 @@ const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
 let subProcessExecSpy;
-let restorePlatform;
+let platformMock;
 
 beforeAll(() => {
-  restorePlatform = stubPlatform('win32');
+  platformMock = jest.spyOn(os, 'platform');
+  platformMock.mockReturnValue('win');
   subProcessExecSpy = jest.spyOn(subProcess, 'execute');
   subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
 });
 
 afterAll(() => {
-  restorePlatform();
+  jest.restoreAllMocks();
 });
 
 afterEach(() => {

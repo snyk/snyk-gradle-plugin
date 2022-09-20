@@ -1,26 +1,29 @@
+import * as os from 'os';
 import * as path from 'path';
-import { fixtureDir, stubPlatform } from '../common';
+import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
+
 let subProcessExecSpy;
-let restorePlatform;
+let platformMock;
 
 beforeAll(() => {
-  restorePlatform = stubPlatform('darwin');
+  platformMock = jest.spyOn(os, 'platform');
+  platformMock.mockReturnValue('darwin');
   subProcessExecSpy = jest.spyOn(subProcess, 'execute');
   subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
 });
 
-afterAll(() => {
-  restorePlatform();
-});
-
 afterEach(() => {
   jest.clearAllMocks();
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });
 
 test('darwin without wrapper invokes gradle directly', async () => {

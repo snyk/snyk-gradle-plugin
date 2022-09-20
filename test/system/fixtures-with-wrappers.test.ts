@@ -43,7 +43,7 @@ describe('inspect() fixtures', () => {
         expectedDepGraph.equals(result.dependencyGraph);
 
       expect(resultMatchesExpected).toBeTruthy();
-    });
+    }, 30000);
   });
 
   fixtures.forEach((fixtureName) => {
@@ -65,6 +65,6 @@ describe('inspect() fixtures', () => {
         expectedDepGraph.equals(result.dependencyGraph);
 
       expect(resultMatchesExpected).toBeTruthy();
-    });
+    }, 30000);
   });
 });
