@@ -16,7 +16,7 @@ export function getPathToFixture(f: string = ''): string {
 
 export function stubPlatform(platform: string) {
   stub(os, 'platform').callsFake(() => {
-    return platform;
+    return platform as NodeJS.Platform;
   });
   return function restorePlatform() {
     (os.platform as SinonStub).restore();

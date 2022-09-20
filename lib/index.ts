@@ -23,7 +23,7 @@ type CallGraphResult = legacyCommon.CallGraphResult;
 let logger: debugModule.Debugger | null = null;
 
 // TODO: move config into relevant scope
-const config = snykConfig.loadConfig(__dirname + '/../..') as unknown as Config;
+const config = snykConfig.loadConfig(__dirname + '/..') as unknown as Config;
 
 function debugLog(s: string) {
   if (logger === null) {
@@ -505,9 +505,9 @@ async function getAllDepsWithPlugin(
 // curl -v -H "Authorization: token $DEV_API_KEY" "https://api.dev.snyk.io/rest/maven/coordinates/sha1/c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e"
 const MAVEN_SEARCH_URL =
   process.env.MAVEN_SEARCH_URL ||
-  `${config.API_REST_URL}/maven/coordinates/sha1`;
+  `${config.API_REST_URL}/rest/maven/coordinates/sha1`;
 
-interface PomCoords {
+export interface PomCoords {
   groupId: string;
   artifactId: string;
   version: string;
@@ -519,7 +519,7 @@ interface MavenCoordsResponse {
   coordinate: PomCoords;
 }
 
-async function getMavenPackageInfo(
+export async function getMavenPackageInfo(
   sha1: string,
   depCoords: Partial<PomCoords>,
   authHeader: string,

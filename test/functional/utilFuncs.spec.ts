@@ -42,7 +42,7 @@ describe('should get Maven package info', () => {
   });
 
   it('returns Maven package info', async () => {
-    nock('https://api.dev.snyk.io')
+    nock('https://api.snyk.io')
       .get(
         '/rest/maven/coordinates/sha1/c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2?',
       )

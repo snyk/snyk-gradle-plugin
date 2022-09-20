@@ -10,7 +10,10 @@
     "strict": false,
     "declaration": true,
     "importHelpers": true,
-    "typeRoots": ["./node_modules/@types", "./typings"]
+    "typeRoots": ["./node_modules/@types", "./typings"],
+
+    /* Module Resolution Options */
+    "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
   },
   "include": ["./test/**/*"]
 }
