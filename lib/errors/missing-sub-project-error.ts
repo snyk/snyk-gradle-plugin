@@ -1,6 +1,6 @@
 export class MissingSubProjectError extends Error {
   public name = 'MissingSubProjectError';
-  public subProject: string;
+  public targetProject: string;
   public allProjects: string[];
 
   constructor(subProject: string, allSubProjectNames: string[]) {

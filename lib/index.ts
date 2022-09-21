@@ -108,7 +108,6 @@ export async function inspect(
         subProject: (options as any)?.subProject,
       }),
   );
-
   if (!options) {
     options = { dev: false };
   }
@@ -166,7 +165,7 @@ export async function inspect(
 
 // See the comment for DepRoot.targetFile
 // Note: for Gradle, we are not returning the name unless it's a .kts file.
-// This is a workaround for a project naming problem happening in Registry
+// TODO: This is a workaround for a project naming problem happening in Registry
 // (legacy projects are named without "build.gradle" attached to them).
 // See ticket BST-529 re permanent solution.
 function targetFileFilteredForCompatibility(
@@ -179,6 +178,7 @@ function targetFileFilteredForCompatibility(
 
 export interface JsonDepsScriptResult {
   defaultProject: string;
+  defaultProjectKey: string;
   projects: ProjectsDict;
   allSubProjectNames: string[];
   versionBuildInfo?: VersionBuildInfo;

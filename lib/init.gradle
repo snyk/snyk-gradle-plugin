@@ -35,6 +35,7 @@ import org.gradle.util.GradleVersion
 
 // interface JsonDepsScriptResult {
 //   defaultProject: string;
+//   defaultProjectKey: string;
 //   projects: ProjectsDict;
 //   allSubProjectNames: string[];
 // }
@@ -300,8 +301,11 @@ allprojects { Project currProj ->
                         })
                     }
             }
-
-            def defaultProjectName = task.project.name
+            // use name of the target project: name of module indicated by --sub-project or --file or default root project
+            String defaultProjectName = onlyProj && onlyProj != "." ? onlyProj : task.project.name  
+            debugLog("project path: $task.project.path, project name: $task.project.name, subproj: $onlyProj")
+            // if project is root use default name, otherwise, use the path formatted to be e.g. greeter/subproj or subproj
+            String defaultProjectKey = task.project.path == ':' ? defaultProjectName : formatPath(task.project.path)
             def allSubProjectNames = []
             def seenSubprojects = [:]
             allprojects
@@ -311,7 +315,7 @@ allprojects { Project currProj ->
                     if (seenSubprojects.get(projKey)) {
                         projKey = formatPath(it.path)
                         if (projKey == "") {
-                            projKey = defaultProjectName
+                            projKey = defaultProjectKey
                         }
                     }
                     allSubProjectNames.add(projKey)
@@ -372,6 +376,7 @@ allprojects { Project currProj ->
 
             def result = [
                 'defaultProject': defaultProjectName,
+                'defaultProjectKey': defaultProjectKey,
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames
             ]
