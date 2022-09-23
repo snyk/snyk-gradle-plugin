@@ -21,6 +21,7 @@ windows_defaults: &windows_defaults
     npm_config_loglevel: silent
   executor:
     name: win/default
+    size: large
 
 test_matrix_unix: &test_matrix_unix
   matrix:

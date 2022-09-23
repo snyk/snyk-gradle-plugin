@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
+import * as pMap from 'p-map';
 import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
@@ -11,6 +12,12 @@ import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import debugModule = require('debug');
 import { buildGraph, SnykGraph } from './graph';
+import type {
+  CoordinateMap,
+  PomCoords,
+  Sha1Map,
+  SnykHttpClient,
+} from './types';
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -67,6 +74,7 @@ export interface GradleInspectOptions {
   reachableVulns?: boolean;
   callGraphBuilderTimeout?: number;
   initScript?: string;
+  gradleNormalizeDeps?: boolean;
 }
 
 type Options = api.InspectOptions & GradleInspectOptions;
@@ -78,11 +86,13 @@ export async function inspect(
   root: string,
   targetFile: string,
   options?: api.SingleSubprojectInspectOptions & GradleInspectOptions,
+  snykHttpClient?: SnykHttpClient,
 ): Promise<api.SinglePackageResult>;
 export async function inspect(
   root: string,
   targetFile: string,
   options: api.MultiSubprojectInspectOptions & GradleInspectOptions,
+  snykHttpClient?: SnykHttpClient,
 ): Promise<api.MultiProjectResult>;
 
 // General implementation. The result type depends on the runtime type of `options`.
@@ -90,6 +100,7 @@ export async function inspect(
   root: string,
   targetFile: string,
   options?: Options,
+  snykHttpClient?: SnykHttpClient,
 ): Promise<api.InspectResult> {
   debugLog(
     'Gradle inspect called with: ' +
@@ -100,6 +111,7 @@ export async function inspect(
         subProject: (options as any)?.subProject,
       }),
   );
+
   if (!options) {
     options = { dev: false };
   }
@@ -157,6 +169,7 @@ export async function inspect(
       root,
       targetFile,
       options,
+      snykHttpClient,
     );
     plugin.meta = plugin.meta || {};
     return {
@@ -169,6 +182,7 @@ export async function inspect(
     root,
     targetFile,
     options,
+    snykHttpClient,
     subProject,
   );
   if (depGraphAndDepRootNames.allSubProjectNames) {
@@ -206,6 +220,7 @@ export interface JsonDepsScriptResult {
   projects: ProjectsDict;
   allSubProjectNames: string[];
   versionBuildInfo?: VersionBuildInfo;
+  sha1Map?: Sha1Map;
 }
 
 interface ProjectsDict {
@@ -255,6 +270,7 @@ async function getAllDepsOneProject(
   root: string,
   targetFile: string,
   options: Options,
+  snykHttpClient: SnykHttpClient,
   subProject?: string,
 ): Promise<{
   depGraph: DepGraph;
@@ -262,7 +278,12 @@ async function getAllDepsOneProject(
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 }> {
-  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const allProjectDeps = await getAllDeps(
+    root,
+    targetFile,
+    options,
+    snykHttpClient,
+  );
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
 
   return subProject
@@ -322,8 +343,14 @@ async function getAllDepsAllProjects(
   root: string,
   targetFile: string,
   options: Options,
+  snykHttpClient: SnykHttpClient,
 ): Promise<ScannedProject[]> {
-  const allProjectDeps = await getAllDeps(root, targetFile, options);
+  const allProjectDeps = await getAllDeps(
+    root,
+    targetFile,
+    options,
+    snykHttpClient,
+  );
   return Object.keys(allProjectDeps.projects).map((projectId) => {
     const { defaultProject } = allProjectDeps;
     const gradleProjectName =
@@ -486,10 +513,47 @@ async function getAllDepsWithPlugin(
   return extractedJSON;
 }
 
+export async function getMavenPackageInfo(
+  sha1: string,
+  depCoords: Partial<PomCoords>,
+  snykHttpClient: SnykHttpClient,
+): Promise<string> {
+  const { res, body } = await snykHttpClient({
+    method: 'get',
+    path: `/maven/coordinates/sha1/${sha1}`,
+    qs: depCoords,
+  });
+  if (res?.statusCode >= 400 || !body || !body.ok || body.code >= 400) {
+    debugLog(
+      body.message ||
+        `Failed to resolve ${JSON.stringify(depCoords)} using sha1 '${sha1}.`,
+    );
+  }
+  const {
+    groupId = depCoords.groupId || 'unknown',
+    artifactId = depCoords.artifactId || 'unknown',
+    version = depCoords.version || 'unknown',
+  } = body.coordinate || {};
+  return `${groupId}:${artifactId}@${version}`;
+}
+
+function splitCoordinate(coordinate: string): Partial<PomCoords> {
+  const coordTest = /^[\w.-]+:[\w.-]+@[\w.-]+$/.test(coordinate);
+  if (!coordTest) return {};
+  const [groupId, artifactId, version] = coordinate.split(/:|@/);
+  const pomCoord: Partial<PomCoords> = {};
+  pomCoord.artifactId = artifactId;
+  pomCoord.groupId = groupId;
+  pomCoord.version = version;
+
+  return pomCoord;
+}
+
 async function getAllDeps(
   root: string,
   targetFile: string,
   options: Options,
+  snykHttpClient: SnykHttpClient,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   const gradleVersion = await getGradleVersion(root, command);
@@ -503,7 +567,32 @@ async function getAllDeps(
     if (versionBuildInfo) {
       extractedJSON.versionBuildInfo = versionBuildInfo;
     }
-    return await processProjectsInExtractedJSON(root, extractedJSON);
+    const coordinateMap: CoordinateMap = {};
+    if (extractedJSON.sha1Map) {
+      const getCoordinateFromHash = async (hash: string): Promise<void> => {
+        const originalCoordinate = extractedJSON.sha1Map[hash];
+        const depCoord = splitCoordinate(originalCoordinate);
+        try {
+          const coordinate = await getMavenPackageInfo(
+            hash,
+            depCoord,
+            snykHttpClient,
+          );
+          coordinateMap[originalCoordinate] = coordinate;
+        } catch (err) {
+          debugLog(err);
+        }
+      };
+
+      await pMap(Object.keys(extractedJSON.sha1Map), getCoordinateFromHash, {
+        concurrency: 100,
+      });
+    }
+    return await processProjectsInExtractedJSON(
+      root,
+      extractedJSON,
+      coordinateMap,
+    );
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -589,6 +678,7 @@ ${chalk.red.bold(mainErrorMessage)}`;
 export async function processProjectsInExtractedJSON(
   root: string,
   extractedJSON: JsonDepsScriptResult,
+  coordinateMap?: CoordinateMap,
 ) {
   for (const projectId in extractedJSON.projects) {
     const { defaultProject } = extractedJSON;
@@ -614,6 +704,7 @@ export async function processProjectsInExtractedJSON(
       snykGraph,
       projectName,
       projectVersion,
+      coordinateMap,
     );
     // this property usage ends here
     delete extractedJSON.projects[projectId].snykGraph;
@@ -666,7 +757,12 @@ function buildArgs(
   options: Options,
 ) {
   const args: string[] = [];
-  args.push('snykResolvedDepsJson', '-q');
+  const taskName = options.gradleNormalizeDeps
+    ? 'snykNormalizedResolvedDepsJson'
+    : 'snykResolvedDepsJson';
+
+  args.push(taskName, '-q');
+
   if (targetFile) {
     if (!fs.existsSync(path.resolve(root, targetFile))) {
       throw new Error('File not found: "' + targetFile + '"');
@@ -772,4 +868,6 @@ export const exportsForTests = {
   getVersionBuildInfo,
   toCamelCase,
   getGradleAttributesPretty,
+  splitCoordinate,
+  getMavenPackageInfo,
 };
