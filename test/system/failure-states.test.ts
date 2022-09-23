@@ -35,7 +35,7 @@ test('multi-project: error on missing sub-project', async () => {
       options,
     ),
   ).rejects.toThrowError(
-    /Specified sub-project not found: "non-existent". Found these projects: defaultProject, projects/,
+    /Specified sub-project not found: "non-existent". Found these projects: subproj/,
   );
 });
 

@@ -203,6 +203,7 @@ function targetFileFilteredForCompatibility(
 
 export interface JsonDepsScriptResult {
   defaultProject: string;
+  defaultProjectKey: string;
   projects: ProjectsDict;
   allSubProjectNames: string[];
   versionBuildInfo?: VersionBuildInfo;
@@ -280,14 +281,21 @@ function getSubProject(
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 } {
+  // TODO: we don't want to break the existing implementation of --sub-project using name
+  // we would like a relative path instead to have a unique identifier
+  if (subProject != '.') {
+    subProject =
+      allSubProjectNames.find((it) => it === subProject) ||
+      allSubProjectNames.find((it) => it.match(`/${subProject}`)) ||
+      subProject;
+  }
   if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
-    throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
+    throw new MissingSubProjectError(subProject, allSubProjectNames);
   }
 
   const { depGraph } = allProjectDeps.projects[subProject];
   const { versionBuildInfo } = allProjectDeps;
   const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
-
   return {
     depGraph,
     allSubProjectNames,
@@ -305,10 +313,10 @@ function getRootProject(
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 } {
-  const { projects, defaultProject, versionBuildInfo } = allProjectDeps;
-  const { depGraph } = projects[defaultProject];
-
+  const { projects, defaultProject, versionBuildInfo, defaultProjectKey } =
+    allProjectDeps;
   const gradleProjectName = defaultProject;
+  const { depGraph } = projects[defaultProjectKey];
 
   return {
     depGraph,
@@ -591,7 +599,7 @@ export async function processProjectsInExtractedJSON(
   extractedJSON: JsonDepsScriptResult,
 ) {
   for (const projectId in extractedJSON.projects) {
-    const { defaultProject } = extractedJSON;
+    const { defaultProject, defaultProjectKey } = extractedJSON;
     const { snykGraph, projectVersion } = extractedJSON.projects[projectId];
 
     if (!snykGraph) {
@@ -600,11 +608,12 @@ export async function processProjectsInExtractedJSON(
 
     const invalidValues = [null, undefined, ''];
     const isValidRootDir = invalidValues.indexOf(root) === -1;
-    const isSubProject = projectId !== defaultProject;
+    const isTargetProject = projectId === defaultProjectKey;
 
+    // TODO: assume proj is not root and reassign projectName if it is
     let projectName = isValidRootDir ? path.basename(root) : defaultProject;
 
-    if (isSubProject) {
+    if (!isTargetProject) {
       projectName = isValidRootDir
         ? `${path.basename(root)}/${projectId}`
         : `${defaultProject}/${projectId}`;
