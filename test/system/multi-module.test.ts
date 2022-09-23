@@ -506,3 +506,26 @@ test('multi-project: correct deps for subprojects with the same name as root', a
     'org.apache.struts:struts2-spring-plugin@2.3.1',
   );
 });
+
+test.only('multi-project, explicitly targeting a subproject build file with the same name as another module in root', async () => {
+  const result = await inspect(
+    '.',
+    path.join(
+      fixtureDir('subprojects-with-same-name-dependent'),
+      'greeter',
+      'subproj',
+      'build.gradle',
+    ),
+  );
+  const projectDeps = {};
+  for (const p of result.scannedProjects) {
+    projectDeps[p.meta.projectName] = p.depGraph
+      .getDepPkgs()
+      .map((d) => `${d.name}@${d.version}`);
+  }
+
+  const rootGraph = projectDeps['subproj'];
+  expect(rootGraph.length).toBe(44); //to be checked
+  expect(rootGraph).toContain('org.apache.struts:struts2-spring-plugin:2.3.1'); // this project's dep
+  expect(rootGraph).toContain('com.google.guava:guava:30.1.1-jre'); // dep of the subproj module
+});
