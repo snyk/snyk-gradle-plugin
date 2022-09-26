@@ -286,12 +286,10 @@ async function getAllDepsOneProject(
   );
   const allSubProjectNames = allProjectDeps.allSubProjectNames;
 
-  return subProject
-    ? getSubProject(subProject, allProjectDeps, allSubProjectNames)
-    : getRootProject(allProjectDeps, allSubProjectNames);
+  return getTargetProject(subProject, allProjectDeps, allSubProjectNames);
 }
 
-function getSubProject(
+function getTargetProject(
   subProject: string,
   allProjectDeps,
   allSubProjectNames: string[],
@@ -301,35 +299,17 @@ function getSubProject(
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 } {
-  if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
-    throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
+  const { projects, defaultProject, versionBuildInfo } = allProjectDeps;
+  const targetProject = subProject || defaultProject;
+  let gradleProjectName = defaultProject;
+  if (subProject) {
+    if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
+      throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
+    }
+    gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
   }
 
-  const { depGraph } = allProjectDeps.projects[subProject];
-  const { versionBuildInfo } = allProjectDeps;
-  const gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
-
-  return {
-    depGraph,
-    allSubProjectNames,
-    gradleProjectName,
-    versionBuildInfo,
-  };
-}
-
-function getRootProject(
-  allProjectDeps,
-  allSubProjectNames: string[],
-): {
-  depGraph: DepGraph;
-  allSubProjectNames: string[];
-  gradleProjectName: string;
-  versionBuildInfo: VersionBuildInfo;
-} {
-  const { projects, defaultProject, versionBuildInfo } = allProjectDeps;
-  const { depGraph } = projects[defaultProject];
-
-  const gradleProjectName = defaultProject;
+  const { depGraph } = projects[targetProject];
 
   return {
     depGraph,
