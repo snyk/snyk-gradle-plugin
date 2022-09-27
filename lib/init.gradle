@@ -248,6 +248,9 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     return resolvable
 }
 
+String formatPath(path) {
+    return path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+}
 
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
@@ -309,7 +312,7 @@ allprojects { Project currProj ->
                 .each({
                     def projKey = it.name
                     if (seenSubprojects.get(projKey)) {
-                        projKey = it.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                        projKey = formatPath(it.path)
                         if (projKey == "") {
                             projKey = defaultProjectName
                         }
@@ -357,7 +360,7 @@ allprojects { Project currProj ->
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
-                    projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                    projKey = formatPath(proj.path)
                     if (projKey == "") {
                         debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
                         projKey = defaultProjectName
@@ -434,7 +437,7 @@ allprojects { Project currProj ->
                 .each({
                     def projKey = it.name
                     if (seenSubprojects.get(projKey)) {
-                        projKey = it.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                        projKey = formatPath(it.path)
                         if (projKey == "") {
                             projKey = defaultProjectName
                         }
@@ -486,7 +489,7 @@ allprojects { Project currProj ->
                 def projKey = proj.name
                 if (projectsDict.get(projKey)) {
                     debugLog("The deps dict already has a project with key `$projKey'; using the full path")
-                    projKey = proj.path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+                    projKey = formatPath(proj.path)
                     if (projKey == "") {
                         debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
                         projKey = defaultProjectName
