@@ -1,5 +1,3 @@
-import type { NeedleResponse } from 'needle';
-
 import { exportsForTests as testableMethods } from '../../lib';
 
 describe('should convert strings to camel case', () => {
@@ -28,65 +26,5 @@ describe('should split coordinate strings', () => {
     ${'a.group.id:artifact-id@release-1.0.0'}   | ${{ groupId: 'a.group.id', artifactId: 'artifact-id', version: 'release-1.0.0' }} | ${'should return object with correct properties for string with groupId, artifactId and @version'}
   `('function splitCoordinate $msg', ({ input, output }) => {
     expect(testableMethods.splitCoordinate(input)).toEqual(output);
-  });
-});
-
-describe('should get Maven package info', () => {
-  it('returns maven coordinate string when ok:true response with coordinate property', async () => {
-    const received = await testableMethods.getMavenPackageInfo(
-      'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
-      {},
-      async () => ({
-        res: {} as NeedleResponse,
-        body: {
-          ok: true,
-          code: 200,
-          coordinate: {
-            groupId: 'group1',
-            artifactId: 'artifact1',
-            version: 'version1',
-          },
-        },
-      }),
-    );
-    expect(received).toBe('group1:artifact1@version1');
-  });
-
-  it("should return all 'unknown' values when no dep coordinates passed, 200, ok:true and NO coordinate property on response", async () => {
-    const received = await testableMethods.getMavenPackageInfo(
-      'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
-      {},
-      async () => ({
-        res: {} as NeedleResponse,
-        body: {
-          ok: true,
-          code: 200,
-        },
-      }),
-    );
-    expect(received).toBe('unknown:unknown@unknown');
-  });
-
-  it('should return passed dep coordinate value when 200, ok:true and partial coordinate property on response', async () => {
-    const received = await testableMethods.getMavenPackageInfo(
-      'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
-      {
-        groupId: 'group',
-        artifactId: 'artifact',
-        version: '2',
-      },
-      async () => ({
-        res: {} as NeedleResponse,
-        body: {
-          ok: true,
-          code: 200,
-          coordinate: {
-            groupId: 'group2',
-            artifactId: 'artifact',
-          },
-        },
-      }),
-    );
-    expect(received).toBe('group2:artifact@2');
   });
 });

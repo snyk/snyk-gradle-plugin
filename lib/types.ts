@@ -30,3 +30,26 @@ export interface PomCoords {
   artifactId: string;
   version: string;
 }
+
+interface PackageResource {
+  id: string;
+  type: 'package';
+}
+
+type GetPackageResponseData = Array<PackageResource>;
+
+interface GetPackageLinks {
+  self?:
+    | string
+    | {
+        href: string;
+        meta?: {
+          [key: string]: any;
+        };
+      };
+}
+
+export interface GetPackageData {
+  data: GetPackageResponseData;
+  links: GetPackageLinks;
+}

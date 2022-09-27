@@ -4,13 +4,14 @@ import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
 import * as pMap from 'p-map';
-import { MissingSubProjectError } from './errors';
 import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
+import debugModule = require('debug');
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
+
+import { MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
-import debugModule = require('debug');
 import { buildGraph, SnykGraph } from './graph';
 import type {
   CoordinateMap,
@@ -18,6 +19,7 @@ import type {
   Sha1Map,
   SnykHttpClient,
 } from './types';
+import { getMavenPackageInfo } from './search';
 
 type ScannedProject = legacyCommon.ScannedProject;
 type CallGraph = legacyCommon.CallGraph;
@@ -26,7 +28,7 @@ type CallGraphResult = legacyCommon.CallGraphResult;
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
 
-function debugLog(s: string) {
+export function debugLog(s: string) {
   if (logger === null) {
     // Lazy init: Snyk CLI needs to process the CLI argument "-d" first.
     // TODO(BST-648): more robust handling of the debug settings
@@ -493,30 +495,6 @@ async function getAllDepsWithPlugin(
   return extractedJSON;
 }
 
-export async function getMavenPackageInfo(
-  sha1: string,
-  depCoords: Partial<PomCoords>,
-  snykHttpClient: SnykHttpClient,
-): Promise<string> {
-  const { res, body } = await snykHttpClient({
-    method: 'get',
-    path: `/maven/coordinates/sha1/${sha1}`,
-    qs: depCoords,
-  });
-  if (res?.statusCode >= 400 || !body || !body.ok || body.code >= 400) {
-    debugLog(
-      body.message ||
-        `Failed to resolve ${JSON.stringify(depCoords)} using sha1 '${sha1}.`,
-    );
-  }
-  const {
-    groupId = depCoords.groupId || 'unknown',
-    artifactId = depCoords.artifactId || 'unknown',
-    version = depCoords.version || 'unknown',
-  } = body.coordinate || {};
-  return `${groupId}:${artifactId}@${version}`;
-}
-
 function splitCoordinate(coordinate: string): Partial<PomCoords> {
   const coordTest = /^[\w.-]+:[\w.-]+@[\w.-]+$/.test(coordinate);
   if (!coordTest) return {};
@@ -849,5 +827,4 @@ export const exportsForTests = {
   toCamelCase,
   getGradleAttributesPretty,
   splitCoordinate,
-  getMavenPackageInfo,
 };
