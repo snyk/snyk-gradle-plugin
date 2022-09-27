@@ -3,13 +3,13 @@ export class MissingSubProjectError extends Error {
   public subProject: string;
   public allProjects: string[];
 
-  constructor(subProject: string, allProjects: string[]) {
-    super(
-      `Specified sub-project not found: "${subProject}". ` +
-        `Found these projects: ${allProjects.join(', ')}`,
-    );
+  constructor(subProject: string, allSubProjectNames: string[]) {
+    const msg = !allSubProjectNames.length
+      ? 'No projects found.'
+      : `Found these projects: ${allSubProjectNames}`;
+    super(`Specified sub-project not found: "${subProject}". ` + msg);
     this.subProject = subProject;
-    this.allProjects = allProjects;
+    this.allProjects = allSubProjectNames;
     Error.captureStackTrace(this, MissingSubProjectError);
   }
 }

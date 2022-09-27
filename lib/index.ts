@@ -304,7 +304,7 @@ function getTargetProject(
   let gradleProjectName = defaultProject;
   if (subProject) {
     if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
-      throw new MissingSubProjectError(subProject, Object.keys(allProjectDeps));
+      throw new MissingSubProjectError(subProject, allSubProjectNames);
     }
     gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
   }
