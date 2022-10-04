@@ -413,6 +413,28 @@ test('multi-project: do not exclude subprojects with the same name as root', asy
   ]);
 });
 
+test('multi-project: consider matching config if it is available only in one targetted subproject', async () => {
+  // only greeter module has config 'downloadJar'
+  const options = {
+    'configuration-matching': 'downloadJar',
+    subProject: 'greeter',
+  };
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
+    options,
+  );
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  expect(
+    nodeIds.indexOf('org.apache.commons:commons-collections4@4.4'),
+  ).toBeGreaterThanOrEqual(0);
+});
+
 test('multi-project: use flat naming when subprojects have different names', async () => {
   const result = await inspect(
     '.',
