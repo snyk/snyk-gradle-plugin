@@ -8,7 +8,6 @@ import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
 import debugModule = require('debug');
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
-import * as javaCallGraphBuilder from '@snyk/java-call-graph-builder';
 
 import { MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
@@ -22,8 +21,6 @@ import type {
 import { getMavenPackageInfo } from './search';
 
 type ScannedProject = legacyCommon.ScannedProject;
-type CallGraph = legacyCommon.CallGraph;
-type CallGraphResult = legacyCommon.CallGraphResult;
 
 // To enable debugging output, use `snyk -d`
 let logger: debugModule.Debugger | null = null;
@@ -73,8 +70,6 @@ export interface GradleInspectOptions {
   // Gradle process just never exits, from the Node's standpoint.
   // Leaving default usage `--no-daemon`, because of backwards compatibility
   daemon?: boolean;
-  reachableVulns?: boolean;
-  callGraphBuilderTimeout?: number;
   initScript?: string;
   gradleNormalizeDeps?: boolean;
 }
@@ -128,39 +123,6 @@ export async function inspect(
     meta: {},
   };
 
-  let callGraph: CallGraphResult | undefined;
-  const targetPath = path.join(root, targetFile);
-
-  if (options.reachableVulns) {
-    const command = getCommand(root, targetFile);
-
-    let initScriptPath: string | undefined;
-
-    if (options.initScript) {
-      initScriptPath = formatArgWithWhiteSpace(
-        path.resolve(options.initScript),
-      );
-    }
-
-    let confAttrs: string | undefined;
-
-    if (options['configuration-attributes']) {
-      confAttrs = options['configuration-attributes'];
-    }
-
-    const timeout = options?.callGraphBuilderTimeout
-      ? options?.callGraphBuilderTimeout * 1000
-      : undefined;
-
-    callGraph = await getCallGraph(
-      targetPath,
-      command,
-      initScriptPath,
-      confAttrs,
-      timeout,
-    );
-  }
-
   if (api.isMultiSubProject(options)) {
     if (subProject) {
       throw new Error(
@@ -177,7 +139,6 @@ export async function inspect(
     return {
       plugin,
       scannedProjects,
-      callGraph,
     };
   }
   const depGraphAndDepRootNames = await getAllDepsOneProject(
@@ -195,7 +156,6 @@ export async function inspect(
   return {
     plugin,
     package: null, //TODO @boost: delete me once cli-interface makes it optional
-    callGraph,
     dependencyGraph: depGraphAndDepRootNames.depGraph,
     meta: {
       gradleProjectName: depGraphAndDepRootNames.gradleProjectName,
@@ -791,33 +751,6 @@ function buildArgs(
   });
 
   return args;
-}
-
-async function getCallGraph(
-  targetPath: string,
-  command: string,
-  initScriptPath?: string,
-  confAttrs?: string,
-  timeout?: number,
-): Promise<CallGraphResult> {
-  try {
-    debugLog(`getting call graph from path ${targetPath}`);
-    const callGraph: CallGraph = await javaCallGraphBuilder.getCallGraphGradle(
-      path.dirname(targetPath),
-      command,
-      initScriptPath,
-      confAttrs,
-      timeout,
-    );
-    debugLog('got call graph successfully');
-    return callGraph;
-  } catch (e) {
-    debugLog('call graph error: ' + e);
-    return {
-      message: e.message,
-      innerError: e.innerError || e,
-    };
-  }
 }
 
 export const exportsForTests = {
