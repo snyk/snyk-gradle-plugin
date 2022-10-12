@@ -48,6 +48,7 @@ test('multi-project, ran from a subproject directory', async () => {
     'build.gradle',
   );
   expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
+  expect(result.meta!.gradleProjectName).toBe('subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -71,6 +72,7 @@ test('multi-project: only sub-project has deps and they are returned', async () 
     options,
   );
   expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -153,6 +155,7 @@ test('multi-project: only sub-project has deps and they are returned space needs
 
   expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
   expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -240,6 +243,7 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
   ]);
 
   expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
