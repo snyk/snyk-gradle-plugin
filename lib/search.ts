@@ -13,7 +13,8 @@ export async function getMavenPackageInfo(
 ): Promise<string> {
   const { res, body } = await snykHttpClient({
     method: 'get',
-    path: `/rest/packages`,
+    // base URL defaults to SNYK_API_REST_URL="https://api.snyk.io/rest"
+    path: `/packages`,
     qs: {
       version: PACKAGE_SEARCH_VERSION,
       /* eslint-disable @typescript-eslint/camelcase */

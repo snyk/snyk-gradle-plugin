@@ -220,7 +220,7 @@ workflows:
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '10'
+          node_version: '12'
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install

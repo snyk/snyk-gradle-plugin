@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
-      "outDir": "./dist",
-      "pretty": true,
-      "target": "es2017",
-      "lib": [
-        "es2017",
-      ],
-      "module": "commonjs",
-      "allowJs": false,
-      "sourceMap": true,
-      "strict": false,
-      "declaration": true,
-      "importHelpers": true,
-      "typeRoots": ["./node_modules/@types", "./typings"],
+    "outDir": "./dist",
+    "pretty": true,
+    "target": "es2019",
+    "lib": ["es2019", "dom"],
+    "module": "commonjs",
+    "allowJs": false,
+    "sourceMap": true,
+    "strict": false,
+    "declaration": true,
+    "importHelpers": true,
+    "typeRoots": ["./node_modules/@types", "./typings"]
   },
-  "include": [
-      "./lib/**/*", "typings/tap/index.d.ts",
-  ]
+  "include": ["./lib/**/*", "typings/tap/index.d.ts"]
 }
