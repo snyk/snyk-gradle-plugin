@@ -179,6 +179,7 @@ function targetFileFilteredForCompatibility(
 
 export interface JsonDepsScriptResult {
   defaultProject: string;
+  defaultProjectKey: string;
   projects: ProjectsDict;
   allSubProjectNames: string[];
   versionBuildInfo?: VersionBuildInfo;
@@ -261,15 +262,24 @@ function getTargetProject(
   gradleProjectName: string;
   versionBuildInfo: VersionBuildInfo;
 } {
-  const { projects, defaultProject, versionBuildInfo } = allProjectDeps;
-  const targetProject = subProject || defaultProject;
+  const { projects, defaultProject, defaultProjectKey, versionBuildInfo } =
+    allProjectDeps;
   let gradleProjectName = defaultProject;
   if (subProject) {
+    // TODO: we don't want to break the existing implementation of --sub-project using name
+    // we would like a relative path instead to have a unique identifier
+    if (subProject != '.') {
+      subProject =
+        allSubProjectNames.find((it) => it === subProject) ||
+        allSubProjectNames.find((it) => it.match(`/${subProject}`)) ||
+        subProject;
+    }
     if (!allProjectDeps.projects || !allProjectDeps.projects[subProject]) {
       throw new MissingSubProjectError(subProject, allSubProjectNames);
     }
     gradleProjectName = `${allProjectDeps.defaultProject}/${subProject}`;
   }
+  const targetProject = subProject || defaultProjectKey;
 
   const { depGraph } = projects[targetProject];
 
@@ -599,7 +609,7 @@ export async function processProjectsInExtractedJSON(
   coordinateMap?: CoordinateMap,
 ) {
   for (const projectId in extractedJSON.projects) {
-    const { defaultProject } = extractedJSON;
+    const { defaultProject, defaultProjectKey } = extractedJSON;
     const { snykGraph, projectVersion } = extractedJSON.projects[projectId];
 
     if (!snykGraph) {
@@ -608,7 +618,7 @@ export async function processProjectsInExtractedJSON(
 
     const invalidValues = [null, undefined, ''];
     const isValidRootDir = invalidValues.indexOf(root) === -1;
-    const isSubProject = projectId !== defaultProject;
+    const isSubProject = projectId !== defaultProjectKey;
 
     let projectName = isValidRootDir ? path.basename(root) : defaultProject;
 

@@ -413,7 +413,7 @@ test('multi-project: do not exclude subprojects with the same name as root', asy
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
     'lib',
-    'subproject-with-same-name-as-root',
+    'greeter/subproject-with-same-name-as-root',
   ]);
 });
 
@@ -447,7 +447,7 @@ test('multi-project: use flat naming when subprojects have different names', asy
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
     'lib-top',
-    'lib',
+    'greeter/lib',
   ]);
 });
 
@@ -500,7 +500,7 @@ test('multi-project: correct deps when subprojects have different names', async 
   expect(libGraph.length).toBe(1);
   expect(libGraph).toEqual(['org.apache.commons:commons-lang3@3.12.0']);
 
-  const greeterLibGraph = projectDeps['gradle-sandbox/lib'];
+  const greeterLibGraph = projectDeps['gradle-sandbox/greeter/lib'];
   expect(greeterLibGraph.length).toBe(1);
   expect(greeterLibGraph).toEqual(['commons-io:commons-io@2.11.0']);
 });
@@ -531,4 +531,92 @@ test('multi-project: correct deps for subprojects with the same name as root', a
   expect(greeterSubprojGraph).toContain(
     'org.apache.struts:struts2-spring-plugin@2.3.1',
   );
+});
+
+test('multi-project: correct deps for subproject with the same name, one dependent on another, using --file', async () => {
+  const result = await inspect(
+    '.',
+    path.join(
+      fixtureDir('subprojects-same-name'),
+      'greeter',
+      'subproj',
+      'build.gradle',
+    ),
+  );
+
+  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.meta!.gradleProjectName).toBe('subproj');
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  expect(
+    nodeIds.indexOf('org.apache.struts:struts2-spring-plugin@2.3.1'),
+  ).toBeGreaterThanOrEqual(0);
+  expect(
+    nodeIds.indexOf('com.google.guava:guava@30.1.1-jre'),
+  ).toBeGreaterThanOrEqual(0);
+  expect(nodeIds.indexOf('joda-time:joda-time@2.2')).toBe(-1);
+});
+
+test('multi-project: correct deps for subproject with the same name, one dependent on another, using --sub-project', async () => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('subprojects-same-name'), 'build.gradle'),
+    { subProject: 'subproj' },
+  );
+
+  expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.meta!.gradleProjectName).toBe('subprojects-same-name/subproj');
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    'greeter',
+    'subproj',
+    'greeter/subproj',
+  ]);
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  // expect to see only deps of the target submodule
+  expect(
+    nodeIds.indexOf('com.google.guava:guava@30.1.1-jre'),
+  ).toBeGreaterThanOrEqual(0);
+  expect(nodeIds.indexOf('org.apache.struts:struts2-spring-plugin@2.3.1')).toBe(
+    -1,
+  );
+  expect(nodeIds.indexOf('joda-time:joda-time@2.2')).toBe(-1);
+});
+
+test('multi-project: correct deps for a nested subproject using --sub-project', async () => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
+    { subProject: 'lib' },
+  );
+
+  expect(result.dependencyGraph.rootPkg.name).toBe('./greeter/lib');
+  expect(result.meta!.gradleProjectName).toBe('gradle-sandbox/greeter/lib');
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    'greeter',
+    'lib-top',
+    'greeter/lib',
+  ]);
+
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  expect(
+    nodeIds.indexOf('commons-io:commons-io@2.11.0'),
+  ).toBeGreaterThanOrEqual(0);
+  expect(nodeIds.indexOf('org.apache.commons:commons-lang3@3.12.0')).toBe(-1);
 });
