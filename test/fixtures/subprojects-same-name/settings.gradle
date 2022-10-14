@@ -1,0 +1,2 @@
+rootProject.name = 'subprojects-same-name'
+include ':subproj', ':greeter', ':greeter:subproj'

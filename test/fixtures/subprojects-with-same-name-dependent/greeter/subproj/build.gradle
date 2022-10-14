@@ -1,0 +1,13 @@
+plugins {
+    id 'application'
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {   
+    implementation "org.apache.struts:struts2-spring-plugin:2.3.1"
+    implementation project(":subproj")
+}

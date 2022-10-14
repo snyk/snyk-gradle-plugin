@@ -249,6 +249,10 @@ String formatPath(path) {
     return path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
 }
 
+Boolean isRootPath(path){
+    return path == rootProject.path
+}
+
 // We are attaching this task to every project, as this is the only reliable way to run it
 // when we start with a subproject build.gradle. As a consequence, we need to make sure we
 // only ever run it once, for the "starting" project.
@@ -300,22 +304,17 @@ allprojects { Project currProj ->
                         })
                     }
             }
-
-            def defaultProjectName = task.project.name
-            def allSubProjectNames = []
-            def seenSubprojects = [:]
+            // name of target project - either specified by --file or the root of a multi-module build
+            String defaultProjectName = task.project.name
+            // the path of the above, preferred over name because path is unique
+            String defaultProjectKey = isRootPath(task.project.path) ? defaultProjectName : formatPath(task.project.path)
+            // collect all subprojects names that are not target
+            List allSubProjectNames = []
             allprojects
                 .findAll({ it.path != task.project.path })
                 .each({
-                    def projKey = it.name
-                    if (seenSubprojects.get(projKey)) {
-                        projKey = formatPath(it.path)
-                        if (projKey == "") {
-                            projKey = defaultProjectName
-                        }
-                    }
+                    String projKey = formatPath(it.path)
                     allSubProjectNames.add(projKey)
-                    seenSubprojects[projKey] = true
                 })
             def shouldScanProject = {
                 onlyProj == null ||
@@ -324,7 +323,7 @@ allprojects { Project currProj ->
             }
             def projectsDict = [:]
 
-            debugLog("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
+            debugLog("defaultProjectName=$defaultProjectName; defaultProjectKey=$defaultProjectKey; allSubProjectNames=$allSubProjectNames")
 
             // These will be used to suggest attribute filtering to the user if the scan fails
             // due to ambiguous resolution of dependency variants
@@ -354,15 +353,13 @@ allprojects { Project currProj ->
                 
                 debugLog('converting gradle graph to snyk-graph format')
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
-                def projKey = proj.name
-                if (projectsDict.get(projKey)) {
-                    debugLog("The deps dict already has a project with key `$projKey'; using the full path")
-                    projKey = formatPath(proj.path)
-                    if (projKey == "") {
-                        debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
-                        projKey = defaultProjectName
-                    }
+                String projKey = formatPath(proj.path)
+                // if project is root ":", it's formatted to "" - we can't have an empty string as a key so use default name
+                if (projKey == "") {
+                    debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
+                    projKey = defaultProjectKey
                 }
+
                 projectsDict[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
                     'snykGraph': projGraph,
@@ -372,6 +369,7 @@ allprojects { Project currProj ->
 
             def result = [
                 'defaultProject': defaultProjectName,
+                'defaultProjectKey': defaultProjectKey,
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames
             ]
@@ -426,21 +424,14 @@ allprojects { Project currProj ->
                     }
             }
 
-            def defaultProjectName = task.project.name
-            def allSubProjectNames = []
-            def seenSubprojects = [:]
+            String defaultProjectName = task.project.name
+            String defaultProjectKey = isRootPath(task.project.path) ? defaultProjectName : formatPath(task.project.path)
+            List allSubProjectNames = []
             allprojects
                 .findAll({ it.path != task.project.path })
                 .each({
-                    def projKey = it.name
-                    if (seenSubprojects.get(projKey)) {
-                        projKey = formatPath(it.path)
-                        if (projKey == "") {
-                            projKey = defaultProjectName
-                        }
-                    }
+                    String projKey = formatPath(it.path)
                     allSubProjectNames.add(projKey)
-                    seenSubprojects[projKey] = true
                 })
             def shouldScanProject = {
                 onlyProj == null ||
@@ -482,16 +473,13 @@ allprojects { Project currProj ->
                 debugLog('converting gradle graph to snyk-graph format')
                 
                 def projGraph = getSnykGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
-
-                def projKey = proj.name
-                if (projectsDict.get(projKey)) {
-                    debugLog("The deps dict already has a project with key `$projKey'; using the full path")
-                    projKey = formatPath(proj.path)
-                    if (projKey == "") {
-                        debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
-                        projKey = defaultProjectName
-                    }
+                String projKey = formatPath(proj.path)
+            
+                if (projKey == "") {
+                    debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
+                    projKey = defaultProjectKey
                 }
+
                 projectsDict[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
                     'snykGraph': projGraph.graph,
@@ -501,6 +489,7 @@ allprojects { Project currProj ->
 
             def result = [
                 'defaultProject': defaultProjectName,
+                'defaultProjectKey': defaultProjectKey,
                 'projects': projectsDict,
                 'allSubProjectNames': allSubProjectNames,
                 'sha1Map': sha1Map.coordinates

@@ -15,6 +15,7 @@ describe('findProjectsInExtractedJSON', () => {
     async ({ rootDir, targetFile }) => {
       const jsonExtractedFromGradleStdout = {
         defaultProject: 'tardis-master',
+        defaultProjectKey: 'tardis-master',
         projects: {
           'tardis-master': {
             targetFile,
