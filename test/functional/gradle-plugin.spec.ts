@@ -1,8 +1,4 @@
 import { exportsForTests as testableMethods } from '../../lib';
-import * as os from 'os';
-
-const isWin = /^win/.test(os.platform());
-const quot = isWin ? '"' : "'";
 
 const JEST_TIMEOUT = 15000;
 
@@ -16,7 +12,8 @@ describe('Gradle Plugin', () => {
       '-Dorg.gradle.parallel=',
       '-Dorg.gradle.console=plain',
       '-PonlySubProject=.',
-      '-I /tmp/init.gradle',
+      '-I',
+      '/tmp/init.gradle',
     ]);
   });
 
@@ -28,12 +25,13 @@ describe('Gradle Plugin', () => {
     expect(result).toEqual([
       'snykResolvedDepsJson',
       '-q',
-      `-Pconfiguration=${quot}confRegex${quot}`,
+      `-Pconfiguration=confRegex`,
       '--no-daemon',
       '-Dorg.gradle.parallel=',
       '-Dorg.gradle.console=plain',
       '-PonlySubProject=.',
-      '-I /tmp/init.gradle',
+      '-I',
+      '/tmp/init.gradle',
       '--build-file',
       'build.gradle',
     ]);
@@ -48,11 +46,12 @@ describe('Gradle Plugin', () => {
     expect(result).toEqual([
       'snykResolvedDepsJson',
       '-q',
-      `-Pconfiguration=${quot}confRegex${quot}`,
+      `-Pconfiguration=confRegex`,
       '-Dorg.gradle.parallel=',
       '-Dorg.gradle.console=plain',
       '-PonlySubProject=.',
-      '-I /tmp/init.gradle',
+      '-I',
+      '/tmp/init.gradle',
       '--build-file',
       'build.gradle',
     ]);
@@ -69,10 +68,11 @@ describe('Gradle Plugin', () => {
       '-Dorg.gradle.parallel=',
       '-Dorg.gradle.console=plain',
       '-PonlySubProject=.',
-      '-I /tmp/init.gradle',
+      '-I',
+      '/tmp/init.gradle',
       '--build-file',
       'build.gradle',
-      `-Pconfiguration=${quot}^compile$${quot}`,
+      `-Pconfiguration=^compile$`,
     ]);
   });
 
@@ -89,11 +89,11 @@ describe('Gradle Plugin', () => {
         '--no-daemon',
         '-Dorg.gradle.parallel=',
         '-Dorg.gradle.console=plain',
-        '-I /tmp/init.gradle',
+        '-I',
+        '/tmp/init.gradle',
         '--build-file',
         'build.gradle',
-        `-Pconfiguration=${quot}^compile$${quot}`,
-        '', // this is a harmless artifact of argument transformation
+        `-Pconfiguration=^compile$`,
       ]);
     },
     JEST_TIMEOUT,

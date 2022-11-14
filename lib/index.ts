@@ -37,9 +37,6 @@ export function debugLog(s: string) {
   logger(s);
 }
 
-const isWin = /^win/.test(os.platform());
-const quot = isWin ? '"' : "'";
-
 const cannotResolveVariantMarkers = [
   'Cannot choose between the following',
   'Could not select value from candidates',
@@ -115,6 +112,7 @@ export async function inspect(
   let subProject = (options as api.SingleSubprojectInspectOptions).subProject;
   if (subProject) {
     subProject = subProject.trim();
+    (options as api.SingleSubprojectInspectOptions).subProject = subProject;
   }
   const plugin: api.PluginMetadata = {
     name: 'bundled:gradle',
@@ -671,13 +669,6 @@ function getCommand(root: string, targetFile: string) {
   return 'gradle';
 }
 
-export function formatArgWithWhiteSpace(arg: string): string {
-  if (/\s/.test(arg)) {
-    return quot + arg + quot;
-  }
-  return arg;
-}
-
 function buildArgs(
   root: string,
   targetFile: string | null,
@@ -692,31 +683,25 @@ function buildArgs(
   args.push(taskName, '-q');
 
   if (targetFile) {
-    if (!fs.existsSync(path.resolve(root, targetFile))) {
-      throw new Error('File not found: "' + targetFile + '"');
+    const resolvedTargetFilePath = path.resolve(root, targetFile);
+    if (!fs.existsSync(resolvedTargetFilePath)) {
+      throw new Error('File not found: "' + resolvedTargetFilePath + '"');
     }
     args.push('--build-file');
 
-    const formattedTargetFile = formatArgWithWhiteSpace(targetFile);
-    args.push(formattedTargetFile);
+    args.push(resolvedTargetFilePath);
   }
 
   // Arguments to init script are supplied as properties: https://stackoverflow.com/a/48370451
   if (options['configuration-matching']) {
-    args.push(
-      `-Pconfiguration=${quot}${options['configuration-matching']}${quot}`,
-    );
+    args.push(`-Pconfiguration=${options['configuration-matching']}`);
   }
   if (options['configuration-attributes']) {
-    args.push(
-      `-PconfAttr=${quot}${options['configuration-attributes']}${quot}`,
-    );
+    args.push(`-PconfAttr=${options['configuration-attributes']}`);
   }
 
   if (options.initScript) {
-    const formattedInitScript = formatArgWithWhiteSpace(
-      path.resolve(options.initScript),
-    );
+    const formattedInitScript = path.resolve(options.initScript);
     args.push('--init-script', formattedInitScript);
   }
 
@@ -738,7 +723,7 @@ function buildArgs(
     args.push('-PonlySubProject=' + (options.subProject || '.'));
   }
 
-  args.push('-I ' + initGradlePath);
+  args.push('-I', initGradlePath);
 
   if (options.args) {
     args.push(...options.args);
@@ -751,16 +736,16 @@ function buildArgs(
     // Transform --configuration=foo
     args[i] = a.replace(
       /^--configuration[= ]([a-zA-Z_]+)/,
-      `-Pconfiguration=${quot}^$1$$${quot}`,
+      `-Pconfiguration=^$1$$`,
     );
     // Transform --configuration foo
     if (a === '--configuration') {
-      args[i] = `-Pconfiguration=${quot}^${args[i + 1]}$${quot}`;
+      args[i] = `-Pconfiguration=^${args[i + 1]}$`;
       args[i + 1] = '';
     }
   });
 
-  return args;
+  return args.filter(Boolean);
 }
 
 export const exportsForTests = {

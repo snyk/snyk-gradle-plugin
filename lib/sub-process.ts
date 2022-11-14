@@ -1,5 +1,6 @@
 import * as childProcess from 'child_process';
 import debugModule = require('debug');
+import { quoteAll } from 'shescape';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 
@@ -14,6 +15,7 @@ export function execute(
   if (options && options.cwd) {
     spawnOptions.cwd = options.cwd;
   }
+  args = quoteAll(args, spawnOptions);
 
   return new Promise((resolve, reject) => {
     let stdout = '';
