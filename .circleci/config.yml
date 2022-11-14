@@ -225,21 +225,46 @@ workflows:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix
+          requires:
+            - Lint
       - test-windows:
           name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_win
+          requires:
+            - Lint
       - test-fixtures-with-wrappers-unix:
           name: Test Fixtures OS=Unix Node=16 JDK=17.0.3.6.1-amzn Gradle=7.4.2
           context: nodejs-install
+          requires:
+            - Lint
       - test-fixtures-with-wrappers-windows:
           name: Test Fixtures OS=Windows Node=16 JDK=17 Gradle=7.4.2
           context: nodejs-install
+          requires:
+            - Lint
 
       - release:
           name: Release
           context: nodejs-app-release
           node_version: '14.17.6'
+          requires:
+            - Test OS=Windows Node=16 JDK=8 Gradle=6.2.1
+            - Test OS=Windows Node=16 JDK=8 Gradle=5.5
+            - Test OS=Windows Node=16 JDK=8 Gradle=4.10
+            - Test OS=Windows Node=12 JDK=8 Gradle=6.2.1
+            - Test OS=Windows Node=12 JDK=8 Gradle=5.5
+            - Test OS=Windows Node=12 JDK=8 Gradle=4.10
+            - Test OS=Unix Node=16 JDK=8.0.292.j9-adpt Gradle=6.2.1
+            - Test OS=Unix Node=16 JDK=8.0.292.j9-adpt Gradle=5.5
+            - Test OS=Unix Node=16 JDK=8.0.292.j9-adpt Gradle=4.10
+            - Test OS=Unix Node=16 JDK=8.0.292.j9-adpt Gradle=3.4.1
+            - Test OS=Unix Node=12 JDK=8.0.292.j9-adpt Gradle=6.2.1
+            - Test OS=Unix Node=12 JDK=8.0.292.j9-adpt Gradle=5.5
+            - Test OS=Unix Node=12 JDK=8.0.292.j9-adpt Gradle=4.10
+            - Test OS=Unix Node=12 JDK=8.0.292.j9-adpt Gradle=3.4.1
+            - Test Fixtures OS=Windows Node=16 JDK=17 Gradle=7.4.2
+            - Test Fixtures OS=Unix Node=16 JDK=17.0.3.6.1-amzn Gradle=7.4.2
           filters:
             branches:
               only:
