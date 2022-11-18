@@ -336,22 +336,29 @@ allprojects { Project currProj ->
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
                 def resolvedConfigs = []
                 resolvableConfigs.each({ config ->
-                    def resConf = config.resolvedConfiguration
+                    ResolvedConfiguration resConf = config.getResolvedConfiguration()
                     debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
                     if (!resConf.hasError()) {
                         resolvedConfigs.add(resConf)
-                        debugLog("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
+                        debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
+                    } else {
+                        // even if some dependencies fail to resolve, we prefer a partial result to none
+                        LenientConfiguration lenientConf = resConf.getLenientConfiguration()
+                        debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
+                        debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
+                        resolvedConfigs.add(lenientConf)
                     }
                 })
                 if (resolvedConfigs.isEmpty() && !resolvableConfigs.isEmpty()) {
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
+                List nonemptyFirstLevelDeps = [] 
+                resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
 
-                def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
-                
                 debugLog('converting gradle graph to snyk-graph format')
+                
                 def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
                 String projKey = formatPath(proj.path)
                 // if project is root ":", it's formatted to "" - we can't have an empty string as a key so use default name
@@ -455,11 +462,16 @@ allprojects { Project currProj ->
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
                 def resolvedConfigs = []
                 resolvableConfigs.each({ config ->
-                    def resConf = config.resolvedConfiguration
+                    ResolvedConfiguration resConf = config.resolvedConfiguration
                     debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
                     if (!resConf.hasError()) {
                         resolvedConfigs.add(resConf)
-                        debugLog("first level module dependencies for config `$config.name': $resConf.firstLevelModuleDependencies")
+                        debugLog("Fully resolved config `$config.name' with: $resConf.firstLevelModuleDependencies")
+                    } else { 
+                        LenientConfiguration lenientConf = resConf.getLenientConfiguration()
+                        debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
+                        debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
+                        resolvedConfigs.add(lenientConf)
                     }
                 })
                 if (!resolvableConfigs.isEmpty() && resolvedConfigs.isEmpty()) {
@@ -467,8 +479,9 @@ allprojects { Project currProj ->
                             ' for project ' + proj + ' could not be resolved.')
                 }
                 
-                def nonemptyFirstLevelDeps = resolvedConfigs.resolvedConfiguration.firstLevelModuleDependencies.findAll({ !it.isEmpty() })
-                
+                List nonemptyFirstLevelDeps = [] 
+                resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
+
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
                 
