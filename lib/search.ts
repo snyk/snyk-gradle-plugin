@@ -51,7 +51,10 @@ export async function getMavenPackageInfo(
     );
   }
 
-  return `${groupId || 'unknown'}:${artifactId || 'unknown'}@${
-    version || 'unknown'
-  }`;
+  const groupIdString = groupId || 'unknown';
+  const artifactIdString =
+    artifactId ||
+    `${depCoords.artifactId ? `${depCoords.artifactId}-` : ''}${sha1}`;
+  const versionString = version || 'unknown';
+  return `${groupIdString}:${artifactIdString}@${versionString}`;
 }
