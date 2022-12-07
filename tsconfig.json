@@ -10,7 +10,7 @@
     "strict": false,
     "declaration": true,
     "importHelpers": true,
-    "typeRoots": ["./node_modules/@types", "./typings"]
+    "typeRoots": ["./node_modules/@types"]
   },
-  "include": ["./lib/**/*", "typings/tap/index.d.ts"]
+  "include": ["./lib/**/*"]
 }
