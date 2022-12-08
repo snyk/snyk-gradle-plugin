@@ -20,10 +20,10 @@
     "format": "prettier --write '{lib,test}/**/*.{js,ts}'",
     "prepare": "npm run build",
     "test": "tsc -p tsconfig-test.json && npm run test-manual && npm run test-functional && npm run test-system",
-    "test-functional": "jest test/functional -b",
-    "test-system": "jest test/system -b  --testTimeout=150000",
-    "test-fixtures": "tsc -p tsconfig-test.json && jest test/system/fixtures-with-wrappers.test.ts -b  --testTimeout=150000",
-    "test-manual": "jest test/manual -b"
+    "test-functional": "jest test/functional -b  --maxWorkers=2",
+    "test-system": "jest test/system -b  --testTimeout=150000  --maxWorkers=2",
+    "test-fixtures": "tsc -p tsconfig-test.json && jest test/system/fixtures-with-wrappers.test.ts -b  --testTimeout=150000 --maxWorkers=2",
+    "test-manual": "jest test/manual -b  --maxWorkers=2"
   },
   "author": "snyk.io",
   "license": "Apache-2.0",
