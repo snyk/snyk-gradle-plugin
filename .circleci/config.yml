@@ -19,7 +19,7 @@ defaults: &defaults
 windows_defaults: &windows_defaults
   environment:
     npm_config_loglevel: silent
-    GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx3072 -XX:+HeapDumpOnOutOfMemoryError"'
+    GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx3072 -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false'
   executor:
     name: win/default
     size: large
