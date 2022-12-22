@@ -244,6 +244,24 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
 }
+List getResolvedConfigs(resolvableConfigs){
+    List resolvedConfigs = []
+    resolvableConfigs.each({ config ->
+        ResolvedConfiguration resConf = config.getResolvedConfiguration()
+        debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
+        if (!resConf.hasError()) {
+            resolvedConfigs.add(resConf)
+            debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
+        } else {
+            // even if some dependencies fail to resolve, we prefer a partial result to none
+            LenientConfiguration lenientConf = resConf.getLenientConfiguration()
+            debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
+            debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
+            resolvedConfigs.add(lenientConf)
+        }
+    })
+    return resolvedConfigs
+}
 
 String formatPath(path) {
     return path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
@@ -259,17 +277,17 @@ Boolean isRootPath(path){
 def snykDepsConfExecuted = false
 allprojects { Project currProj ->
     debugLog("Current project: $currProj.name")
+    String onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
+    def confNameFilter = (project.hasProperty('configuration')
+        ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
+        : /.*/
+    )
+    def confAttrSpec = (project.hasProperty('confAttr')
+        ? confAttr.toLowerCase().split(',').collect { it.split(':') }
+        : null
+    )
     
     task snykResolvedDepsJson {
-        def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
-        def confNameFilter = (project.hasProperty('configuration')
-            ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
-            : /.*/
-        )
-        def confAttrSpec = (project.hasProperty('confAttr')
-            ? confAttr.toLowerCase().split(',').collect { it.split(':') }
-            : null
-        )
 
         doLast { task ->
             if (snykDepsConfExecuted) {
@@ -288,10 +306,6 @@ allprojects { Project currProj ->
             rootProject.allprojects.each { proj ->
                 findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
                     .each { conf ->
-                        if (!conf.hasProperty('attributes')) {
-                            // Gradle before version 3 does not support attributes
-                            return
-                        }
                         def attrs = conf.attributes
                         attrs.keySet().each({ attr ->
                             def value = attrs.getAttribute(attr)
@@ -334,21 +348,8 @@ allprojects { Project currProj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
-                def resolvedConfigs = []
-                resolvableConfigs.each({ config ->
-                    ResolvedConfiguration resConf = config.getResolvedConfiguration()
-                    debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
-                    if (!resConf.hasError()) {
-                        resolvedConfigs.add(resConf)
-                        debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
-                    } else {
-                        // even if some dependencies fail to resolve, we prefer a partial result to none
-                        LenientConfiguration lenientConf = resConf.getLenientConfiguration()
-                        debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
-                        debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
-                        resolvedConfigs.add(lenientConf)
-                    }
-                })
+                List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
+
                 if (resolvedConfigs.isEmpty() && !resolvableConfigs.isEmpty()) {
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
@@ -387,15 +388,6 @@ allprojects { Project currProj ->
     }
     
     task snykNormalizedResolvedDepsJson {
-        def onlyProj = project.hasProperty('onlySubProject') ? onlySubProject : null
-        def confNameFilter = (project.hasProperty('configuration')
-            ? Pattern.compile(configuration, Pattern.CASE_INSENSITIVE)
-            : /.*/
-        )
-        def confAttrSpec = (project.hasProperty('confAttr')
-            ? confAttr.toLowerCase().split(',').collect { it.split(':') }
-            : null
-        )
 
         doLast { task ->
             if (snykDepsConfExecuted) {
@@ -414,10 +406,6 @@ allprojects { Project currProj ->
             rootProject.allprojects.each { proj ->
                 findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
                     .each { Configuration conf ->
-                        if (!conf.hasProperty('attributes')) {
-                            // Gradle before version 3 does not support attributes
-                            return
-                        }
                         def attrs = conf.attributes
                         attrs.keySet().each({ attr ->
                             def value = attrs.getAttribute(attr)
@@ -460,20 +448,7 @@ allprojects { Project currProj ->
                 debugLog("processing project: name=$proj.name; path=$proj.path")
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
-                def resolvedConfigs = []
-                resolvableConfigs.each({ config ->
-                    ResolvedConfiguration resConf = config.resolvedConfiguration
-                    debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
-                    if (!resConf.hasError()) {
-                        resolvedConfigs.add(resConf)
-                        debugLog("Fully resolved config `$config.name' with: $resConf.firstLevelModuleDependencies")
-                    } else { 
-                        LenientConfiguration lenientConf = resConf.getLenientConfiguration()
-                        debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
-                        debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
-                        resolvedConfigs.add(lenientConf)
-                    }
-                })
+                List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
                 if (!resolvableConfigs.isEmpty() && resolvedConfigs.isEmpty()) {
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
