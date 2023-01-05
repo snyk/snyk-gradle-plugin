@@ -17,9 +17,6 @@ defaults: &defaults
   working_directory: ~/snyk-gradle-plugin
 
 windows_defaults: &windows_defaults
-  environment:
-    npm_config_loglevel: silent
-    GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx3072 -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false'
   executor:
     name: win/default
     size: large
@@ -132,6 +129,9 @@ jobs:
     <<: *windows_defaults
     environment:
       JDK: << parameters.jdk_version >>
+      npm_config_loglevel: silent
+      GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.daemon.idletimeout=180000 -Xmx3g -XX:+HeapDumpOnOutOfMemoryError -Dkotlin.compiler.execution.strategy=in-process'
+      JAVA_OPTS: ' -Xmx512M -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8'
     steps:
       - run: git config --global core.autocrlf false
       - checkout
@@ -153,7 +153,6 @@ jobs:
       - image: circleci/node:<< parameters.node_version >>
     environment:
       GRADLE_VERSION: << parameters.gradle_version >>
-      JDK: << parameters.jdk_version >>
     steps:
       - checkout
       - install_sdkman

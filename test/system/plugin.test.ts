@@ -15,9 +15,7 @@ test('run inspect()', async () => {
     nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
   });
 
-  expect(
-    nodeIds.indexOf('com.android.tools:annotations@25.3.0'),
-  ).toBeGreaterThanOrEqual(0);
+  expect(nodeIds.indexOf('batik:batik-dom@1.6')).toBeGreaterThanOrEqual(0);
 });
 
 test('run inspect() with gradle init script', async () => {
@@ -30,12 +28,10 @@ test('run inspect() with gradle init script', async () => {
     nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
   });
 
-  expect(
-    nodeIds.indexOf('com.android.tools:annotations@25.3.0'),
-  ).toBeGreaterThanOrEqual(0);
+  expect(nodeIds.indexOf('batik:batik-dom@1.6')).toBeGreaterThanOrEqual(0);
 });
 
-test('run inspect() with on project that depends on gradle init script', async () => {
+test('run inspect() on project that depends on gradle init script', async () => {
   const result = await inspect('.', path.join(withInitScript, 'build.gradle'), {
     initScript: path.join(withInitScript, 'init.gradle'),
   });
@@ -122,9 +118,7 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
     nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
   });
 
-  expect(
-    nodeIds.indexOf('com.android.tools.build:builder@2.3.0'),
-  ).toBeGreaterThanOrEqual(-1);
+  expect(nodeIds.indexOf('com.android.tools.build:builder@2.3.0')).toBe(-1);
   expect(
     nodeIds.indexOf('javax.servlet:servlet-api@2.5'),
   ).toBeGreaterThanOrEqual(0);
@@ -149,12 +143,10 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
     nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
   });
 
-  expect(
-    nodeIds.indexOf('com.android.tools.build:builder@2.3.0'),
-  ).toBeGreaterThanOrEqual(-1);
+  expect(nodeIds.indexOf('com.android.tools.build:builder@2.3.0')).toBe(-1);
   expect(
     nodeIds.indexOf('javax.servlet:servlet-api@2.5'),
-  ).toBeGreaterThanOrEqual(-1);
+  ).toBeGreaterThanOrEqual(0);
 
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
@@ -174,11 +166,11 @@ test('custom dependency resolution via configurations.all is supported', async (
   });
 
   expect(
-    nodeIds.indexOf('com.android.tools:annotations@25.2.0'),
-  ).toBeGreaterThanOrEqual(-1); //forced, normally 25.3.0
+    nodeIds.indexOf('commons-logging:commons-logging@1.0.3'),
+  ).toBeGreaterThanOrEqual(0); //forced, normally 1.0.4
 });
 
-test('custom dependency resolution via configurations* is NOT supported (known problem)', async () => {
+test('custom dependency resolution via configurations* is supported', async () => {
   // See the test case for more details
   const result = await inspect(
     '.',
@@ -195,8 +187,8 @@ test('custom dependency resolution via configurations* is NOT supported (known p
   });
 
   expect(
-    nodeIds.indexOf('com.android.tools:annotations@25.2.0'),
-  ).toBeGreaterThanOrEqual(-1); // 25.2.0 instead of 25.3.0 due of dependency conflict resolution
+    nodeIds.indexOf('commons-logging:commons-logging@1.0.3'),
+  ).toBeGreaterThanOrEqual(0); //forced, normally 1.0.4
 });
 
 test('repeated transitive lines terminated at duplicate node and labeled pruned', async () => {
