@@ -435,12 +435,19 @@ async function getAllDepsWithPlugin(
   root: string,
   targetFile: string,
   options: Options,
+  gradleVersion: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
     'init.gradle',
   );
-  const args = buildArgs(root, targetFile, injectedPluginFilePath, options);
+  const args = buildArgs(
+    root,
+    targetFile,
+    injectedPluginFilePath,
+    options,
+    gradleVersion,
+  );
 
   const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
@@ -488,7 +495,12 @@ async function getAllDeps(
   }
 
   try {
-    const extractedJSON = await getAllDepsWithPlugin(root, targetFile, options);
+    const extractedJSON = await getAllDepsWithPlugin(
+      root,
+      targetFile,
+      options,
+      gradleVersion,
+    );
     const versionBuildInfo = getVersionBuildInfo(gradleVersion);
     if (versionBuildInfo) {
       extractedJSON.versionBuildInfo = versionBuildInfo;
@@ -674,8 +686,9 @@ function buildArgs(
   targetFile: string | null,
   initGradlePath: string,
   options: Options,
+  gradleVersion: string,
 ) {
-  const args: string[] = [];
+  let args: string[] = [];
   const taskName = options.gradleNormalizeDeps
     ? 'snykNormalizedResolvedDepsJson'
     : 'snykResolvedDepsJson';
@@ -729,6 +742,10 @@ function buildArgs(
     args.push(...options.args);
   }
 
+  // Gradle 7 introduced configuration caching which we don't support yet
+  // If it is enabled in a gradle.properties file, it can be disabled on the command line with --no-configuration-cache
+  if (gradleVersion.match(/Gradle 7/)) args.push('--no-configuration-cache');
+
   // There might be a legacy --configuration option in 'args'.
   // It has been superseded by --configuration-matching option for Snyk CLI (see buildArgs),
   // but we are handling it to support the legacy setups.
@@ -743,6 +760,14 @@ function buildArgs(
       args[i] = `-Pconfiguration=^${args[i + 1]}$`;
       args[i + 1] = '';
     }
+  });
+
+  const unsupportedArgs = ['--configuration-cache'];
+  args = args.filter((arg) => {
+    if (unsupportedArgs.includes(arg)) {
+      debugLog(`Argument ${arg} not currently supported by Snyk.`);
+      return false;
+    } else return true;
   });
 
   return args.filter(Boolean);
