@@ -251,9 +251,9 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
     nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
   });
 
-  expect(
-    nodeIds.indexOf('com.android.tools:annotations@25.3.0'),
-  ).toBeGreaterThanOrEqual(-1);
+  expect(nodeIds.indexOf('com.google.guava:guava@18.0')).toBeGreaterThanOrEqual(
+    0,
+  );
 });
 
 test('allSubProjects incompatible with gradle-sub-project', async () => {
