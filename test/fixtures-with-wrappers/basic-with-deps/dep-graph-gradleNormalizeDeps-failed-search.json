@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": ".@unspecified",
+      "info": {
+        "name": ".",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8@unknown",
+      "info": {
+        "name": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8",
+        "version": "unknown"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": ".@unspecified",
+        "deps": [
+          {
+            "nodeId": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8@unknown"
+          }
+        ]
+      },
+      {
+        "nodeId": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8@unknown",
+        "pkgId": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8@unknown",
+        "deps": []
+      }
+    ]
+  }
+}
