@@ -173,7 +173,7 @@ jobs:
     steps:
       - checkout
       - install_deps
-      - run: sudo npm i -g semantic-release @semantic-release/exec pkg
+      - run: sudo npm i -g semantic-release@19 @semantic-release/exec pkg
       - run:
           name: Publish to GitHub
           command: semantic-release
