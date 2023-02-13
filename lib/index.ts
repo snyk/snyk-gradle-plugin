@@ -718,7 +718,8 @@ function buildArgs(
     args.push('--init-script', formattedInitScript);
   }
 
-  if (!options.daemon) {
+  const isWin = /^win/.test(os.platform());
+  if (isWin && !options.daemon) {
     args.push('--no-daemon');
   }
 
