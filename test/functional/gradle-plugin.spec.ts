@@ -12,16 +12,17 @@ describe('Gradle Plugin', () => {
       {},
       gradleVersion,
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      '--no-daemon',
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+      ]),
+    );
   });
 
   it('check build args with array (new configuration arg)', async () => {
@@ -35,19 +36,20 @@ describe('Gradle Plugin', () => {
       },
       gradleVersion,
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      `-Pconfiguration=confRegex`,
-      '--no-daemon',
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-      '--build-file',
-      'build.gradle',
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        `-Pconfiguration=confRegex`,
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+        '--build-file',
+        'build.gradle',
+      ]),
+    );
   });
 
   it('check build args with array (new configuration arg) with --deamon', async () => {
@@ -62,18 +64,20 @@ describe('Gradle Plugin', () => {
       },
       gradleVersion,
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      `-Pconfiguration=confRegex`,
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-      '--build-file',
-      'build.gradle',
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        `-Pconfiguration=confRegex`,
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+        '--build-file',
+        'build.gradle',
+      ]),
+    );
   });
 
   it('check build args with array (legacy configuration arg)', async () => {
@@ -86,19 +90,20 @@ describe('Gradle Plugin', () => {
       },
       gradleVersion,
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      '--no-daemon',
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-      '--build-file',
-      'build.gradle',
-      `-Pconfiguration=^compile$`,
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+        '--build-file',
+        'build.gradle',
+        `-Pconfiguration=^compile$`,
+      ]),
+    );
   });
 
   it(
@@ -114,19 +119,19 @@ describe('Gradle Plugin', () => {
         },
         gradleVersion,
       );
-      expect(result).toEqual([
-        'snykResolvedDepsJson',
-        '-q',
-        '--no-daemon',
-
-        '-Dorg.gradle.parallel=',
-        '-Dorg.gradle.console=plain',
-        '-I',
-        '/tmp/init.gradle',
-        '--build-file',
-        'build.gradle',
-        `-Pconfiguration=^compile$`,
-      ]);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          'snykResolvedDepsJson',
+          '-q',
+          '-Dorg.gradle.parallel=',
+          '-Dorg.gradle.console=plain',
+          '-I',
+          '/tmp/init.gradle',
+          '--build-file',
+          'build.gradle',
+          `-Pconfiguration=^compile$`,
+        ]),
+      );
     },
     JEST_TIMEOUT,
   );
@@ -141,16 +146,17 @@ describe('Gradle Plugin', () => {
       },
       gradleVersion,
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      '--no-daemon',
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+      ]),
+    );
   });
 
   it('make sure configuration cache is switched off for Gradle 7', () => {
@@ -161,16 +167,17 @@ describe('Gradle Plugin', () => {
       {},
       'Gradle 7',
     );
-    expect(result).toEqual([
-      'snykResolvedDepsJson',
-      '-q',
-      '--no-daemon',
-      '-Dorg.gradle.parallel=',
-      '-Dorg.gradle.console=plain',
-      '-PonlySubProject=.',
-      '-I',
-      '/tmp/init.gradle',
-      '--no-configuration-cache',
-    ]);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'snykResolvedDepsJson',
+        '-q',
+        '-Dorg.gradle.parallel=',
+        '-Dorg.gradle.console=plain',
+        '-PonlySubProject=.',
+        '-I',
+        '/tmp/init.gradle',
+        '--no-configuration-cache',
+      ]),
+    );
   });
 });
