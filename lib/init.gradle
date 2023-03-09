@@ -227,7 +227,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     }
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
     debugLog("end of list of configurations")
-    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
+    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which
     // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
     // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
     def resolvable = []
@@ -236,7 +236,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
         if (!it.canBeResolved) { return }
         try {
             debugLog("Trying to access resolvedConfiguration")
-            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode  
+            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode
             it.resolvedConfiguration
             resolvable.add(it)
             debugLog("Added resolvable configuration $it.name")
@@ -290,6 +290,14 @@ allprojects { Project currProj ->
     )
     
     task snykResolvedDepsJson {
+        rootProject.allprojects.each { proj ->
+            findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec).each {
+                if (it.canBeResolved) {
+                    dependsOn it
+                }
+            }
+        }
+
         doLast { task ->
             if (snykDepsConfExecuted) {
                 return
