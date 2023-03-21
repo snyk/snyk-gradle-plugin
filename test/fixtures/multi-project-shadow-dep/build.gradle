@@ -1,0 +1,9 @@
+apply from: "gradle/libraries.gradle"
+
+buildscript {
+  apply from: "$rootDir/gradle/libraries.gradle"
+
+ configurations.classpath {
+    resolutionStrategy.activateDependencyLocking()
+  }
+}

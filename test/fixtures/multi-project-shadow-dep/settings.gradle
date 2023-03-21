@@ -1,0 +1,11 @@
+dependencyResolutionManagement {
+  repositories {
+     mavenCentral()
+  }
+}
+
+rootProject.name = 'test'
+include ':module'
+include ':module:tools'
+
+includeBuild 'third-party'

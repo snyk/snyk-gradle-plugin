@@ -1,0 +1,6 @@
+ext {
+  libraries = [
+    flyway_core: 'test.third-party:flyway-core:INCLUDED'
+  ] as Map<String, Object>
+}
+

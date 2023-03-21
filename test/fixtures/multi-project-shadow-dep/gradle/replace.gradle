@@ -1,0 +1,21 @@
+def replaceArtifact(newArtifact) {
+  configurations {
+    it.each { configuration -> 
+      configuration.artifacts.each {
+        if (it.file.name.equals(jar.archiveFileName.get())) {
+          configuration.artifacts.remove(it)
+        }
+      }
+    }
+
+    runtimeElements {
+      outgoing.artifact(newArtifact)
+    }
+  
+     apiElements {
+       outgoing.artifact(newArtifact)
+     }
+  }
+}
+
+ext.replaceArtifact = this.&replaceArtifact
