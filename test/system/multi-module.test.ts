@@ -620,3 +620,20 @@ test('multi-project: correct deps for a nested subproject using --sub-project', 
   ).toBeGreaterThanOrEqual(0);
   expect(nodeIds.indexOf('org.apache.commons:commons-lang3@3.12.0')).toBe(-1);
 });
+
+test('multi-project shadow dep: process dependencies when a shadowed dep is used', async () => {
+  jest.setTimeout(15_000);
+
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('multi-project-shadow-dep'), 'build.gradle'),
+    { subProject: 'module' },
+  );
+
+  expect(result.dependencyGraph.rootPkg.name).toBe('./module');
+  expect(result.meta!.gradleProjectName).toBe('test/module');
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    'module',
+    'module/tools',
+  ]);
+});

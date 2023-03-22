@@ -1,0 +1,5 @@
+apply from: "../gradle/libraries.gradle"
+
+allprojects {
+    group 'test.third-party'
+}

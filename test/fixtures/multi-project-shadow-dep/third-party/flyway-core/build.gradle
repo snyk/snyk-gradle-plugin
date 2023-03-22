@@ -1,0 +1,22 @@
+plugins {
+  id 'java'
+  id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+apply from: "../../gradle/replace.gradle"
+
+configurations {
+  forShadowJar
+}
+
+shadowJar {
+  configurations = [project.configurations.forShadowJar]
+  dependencies {
+    exclude(dependency("org.slf4j:slf4j-api:.*"))
+  }
+}
+
+replaceArtifact(shadowJar)
+dependencies {
+  forShadowJar 'org.flywaydb:flyway-core:9.16.0'
+}

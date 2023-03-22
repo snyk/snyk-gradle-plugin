@@ -288,11 +288,12 @@ allprojects { Project currProj ->
     )
     
     task snykResolvedDepsJson {
-
         doLast { task ->
             if (snykDepsConfExecuted) {
                 return
             }
+
+            snykDepsConfExecuted = true
             debugLog('snykResolvedDepsJson task is executing via doLast')
             // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
             // First pass: scan all configurations that match the attribute filter and collect all attributes
@@ -383,7 +384,6 @@ allprojects { Project currProj ->
             ]
             def jsonDeps = JsonOutput.toJson(result)
             println("JSONDEPS $jsonDeps")
-            snykDepsConfExecuted = true
         }
     }
     
@@ -393,6 +393,8 @@ allprojects { Project currProj ->
             if (snykDepsConfExecuted) {
                 return
             }
+            
+            snykDepsConfExecuted = true
             debugLog('snykNormalizedResolvedDepsJson task is executing via doLast')
             // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
             // First pass: scan all configurations that match the attribute filter and collect all attributes
@@ -485,7 +487,6 @@ allprojects { Project currProj ->
 
             def jsonDeps = JsonOutput.toJson(result)
             println("JSONDEPS $jsonDeps")
-            snykDepsConfExecuted = true
         }
     }
 }
