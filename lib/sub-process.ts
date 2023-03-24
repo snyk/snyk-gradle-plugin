@@ -8,10 +8,13 @@ const debugLogging = debugModule('snyk-gradle-plugin');
 export function execute(
   command: string,
   args: string[],
-  options: { cwd?: string, env?: NodeJS.ProcessEnv },
+  options: { cwd?: string; env?: NodeJS.ProcessEnv },
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
-  const spawnOptions: childProcess.SpawnOptions = { shell: true, env: { ...process.env } };
+  const spawnOptions: childProcess.SpawnOptions = {
+    shell: true,
+    env: { ...process.env },
+  };
   if (options?.cwd) {
     spawnOptions.cwd = options.cwd;
   }
