@@ -42,6 +42,8 @@ export async function buildGraph(
     const item = queue.shift();
     if (!item) continue;
     let { id, parentId } = item;
+    // take a copy as id maybe mutated below and we need this id when finding childing in snykGraph
+    const snykGraphId = `${id}`;
     const node = snykGraph[id];
     if (!node) continue;
     let { name = 'unknown', version = 'unknown' } = node;
@@ -67,7 +69,7 @@ export async function buildGraph(
     }
     depGraphBuilder.addPkgNode({ name, version }, id);
     depGraphBuilder.connectDep(parentId, id);
-    queue.push(...findChildren(id, snykGraph)); // queue children
+    queue.push(...findChildren(snykGraphId, snykGraph)); // queue children
     visited.push(id);
   }
 
