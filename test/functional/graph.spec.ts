@@ -95,6 +95,42 @@ describe('buildGraph', () => {
     expected.connectDep('c@1', 'b@1:pruned');
     expect(received.equals(expected.build())).toBe(true);
   });
+  it('returns expected graph with coordinate map', async () => {
+    const received = await buildGraph(
+      {
+        'com.private:a@1': {
+          name: 'a',
+          version: '1',
+          parentIds: ['root-node'],
+        },
+        'com.public:b@1': {
+          name: 'com.public:b',
+          version: '1',
+          parentIds: ['com.private:a@1'],
+        },
+      },
+      'project',
+      '1.2.3',
+      {
+        'com.private:a@1': 'unknown:a@unknown',
+      },
+    );
+    const expected = new DepGraphBuilder(
+      { name: 'gradle' },
+      { name: 'project', version: '1.2.3' },
+    );
+    expected.addPkgNode(
+      { name: 'unknown:a', version: 'unknown' },
+      'unknown:a@unknown',
+    );
+    expected.connectDep(expected.rootNodeId, 'unknown:a@unknown');
+    expected.addPkgNode(
+      { name: 'com.public:b', version: '1' },
+      'com.public:b@1',
+    );
+    expected.connectDep('unknown:a@unknown', 'com.public:b@1');
+    expect(received.equals(expected.build())).toBe(true);
+  });
 });
 
 describe('findChildren', () => {
