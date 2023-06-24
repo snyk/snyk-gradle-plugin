@@ -47,7 +47,7 @@
     "debug": "^4.1.1",
     "p-map": "^4.0.0",
     "packageurl-js": "^1.0.0",
-    "shescape": "1.6.1",
+    "shescape": "1.7.1",
     "tmp": "0.2.1",
     "tslib": "^2.0.0"
   },
