@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: snyk-gradle-plugin
+  annotations:
+    github.com/project-slug: snyk/snyk-gradle-plugin
+    github.com/team-slug: snyk/os-managed
+spec:
+  type: snyk-cli-plugin
+  lifecycle: "-"
+  owner: os-managed
