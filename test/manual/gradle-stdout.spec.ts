@@ -39,7 +39,6 @@ describe('findProjectsInExtractedJSON', () => {
 
       const { defaultProject, projects, allSubProjectNames } =
         await processProjectsInExtractedJSON(
-          rootDir,
           jsonExtractedFromGradleStdout,
         );
 
