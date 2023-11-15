@@ -10,7 +10,7 @@ import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 
 import { MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
-import { buildGraph, SnykGraph } from './graph';
+import { buildGraph, GradleGraph } from './graph';
 import type {
   CoordinateMap,
   PomCoords,
@@ -190,7 +190,7 @@ interface ProjectsDict {
 
 interface GradleProjectInfo {
   depGraph?: DepGraph;
-  snykGraph?: SnykGraph; // snykGraph from gradle init task
+  gradleGraph?: GradleGraph; // gradleGraph from gradle init task
   targetFile: string;
   projectVersion: string;
 }
@@ -615,9 +615,9 @@ export async function processProjectsInExtractedJSON(
 ) {
   for (const projectId in extractedJSON.projects) {
     const { defaultProject, defaultProjectKey } = extractedJSON;
-    const { snykGraph, projectVersion } = extractedJSON.projects[projectId];
+    const { gradleGraph, projectVersion } = extractedJSON.projects[projectId];
 
-    if (!snykGraph) {
+    if (!gradleGraph) {
       continue;
     }
 
@@ -629,13 +629,13 @@ export async function processProjectsInExtractedJSON(
     }
 
     extractedJSON.projects[projectId].depGraph = await buildGraph(
-      snykGraph,
+      gradleGraph,
       rootPkgName,
       projectVersion,
       coordinateMap,
     );
     // this property usage ends here
-    delete extractedJSON.projects[projectId].snykGraph;
+    delete extractedJSON.projects[projectId].gradleGraph;
   }
 
   return extractedJSON;

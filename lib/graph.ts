@@ -2,7 +2,7 @@ import { DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
 
 import type { CoordinateMap } from './types';
 
-export interface SnykGraph {
+export interface GradleGraph {
   [id: string]: {
     name: string;
     version: string;
@@ -16,13 +16,13 @@ interface QueueItem {
 }
 
 export async function buildGraph(
-  snykGraph: SnykGraph,
+  gradleGraph: GradleGraph,
   rootPkgName: string,
   projectVersion: string,
   coordinateMap?: CoordinateMap,
 ) {
   const pkgManager: PkgManager = { name: 'gradle' };
-  const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
+  const isEmptyGraph = !gradleGraph || Object.keys(gradleGraph).length === 0;
 
   const depGraphBuilder = new DepGraphBuilder(pkgManager, {
     name: rootPkgName,
@@ -35,16 +35,16 @@ export async function buildGraph(
 
   const visited: string[] = [];
   const queue: QueueItem[] = [];
-  queue.push(...findChildren('root-node', snykGraph)); // queue direct dependencies
+  queue.push(...findChildren('root-node', gradleGraph)); // queue direct dependencies
 
   // breadth first search
   while (queue.length > 0) {
     const item = queue.shift();
     if (!item) continue;
     let { id, parentId } = item;
-    // take a copy as id maybe mutated below and we need this id when finding childing in snykGraph
-    const snykGraphId = `${id}`;
-    const node = snykGraph[id];
+    // take a copy as id maybe mutated below and we need this id when finding childing in GradleGraph
+    const gradleGraphId = `${id}`;
+    const node = gradleGraph[id];
     if (!node) continue;
     let { name = 'unknown', version = 'unknown' } = node;
 
@@ -69,7 +69,7 @@ export async function buildGraph(
     }
     depGraphBuilder.addPkgNode({ name, version }, id);
     depGraphBuilder.connectDep(parentId, id);
-    queue.push(...findChildren(snykGraphId, snykGraph)); // queue children
+    queue.push(...findChildren(gradleGraphId, gradleGraph)); // queue children
     visited.push(id);
   }
 
@@ -78,11 +78,11 @@ export async function buildGraph(
 
 export function findChildren(
   parentId: string,
-  snykGraph: SnykGraph,
+  gradleGraph: GradleGraph,
 ): QueueItem[] {
   const result: QueueItem[] = [];
-  for (const id of Object.keys(snykGraph)) {
-    const node = snykGraph[id];
+  for (const id of Object.keys(gradleGraph)) {
+    const node = gradleGraph[id];
     if (node?.parentIds?.includes(parentId)) {
       result.push({ id, parentId });
     }

@@ -2,6 +2,7 @@ import groovy.json.JsonOutput
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.gradle.util.GradleVersion
+import org.gradle.api.internal.artifacts.DefaultResolvedDependency
 
 // Snyk dependency resolution script for Gradle.
 // Tested on Gradle versions from v2.14 to v6.8.1
@@ -44,10 +45,10 @@ import org.gradle.util.GradleVersion
 
 // interface GradleProjectInfo {
 //   depGraph: DepGraph;
-//   snykGraph: SnykGraph;
+//   gradleGraph: GradleGraph;
 //   targetFile: string;
 // }
-// interface SnykGraph {
+// interface GradleGraph {
 //   [id: string]: {
 //     name: string;
 //     version: string;
@@ -55,47 +56,46 @@ import org.gradle.util.GradleVersion
 //   };
 // }
 
-class SnykGraph {
-    def nodes
-    def rootId
-    SnykGraph(rootId) {
-        this.nodes = [:]
+class GradleGraph {
+    Map<String, Map> nodes = [:]
+    String rootId
+
+    GradleGraph(String rootId) {
         this.rootId = rootId
     }
 
-    def setNode(key, value) {
-        if (!key) {
-            return
+    Map setNode(String key, Map value) {
+        if (!key || !value) {
+            return null
         }
-        if (this.nodes.get(key)) {
-            return this.nodes.get(key)
+
+        nodes.computeIfAbsent(key) { _ ->
+            ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
         }
-        if (!value) {
-            return
-        }
-        def vertex = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
-        this.nodes.put(key, vertex)
-        return vertex
     }
 
-    def setEdge(parentId, childId) {
-        if (!parentId || !childId || parentId == childId) {
+    void setEdge(String parentId, String childId) {
+        if (isInvalidEdge(parentId, childId)) {
             return
         }
-        // root-node will be the graphlib root that first-level deps will be attached to
-        if (parentId != this.rootId) {
-            def parentNode = this.setNode(parentId, null)
-            if (!parentNode) {
-                return
-            }
+
+        def parentNode = nodes.computeIfAbsent(parentId) { _ -> createEmptyNode() }
+        def childNode = nodes.computeIfAbsent(childId) { _ -> createEmptyNode() }
+
+        if (!childNode.parentIds.contains(parentId)) {
+            childNode.parentIds.add(parentId)
         }
-        def childNode = this.setNode(childId, null)
-        if (!childNode || childNode.parentIds.contains(parentId)) {
-            return
-        }
-        childNode.parentIds.add(parentId)
+    }
+
+    private boolean isInvalidEdge(String parentId, String childId) {
+        parentId == null || childId == null || parentId == childId || (parentId != rootId && !nodes.containsKey(parentId))
+    }
+
+    private Map createEmptyNode() {
+        ['name': null, 'version': null, 'parentIds': [] as Set]
     }
 }
+
 
 class Sha1Map {
     def coordinates
@@ -116,7 +116,7 @@ def hash(File file) {
         return md.digest().encodeHex().toString()
 }
 
-def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
+def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
     deps.each { dep ->
             dep.each { d ->
                 def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
@@ -135,7 +135,7 @@ def loadGraph(Iterable deps, SnykGraph graph, parentId, currentChain) {
     }
 }
 
-def loadSha1MapGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha1Map) {
+def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
         dep.each { d ->
             def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
@@ -165,19 +165,19 @@ def loadSha1MapGraph(Iterable deps, SnykGraph graph, parentId, currentChain, sha
     }
 }
 
-def getSnykGraph(Iterable deps) {
+def getGradleGraph(Iterable deps) {
     def rootId = 'root-node'
-    def graph = new SnykGraph(rootId)
+    def graph = new GradleGraph(rootId)
     def currentChain = new HashSet()
     loadGraph(deps, graph, rootId, currentChain)
 
     return graph.nodes
 }
 
-def getSnykGraphWithSha1Map(Iterable deps, Sha1Map sha1Map) {
+def getGradleGraphWithSha1Map(Iterable deps, Sha1Map sha1Map) {
     if (!sha1Map) sha1Map = new Sha1Map()
     def rootId = 'root-node'
-    def graph = new SnykGraph(rootId)
+    def graph = new GradleGraph(rootId)
     def currentChain = new HashSet()
     loadSha1MapGraph(deps, graph, rootId, currentChain, sha1Map)
 
@@ -361,7 +361,7 @@ allprojects { Project currProj ->
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
                 
-                def projGraph = getSnykGraph(nonemptyFirstLevelDeps)
+                def projGraph = getGradleGraph(nonemptyFirstLevelDeps)
                 String projKey = formatPath(proj.path)
                 // if project is root ":", it's formatted to "" - we can't have an empty string as a key so use default name
                 if (projKey == "") {
@@ -371,7 +371,7 @@ allprojects { Project currProj ->
 
                 projectsDict[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
-                    'snykGraph': projGraph,
+                    'gradleGraph': projGraph,
                     'projectVersion': proj.version.toString()
                 ]
             }
@@ -462,7 +462,7 @@ allprojects { Project currProj ->
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
                 
-                def projGraph = getSnykGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
+                def projGraph = getGradleGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
                 String projKey = formatPath(proj.path)
             
                 if (projKey == "") {
@@ -472,7 +472,7 @@ allprojects { Project currProj ->
 
                 projectsDict[projKey] = [
                     'targetFile': findProject(proj.path).buildFile.toString(),
-                    'snykGraph': projGraph.graph,
+                    'gradleGraph': projGraph.graph,
                     'projectVersion': proj.version.toString()
                 ]
             }
