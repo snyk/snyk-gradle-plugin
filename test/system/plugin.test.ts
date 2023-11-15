@@ -193,10 +193,10 @@ test('custom dependency resolution via configurations* is supported', async () =
 
 test('repeated transitive lines terminated at duplicate node and labeled pruned', async () => {
   const pathToFixture = fixtureDir('pruned-spring-app');
-  const result = await inspect('.', path.join(pathToFixture, 'build.gradle'));
   const expectedJson = JSON.parse(
     fs.readFileSync(path.join(pathToFixture, 'dep-graph.json'), 'utf-8'),
   );
   const expected = depGraphLib.createFromJSON(expectedJson);
+  const result = await inspect('.', path.join(pathToFixture, 'build.gradle'));
   expect(result.dependencyGraph?.equals(expected)).toBe(true);
 });

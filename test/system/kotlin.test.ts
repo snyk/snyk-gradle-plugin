@@ -15,7 +15,7 @@ if (isKotlinSupported) {
       '.',
       path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'),
     );
-    expect(result.dependencyGraph.rootPkg.name).toMatch('.');
+    expect(result.dependencyGraph.rootPkg.name).toMatch('gradle-kts');
     expect(result.meta!.gradleProjectName).toMatch('gradle-kts');
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];

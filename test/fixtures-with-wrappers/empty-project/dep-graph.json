@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "basic@unspecified",
       "info": {
-        "name": ".",
+        "name": "basic",
         "version": "unspecified"
       }
     }
@@ -17,7 +17,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "basic@unspecified",
         "deps": []
       }
     ]

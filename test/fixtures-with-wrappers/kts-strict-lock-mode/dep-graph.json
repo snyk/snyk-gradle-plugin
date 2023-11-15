@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@1.0.0-SNAPSHOT",
+      "id": "kts-strict-lock-mode@1.0.0-SNAPSHOT",
       "info": {
-        "name": ".",
+        "name": "kts-strict-lock-mode",
         "version": "1.0.0-SNAPSHOT"
       }
     },
@@ -101,7 +101,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@1.0.0-SNAPSHOT",
+        "pkgId": "kts-strict-lock-mode@1.0.0-SNAPSHOT",
         "deps": [
           {
             "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21"

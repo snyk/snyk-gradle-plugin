@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "with-lock-file@unspecified",
       "info": {
-        "name": ".",
+        "name": "with-lock-file",
         "version": "unspecified"
       }
     },
@@ -73,7 +73,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "with-lock-file@unspecified",
         "deps": [
           {
             "nodeId": "org.codehaus.groovy:groovy@3.0.3"
