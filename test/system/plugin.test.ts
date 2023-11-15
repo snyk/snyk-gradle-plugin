@@ -53,7 +53,7 @@ test('multi-config: both compile and runtime deps picked up by default', async (
     path.join(fixtureDir('multi-config'), 'build.gradle'),
   );
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
   expect(result.meta!.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -83,7 +83,7 @@ test('multi-config: only deps for specified conf are picked up (precise match)',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { 'configuration-matching': '^compileClasspath$' },
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
   expect(result.meta!.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -109,7 +109,7 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { 'configuration-matching': 'pileclass' },
   ); // case-insensitive regexp matching "compileClasspath"
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
   expect(result.meta!.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -135,7 +135,7 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
     path.join(fixtureDir('multi-config'), 'build.gradle'),
     { args: ['--configuration', 'compileClasspath'] },
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
   expect(result.meta!.gradleProjectName).toBe('multi-config');
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
