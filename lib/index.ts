@@ -11,7 +11,12 @@ import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 import { MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import { buildGraph, SnykGraph } from './graph';
-import type { CoordinateMap, PomCoords, Sha1Map, SnykHttpClient, } from './types';
+import type {
+  CoordinateMap,
+  PomCoords,
+  Sha1Map,
+  SnykHttpClient,
+} from './types';
 import { getMavenPackageInfo } from './search';
 import debugModule = require('debug');
 
@@ -93,12 +98,12 @@ export async function inspect(
 ): Promise<api.InspectResult> {
   debugLog(
     'Gradle inspect called with: ' +
-    JSON.stringify({
-      root,
-      targetFile,
-      allSubProjects: (options as any)?.allSubProjects,
-      subProject: (options as any)?.subProject,
-    }),
+      JSON.stringify({
+        root,
+        targetFile,
+        allSubProjects: (options as any)?.allSubProjects,
+        subProject: (options as any)?.subProject,
+      }),
   );
 
   if (!options) {
@@ -211,13 +216,13 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   if (jsonLine === null) {
     throw new Error(
       'No line prefixed with "JSONDEPS " was returned; full output:\n' +
-      stdoutText,
+        stdoutText,
     );
   }
   debugLog(
     'The command produced JSONDEPS output of ' +
-    jsonLine!.length +
-    ' characters',
+      jsonLine!.length +
+      ' characters',
   );
   return JSON.parse(jsonLine!);
 }
@@ -521,10 +526,7 @@ async function getAllDeps(
         concurrency: 100,
       });
     }
-    return await processProjectsInExtractedJSON(
-      extractedJSON,
-      coordinateMap,
-    );
+    return await processProjectsInExtractedJSON(extractedJSON, coordinateMap);
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -562,8 +564,8 @@ You have several options to make dependency resolution rules more specific:
 
 1. Run Snyk CLI tool with an attribute filter, e.g.:
     ${chalk.whiteBright(
-        'snyk test --all-sub-projects --configuration-attributes=buildtype:release,usage:java-runtime',
-      )}
+      'snyk test --all-sub-projects --configuration-attributes=buildtype:release,usage:java-runtime',
+    )}
 
 The filter will select matching attributes from those found in your configurations, use them
 to select matching configuration(s) to be used to resolve dependencies. Any sub-string of the full
@@ -580,8 +582,8 @@ ${jsonAttrsPretty}
 
 2. Run Snyk CLI tool for specific configuration(s), e.g.:
     ${chalk.whiteBright(
-        "snyk test --gradle-sub-project=my-app --configuration-matching='^releaseRuntimeClasspath$'",
-      )}
+      "snyk test --gradle-sub-project=my-app --configuration-matching='^releaseRuntimeClasspath$'",
+    )}
 
 (note that some configurations won't be present in every your subproject)
 
@@ -589,8 +591,8 @@ ${jsonAttrsPretty}
     ${chalk.whiteBright("implementation project(':mymodule')")}
 to
     ${chalk.whiteBright(
-        "implementation project(path: ':mymodule', configuration: 'default')",
-      )}`;
+      "implementation project(path: ':mymodule', configuration: 'default')",
+    )}`;
     }
 
     error.message = `${chalk.red.bold(

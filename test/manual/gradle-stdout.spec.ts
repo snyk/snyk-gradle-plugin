@@ -38,9 +38,7 @@ describe('findProjectsInExtractedJSON', () => {
       };
 
       const { defaultProject, projects, allSubProjectNames } =
-        await processProjectsInExtractedJSON(
-          jsonExtractedFromGradleStdout,
-        );
+        await processProjectsInExtractedJSON(jsonExtractedFromGradleStdout);
 
       expect(defaultProject).toEqual('tardis-master');
       expect(projects['tardis-master']?.targetFile).toEqual(`${targetFile}`);
