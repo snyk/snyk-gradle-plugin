@@ -258,7 +258,7 @@ workflows:
           context: nodejs-install
           <<: *test_matrix_unix
           requires:
-            - lint
+            - Lint
           <<: *filters_branches_ignore_main
 
       - test-windows:
@@ -266,7 +266,7 @@ workflows:
           context: nodejs-install
           <<: *test_matrix_win
           requires:
-            - lint
+            - Lint
           <<: *filters_branches_ignore_main
 
       - release:
