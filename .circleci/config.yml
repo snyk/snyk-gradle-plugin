@@ -27,16 +27,28 @@ windows_defaults: &windows_defaults
 test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
-      node_version: ['16.18', '18.18', '20.9']
-      jdk_version: ['8.0.292.j9-adpt']
-      gradle_version: ['4.10', '5.5', '6.2.1']
+      node_version: [ '16.18', '18.18', '20.9' ]
+      jdk_version: [ '8.0.292.j9-adpt' ]
+      gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win: &test_matrix_win
   matrix:
     parameters:
-      node_version: ['16', '18', '20']
-      jdk_version: ['8']
-      gradle_version: ['4.10', '5.5', '6.2.1']
+      node_version: [ '16', '18', '20' ]
+      jdk_version: [ '8' ]
+      gradle_version: [ '4.10', '5.5', '6.2.1' ]
+
+filters_branches_only_main: &filters_branches_only_main
+  filters:
+    branches:
+      only:
+        - main
+
+filters_branches_ignore_main: &filters_branches_ignore_main
+  filters:
+    branches:
+      ignore:
+        - main
 
 commands:
   node-install-packages:
@@ -233,27 +245,32 @@ workflows:
           context:
             - snyk-bot-slack
           channel: os-team-managed-alerts
+          <<: *filters_branches_ignore_main
 
       - lint:
           name: Lint
           context: nodejs-install
+          <<: *filters_branches_ignore_main
           node_version: '20.9'
 
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix
+          <<: *filters_branches_ignore_main
+          requires:
+            - lint
 
       - test-windows:
           name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_win
+          <<: *filters_branches_ignore_main
+          requires:
+            - lint
 
       - release:
           name: Release
           context: nodejs-app-release
           node_version: '20.9'
-          filters:
-            branches:
-              only:
-                - master
+          <<: *filters_branches_only_main
