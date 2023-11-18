@@ -250,24 +250,24 @@ workflows:
       - lint:
           name: Lint
           context: nodejs-install
-          <<: *filters_branches_ignore_main
           node_version: '20.9'
+          <<: *filters_branches_ignore_main
 
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix
-          <<: *filters_branches_ignore_main
           requires:
             - lint
+          <<: *filters_branches_ignore_main
 
       - test-windows:
           name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_win
-          <<: *filters_branches_ignore_main
           requires:
             - lint
+          <<: *filters_branches_ignore_main
 
       - release:
           name: Release
