@@ -27,20 +27,16 @@ windows_defaults: &windows_defaults
 test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
-#      node_version: ['16.18', '18.18', '20.9']
-      node_version: ['16.18']
+      node_version: ['16.18', '18.18', '20.9']
       jdk_version: ['8.0.292.j9-adpt']
-#      gradle_version: ['4.10', '5.5', '6.2.1']
-      gradle_version: ['6.2.1']
+      gradle_version: ['4.10', '5.5', '6.2.1']
 
 test_matrix_win: &test_matrix_win
   matrix:
     parameters:
-#      node_version: ['16', '18', '20']
-      node_version: ['16']
+      node_version: ['16', '18', '20']
       jdk_version: ['8']
-#      gradle_version: ['4.10', '5.5', '6.2.1']
-      gradle_version: ['6.2.1']
+      gradle_version: ['4.10', '5.5', '6.2.1']
 
 commands:
   node-install-packages:
@@ -74,14 +70,14 @@ commands:
       - restore_cache:
           name: Restoring Gradle binary from cache
           keys:
-            - chocolatey-gradle-cache-{{ arch }}-v2
+            - chocolatey-gradle-cache-{{ arch }}-v3
       - run:
           name: Installing Gradle
-          command: choco install gradle --version=<< parameters.gradle_version >>
+          command: choco install gradle --version=<< parameters.gradle_version >> --cache ~\AppData\Local\Temp\gradle
       - save_cache:
-          key: chocolatey-gradle-cache-{{ arch }}-v2
+          key: chocolatey-gradle-cache-{{ arch }}-v3
           paths:
-            - ~\AppData\Local\Temp\chocolatey\gradle
+            - ~\AppData\Local\Temp\gradle
 
   install_sdkman:
     description: Install SDKMAN
@@ -89,19 +85,20 @@ commands:
       - restore_cache:
           name: Restore Sdkman executable and binaries from cache
           keys:
-            - sdkman-cli-{{ arch }}-v1
+            - sdkman-cli-{{ arch }}-v2
       - run:
           name: Installing SDKMAN
           command: |
             if [ ! -d ~/.sdkman ]
             then
               curl -s "https://get.sdkman.io?rcupdate=false" | bash
+              sed -i -e 's/sdkman_auto_answer=false/sdkman_auto_answer=true/g' ~/.sdkman/etc/config
             fi
             echo -e '\nsource "/home/circleci/.sdkman/bin/sdkman-init.sh"' >> $BASH_ENV
             source $BASH_ENV
             sdk version
       - save_cache:
-          key: sdkman-cli-{{ arch }}-v1
+          key: sdkman-cli-{{ arch }}-v2
           paths:
             - ~/.sdkman
 
@@ -153,16 +150,14 @@ commands:
       - restore_cache:
           name: Restoring Java binary from cache
           keys:
-            - chocolatey-jdk-cache-{{ arch }}-v3
-          paths:
-            - ~\AppData\Local\Temp\chocolatey\Temurin*
+            - chocolatey-jdk-cache-{{ arch }}-v4
       - run:
           name: Installing JDK
-          command: choco install openjdk<< parameters.jdk_version >>
+          command: choco install openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
       - save_cache:
-          key: chocolatey-jdk-cache-{{ arch }}-v3
+          key: chocolatey-jdk-cache-{{ arch }}-v4
           paths:
-            - ~\AppData\Local\Temp\chocolatey
+            - ~\AppData\Local\Temp\jdk
 jobs:
   lint:
     <<: *defaults
@@ -214,9 +209,9 @@ jobs:
           gradle_version: << parameters.gradle_version >>
       - node-install-packages
       - show_node_version
-#      - run:
-#          name: Run tests
-#          command: npm test
+      - run:
+          name: Run tests
+          command: npm test
 
   release:
     <<: *defaults
@@ -233,16 +228,16 @@ workflows:
   version: 2
   test_and_release:
     jobs:
-#      - prodsec/secrets-scan:
-#          name: Scan repository for secrets
-#          context:
-#            - snyk-bot-slack
-#          channel: os-team-managed-alerts
+      - prodsec/secrets-scan:
+          name: Scan repository for secrets
+          context:
+            - snyk-bot-slack
+          channel: os-team-managed-alerts
 
-#      - lint:
-#          name: Lint
-#          context: nodejs-install
-#          node_version: '20'
+      - lint:
+          name: Lint
+          context: nodejs-install
+          node_version: '20.9'
 
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
@@ -257,7 +252,7 @@ workflows:
       - release:
           name: Release
           context: nodejs-app-release
-          node_version: '20'
+          node_version: '20.9'
           filters:
             branches:
               only:
