@@ -17,7 +17,7 @@ interface QueueItem {
 
 export async function buildGraph(
   snykGraph: SnykGraph,
-  projectName: string,
+  rootPkgName: string,
   projectVersion: string,
   coordinateMap?: CoordinateMap,
 ) {
@@ -25,7 +25,7 @@ export async function buildGraph(
   const isEmptyGraph = !snykGraph || Object.keys(snykGraph).length === 0;
 
   const depGraphBuilder = new DepGraphBuilder(pkgManager, {
-    name: projectName,
+    name: rootPkgName,
     version: projectVersion || '0.0.0',
   });
 

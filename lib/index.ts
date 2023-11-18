@@ -623,14 +623,14 @@ export async function processProjectsInExtractedJSON(
 
     const isSubProject = projectId !== defaultProjectKey;
 
-    let projectName = defaultProject;
+    let rootPkgName = defaultProject;
     if (isSubProject) {
-      projectName = `${defaultProject}/${projectId}`;
+      rootPkgName = `${defaultProject}/${projectId}`;
     }
 
     extractedJSON.projects[projectId].depGraph = await buildGraph(
       snykGraph,
-      projectName,
+      rootPkgName,
       projectVersion,
       coordinateMap,
     );
