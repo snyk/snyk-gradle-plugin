@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "custom-configuration@unspecified",
       "info": {
-        "name": ".",
+        "name": "custom-configuration",
         "version": "unspecified"
       }
     },
@@ -38,7 +38,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "custom-configuration@unspecified",
         "deps": [
           {
             "nodeId": "org.mockito:mockito-core@4.6.1"

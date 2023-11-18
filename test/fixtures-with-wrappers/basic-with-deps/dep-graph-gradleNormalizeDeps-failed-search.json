@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "basic-with-deps@unspecified",
       "info": {
-        "name": ".",
+        "name": "basic-with-deps",
         "version": "unspecified"
       }
     },
@@ -66,7 +66,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "basic-with-deps@unspecified",
         "deps": [
           {
             "nodeId": "unknown:guava-87e0fd1df874ea3cbe577702fe6f17068b790fd8@unknown"

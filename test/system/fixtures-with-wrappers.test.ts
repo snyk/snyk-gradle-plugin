@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { createFromJSON } from '@snyk/dep-graph';
 import { NeedleResponse } from 'needle';
 
 import { getPathToFixture } from '../common';
@@ -26,15 +25,10 @@ describe('inspect() fixtures', () => {
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
       const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
-      const expectedDepGraph = createFromJSON(expectedDepGraphJson);
 
       const result = await inspect('.', pathToBuildConfig);
 
-      const resultMatchesExpected =
-        result.dependencyGraph &&
-        expectedDepGraph.equals(result.dependencyGraph);
-
-      expect(resultMatchesExpected).toBeTruthy();
+      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
   });
 
@@ -56,17 +50,12 @@ describe('inspect() fixtures', () => {
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
       const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
-      const expectedDepGraph = createFromJSON(expectedDepGraphJson);
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,
       });
 
-      const resultMatchesExpected =
-        result.dependencyGraph &&
-        expectedDepGraph.equals(result.dependencyGraph);
-
-      expect(resultMatchesExpected).toBeTruthy();
+      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
   });
 
@@ -97,17 +86,12 @@ describe('inspect() fixtures', () => {
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
       const expectedDepGraphJson = require(`${fixturePath}/dep-graph-gradleNormalizeDeps-failed-search.json`);
-      const expectedDepGraph = createFromJSON(expectedDepGraphJson);
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,
       });
 
-      const resultMatchesExpected =
-        result.dependencyGraph &&
-        expectedDepGraph.equals(result.dependencyGraph);
-
-      expect(resultMatchesExpected).toBeTruthy();
+      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
   });
 });

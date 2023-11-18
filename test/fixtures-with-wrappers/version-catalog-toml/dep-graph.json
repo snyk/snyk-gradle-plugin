@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "version-catalog-toml@unspecified",
       "info": {
-        "name": ".",
+        "name": "version-catalog-toml",
         "version": "unspecified"
       }
     },
@@ -94,7 +94,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "version-catalog-toml@unspecified",
         "deps": [
           {
             "nodeId": "org.mockito:mockito-core@4.5.1"

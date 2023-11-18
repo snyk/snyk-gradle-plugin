@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "repo-content-filtering@unspecified",
       "info": {
-        "name": ".",
+        "name": "repo-content-filtering",
         "version": "unspecified"
       }
     },
@@ -80,7 +80,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "repo-content-filtering@unspecified",
         "deps": [
           {
             "nodeId": "com.google.guava:guava@30.1.1-jre"

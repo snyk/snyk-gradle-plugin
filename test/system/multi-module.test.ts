@@ -10,7 +10,7 @@ test('multi-project, explicitly targeting a subproject build file', async () => 
     '.',
     path.join(multiProject, 'subproj', 'build.gradle'),
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
   expect(result.meta!.gradleProjectName).toBe('subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
 
@@ -27,7 +27,7 @@ test('multi-project, explicitly targeting a subproject build file', async () => 
 
 test('multi-project, ran from root, targeting subproj', async () => {
   const result = await inspect(multiProject, 'subproj/build.gradle');
-  expect(result.dependencyGraph.rootPkg.name).toBe('multi-project');
+  expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
   expect(result.meta!.gradleProjectName).toBe('subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
 
@@ -71,7 +71,7 @@ test('multi-project: only sub-project has deps and they are returned', async () 
     path.join(multiProject, 'build.gradle'),
     options,
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
   expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
 
@@ -89,7 +89,7 @@ test('multi-project: only sub-project has deps and they are returned', async () 
 test('multi-project: only sub-project has deps, none returned for main', async () => {
   const result = await inspect('.', path.join(multiProject, 'build.gradle'));
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
 
   expect(result.meta!.gradleProjectName).toBe('root-proj');
 
@@ -117,7 +117,7 @@ if (wrapperIsCompatibleWithJvm) {
       '.',
       path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'),
     );
-    expect(result.dependencyGraph.rootPkg.name).toBe('.');
+    expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
     expect(result.meta!.gradleProjectName).toBe('root-proj');
     expect(result.meta!.versionBuildInfo!.gradleVersion).toBe('5.4.1');
     expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
@@ -134,7 +134,7 @@ test('multi-project: parallel is handled correctly', async () => {
     fixtureDir('multi-project-parallel'),
     'build.gradle',
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('multi-project-parallel');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
   expect(result.meta!.gradleProjectName).toBe('root-proj');
 
   // double parsing to have access to internal depGraph data, no methods available to properly
@@ -154,7 +154,7 @@ test('multi-project: only sub-project has deps and they are returned space needs
   );
 
   expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
-  expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
   expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -175,7 +175,7 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
   // It's an array, so we have to scan
   expect(result.scannedProjects.length).toBe(2);
   for (const p of result.scannedProjects) {
-    if (p.depGraph.rootPkg.name === '.') {
+    if (p.depGraph.rootPkg.name === 'root-proj') {
       expect(p.meta!.gradleProjectName).toBe('root-proj');
       // double parsing to have access to internal depGraph data, no methods available to properly
       // return the deps nodeIds list that belongs to a node
@@ -185,7 +185,7 @@ test('multi-project: deps for both projects are returned with allSubProjects fla
       // TODO(kyegupov): when the project name issue is solved, change the assertion to:
       // expect(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     } else {
-      expect(p.depGraph.rootPkg.name).toBe('./subproj');
+      expect(p.depGraph.rootPkg.name).toBe('root-proj/subproj');
       expect(p.meta!.gradleProjectName).toBe('root-proj/subproj');
 
       const pkgs = p.depGraph.getDepPkgs();
@@ -212,7 +212,9 @@ test('single-project: array of one is returned with allSubProjects flag', async 
     { allSubProjects: true },
   );
   expect(result.scannedProjects.length).toBe(1);
-  expect(result.scannedProjects[0].depGraph.rootPkg.name).toBe('.');
+  expect(result.scannedProjects[0].depGraph.rootPkg.name).toBe(
+    'api-configuration',
+  );
   expect(result.scannedProjects[0].meta!.gradleProjectName).toBe(
     'api-configuration',
   );
@@ -242,7 +244,7 @@ test('multi-project-some-unscannable: gradle-sub-project for a good subproject w
     'subproj-fail',
   ]);
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
   expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
@@ -282,12 +284,12 @@ test('multi-project: parallel with allSubProjects produces multiple results with
   }
   expect(names).toEqual(
     new Set<string>([
-      'multi-project-parallel',
-      'multi-project-parallel/subproj0',
-      'multi-project-parallel/subproj1',
-      'multi-project-parallel/subproj2',
-      'multi-project-parallel/subproj3',
-      'multi-project-parallel/subproj4',
+      'root-proj',
+      'root-proj/subproj0',
+      'root-proj/subproj1',
+      'root-proj/subproj2',
+      'root-proj/subproj3',
+      'root-proj/subproj4',
     ]),
   );
   expect(newNames).toEqual(
@@ -310,7 +312,7 @@ test('multi-project: allSubProjects + configuration', async () => {
   // It's an array, so we have to scan
   expect(result.scannedProjects.length).toBe(2);
   for (const p of result.scannedProjects) {
-    if (p.depGraph.rootPkg.name === '.') {
+    if (p.depGraph.rootPkg.name === 'root-proj') {
       expect(p.meta!.gradleProjectName).toBe('root-proj');
 
       // double parsing to have access to internal depGraph data, no methods available to properly
@@ -323,7 +325,7 @@ test('multi-project: allSubProjects + configuration', async () => {
       // expect(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
     } else {
       // sub project name is included in the root pkg name
-      expect(p.depGraph.rootPkg.name).toBe('./subproj');
+      expect(p.depGraph.rootPkg.name).toBe('root-proj/subproj');
       // new sub project name is included in the root pkg name
       expect(p.meta!.gradleProjectName).toBe('root-proj/subproj');
 
@@ -350,7 +352,7 @@ test('multi-project-dependency-cycle: scanning the main project works fine', asy
     path.join(fixtureDir('multi-project-dependency-cycle'), 'build.gradle'),
     {},
   );
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
   expect(result.meta!.gradleProjectName).toBe('root-proj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
 
@@ -376,7 +378,7 @@ test('multi-project-dependency-cycle: scanning all subprojects works fine', asyn
   expect(result.scannedProjects.length).toBe(2);
 
   for (const p of result.scannedProjects) {
-    if (p.depGraph.rootPkg.name === '.') {
+    if (p.depGraph.rootPkg.name === 'root-proj') {
       expect(p.meta!.gradleProjectName).toBe('root-proj');
       // double parsing to have access to internal depGraph data, no methods available to properly
       // return the deps nodeIds list that belongs to a node
@@ -544,7 +546,7 @@ test('multi-project: correct deps for subproject with the same name, one depende
     ),
   );
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('.');
+  expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
   expect(result.meta!.gradleProjectName).toBe('subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
 
@@ -570,7 +572,9 @@ test('multi-project: correct deps for subproject with the same name, one depende
     { subProject: 'subproj' },
   );
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('./subproj');
+  expect(result.dependencyGraph.rootPkg.name).toBe(
+    'subprojects-same-name/subproj',
+  );
   expect(result.meta!.gradleProjectName).toBe('subprojects-same-name/subproj');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
@@ -601,7 +605,9 @@ test('multi-project: correct deps for a nested subproject using --sub-project', 
     { subProject: 'lib' },
   );
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('./greeter/lib');
+  expect(result.dependencyGraph.rootPkg.name).toBe(
+    'gradle-sandbox/greeter/lib',
+  );
   expect(result.meta!.gradleProjectName).toBe('gradle-sandbox/greeter/lib');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'greeter',
@@ -630,7 +636,7 @@ test('multi-project shadow dep: process dependencies when a shadowed dep is used
     { subProject: 'module' },
   );
 
-  expect(result.dependencyGraph.rootPkg.name).toBe('./module');
+  expect(result.dependencyGraph.rootPkg.name).toBe('test/module');
   expect(result.meta!.gradleProjectName).toBe('test/module');
   expect(result.plugin.meta!.allSubProjectNames).toEqual([
     'module',

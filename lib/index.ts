@@ -6,7 +6,6 @@ import * as tmp from 'tmp';
 import * as pMap from 'p-map';
 import * as chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
-import debugModule = require('debug');
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 
 import { MissingSubProjectError } from './errors';
@@ -19,6 +18,7 @@ import type {
   SnykHttpClient,
 } from './types';
 import { getMavenPackageInfo } from './search';
+import debugModule = require('debug');
 
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -526,11 +526,7 @@ async function getAllDeps(
         concurrency: 100,
       });
     }
-    return await processProjectsInExtractedJSON(
-      root,
-      extractedJSON,
-      coordinateMap,
-    );
+    return await processProjectsInExtractedJSON(extractedJSON, coordinateMap);
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -614,7 +610,6 @@ ${chalk.red.bold(mainErrorMessage)}`;
 }
 
 export async function processProjectsInExtractedJSON(
-  root: string,
   extractedJSON: JsonDepsScriptResult,
   coordinateMap?: CoordinateMap,
 ) {
@@ -626,21 +621,16 @@ export async function processProjectsInExtractedJSON(
       continue;
     }
 
-    const invalidValues = [null, undefined, ''];
-    const isValidRootDir = invalidValues.indexOf(root) === -1;
     const isSubProject = projectId !== defaultProjectKey;
 
-    let projectName = isValidRootDir ? path.basename(root) : defaultProject;
-
+    let rootPkgName = defaultProject;
     if (isSubProject) {
-      projectName = isValidRootDir
-        ? `${path.basename(root)}/${projectId}`
-        : `${defaultProject}/${projectId}`;
+      rootPkgName = `${defaultProject}/${projectId}`;
     }
 
     extractedJSON.projects[projectId].depGraph = await buildGraph(
       snykGraph,
-      projectName,
+      rootPkgName,
       projectVersion,
       coordinateMap,
     );

@@ -1,13 +1,13 @@
 {
   "graph": {
-    "nodes": [{ "deps": [], "nodeId": "root-node", "pkgId": ".@1.0" }],
+    "nodes": [{ "deps": [], "nodeId": "root-node", "pkgId": "kts-version-catalog-module@1.0" }],
     "rootNodeId": "root-node"
   },
   "pkgManager": { "name": "gradle" },
   "pkgs": [
     {
-      "id": ".@1.0",
-      "info": { "name": ".", "version": "1.0" }
+      "id": "kts-version-catalog-module@1.0",
+      "info": { "name": "kts-version-catalog-module", "version": "1.0" }
     }
   ],
   "schemaVersion": "1.2.0"

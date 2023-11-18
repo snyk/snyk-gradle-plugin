@@ -5,9 +5,9 @@
   },
   "pkgs": [
     {
-      "id": ".@unspecified",
+      "id": "no-build-gradle-in-root@unspecified",
       "info": {
-        "name": ".",
+        "name": "no-build-gradle-in-root",
         "version": "unspecified"
       }
     }
@@ -17,7 +17,7 @@
     "nodes": [
       {
         "nodeId": "root-node",
-        "pkgId": ".@unspecified",
+        "pkgId": "no-build-gradle-in-root@unspecified",
         "deps": []
       }
     ]
