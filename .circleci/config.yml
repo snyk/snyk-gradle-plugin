@@ -1,6 +1,7 @@
 version: 2.1
 
 orbs:
+  node: circleci/node@5.1.0
   win: circleci/windows@2.4.0
   prodsec: snyk/prodsec-orb@1.0
 
@@ -21,40 +22,46 @@ windows_defaults: &windows_defaults
   executor:
     name: win/default
     size: large
+    shell: bash
 
 test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
-      node_version: ['12', '16']
-      jdk_version: ['8.0.292.j9-adpt']
-      gradle_version: ['3.4.1', '4.10', '5.5', '6.2.1']
+      node_version: [ '16.18', '18.18', '20.9' ]
+      jdk_version: [ '8.0.292.j9-adpt' ]
+      gradle_version: [ '4.10', '5.5', '6.2.1' ]
+
 test_matrix_win: &test_matrix_win
   matrix:
     parameters:
-      node_version: ['12', '16']
-      jdk_version: ['8']
-      gradle_version: ['4.10', '5.5', '6.2.1']
+      node_version: [ '16', '18', '20' ]
+      jdk_version: [ '8' ]
+      gradle_version: [ '4.10', '5.5', '6.2.1' ]
+
+filters_branches_only_main: &filters_branches_only_main
+  filters:
+    branches:
+      only:
+        - main
+
+filters_branches_ignore_main: &filters_branches_ignore_main
+  filters:
+    branches:
+      ignore:
+        - main
 
 commands:
-  install_deps:
-    description: Install dependencies
+  node-install-packages:
+    description: Install NPM packages
     steps:
       - run:
-          name: Install dependencies
-          command: npm install
-  install_node_npm:
-    description: Install correct Node version
-    parameters:
-      node_version:
-        type: string
-        default: ''
-    steps:
-      - run:
-          name: Install correct version of Node
-          command: nvm install << parameters.node_version >>
-      - run:
-          name: Use correct version of Node
-          command: nvm use << parameters.node_version >>
+          # The Node orb handles all the boring work for us, but they do not understand repos with no package-lock.json
+          name: Create fake package-lock.json
+          command: touch package-lock.json
+      - node/install-packages:
+          cache-only-lockfile: false
+          override-ci-command: npm i
+
   show_node_version:
     description: Log Node and npm version
     steps:
@@ -64,6 +71,7 @@ commands:
       - run:
           name: NPM version
           command: npm --version
+
   install_gradle_windows:
     description: Install gradle
     parameters:
@@ -71,29 +79,41 @@ commands:
         type: string
         default: ''
     steps:
-      - run: choco install gradle --version=<< parameters.gradle_version >>
+      - restore_cache:
+          name: Restoring Gradle binary from cache
+          keys:
+            - chocolatey-gradle-cache-{{ arch }}-v3
+      - run:
+          name: Installing Gradle
+          command: choco install gradle --version=<< parameters.gradle_version >> --cache ~\AppData\Local\Temp\gradle
+      - save_cache:
+          key: chocolatey-gradle-cache-{{ arch }}-v3
+          paths:
+            - ~\AppData\Local\Temp\gradle
+
   install_sdkman:
     description: Install SDKMAN
     steps:
       - restore_cache:
-          name: Restore SDKMan executable
+          name: Restore Sdkman executable and binaries from cache
           keys:
-            - sdkman-cli-{{ arch }}-v1
+            - sdkman-cli-{{ arch }}-v2
       - run:
           name: Installing SDKMAN
           command: |
-            if ! command -v sdk &> /dev/null
+            if [ ! -d ~/.sdkman ]
             then
               curl -s "https://get.sdkman.io?rcupdate=false" | bash
+              sed -i -e 's/sdkman_auto_answer=false/sdkman_auto_answer=true/g' ~/.sdkman/etc/config
             fi
-            
             echo -e '\nsource "/home/circleci/.sdkman/bin/sdkman-init.sh"' >> $BASH_ENV
             source $BASH_ENV
-            sdk list java
+            sdk version
       - save_cache:
-          key: sdkman-cli-{{ arch }}-v1
+          key: sdkman-cli-{{ arch }}-v2
           paths:
             - ~/.sdkman
+
   install_gradle_unix:
     description: Install gradle
     parameters:
@@ -101,9 +121,18 @@ commands:
         type: string
         default: ''
     steps:
+      - restore_cache:
+          name: Restore Gradle binary from cache
+          keys:
+            - gradle-cli-{{ arch }}-v1
       - run:
           name: Installing Gradle
           command: sdk install gradle << parameters.gradle_version >>
+      - save_cache:
+          key: gradle-cli-{{ arch }}-v1
+          paths:
+            - ~/.sdkman/candidates/gradle/
+
   install_jdk_unix:
     description: Install JDK
     parameters:
@@ -111,9 +140,18 @@ commands:
         type: string
         default: ''
     steps:
+      - restore_cache:
+          name: Restore Java binary from cache
+          keys:
+            - java-cli-{{ arch }}-v1
       - run:
           name: Installing JDK
           command: sdk install java << parameters.jdk_version >>
+      - save_cache:
+          key: java-cli-{{ arch }}-v1
+          paths:
+            - ~/.sdkman/candidates/java/
+
   install_jdk_windows:
     description: Install JDK
     parameters:
@@ -121,22 +159,30 @@ commands:
         type: string
         default: ''
     steps:
+      - restore_cache:
+          name: Restoring Java binary from cache
+          keys:
+            - chocolatey-jdk-cache-{{ arch }}-v4
       - run:
           name: Installing JDK
-          command: choco install openjdk<< parameters.jdk_version >>
-
+          command: choco install openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+      - save_cache:
+          key: chocolatey-jdk-cache-{{ arch }}-v4
+          paths:
+            - ~\AppData\Local\Temp\jdk
 jobs:
   lint:
     <<: *defaults
     docker:
-      - image: circleci/node:<< parameters.node_version >>
+      - image: cimg/node:<< parameters.node_version >>
     steps:
       - checkout
-      - install_deps
+      - node-install-packages
       - show_node_version
       - run:
           name: Run lint
           command: npm run lint
+
   test-windows:
     <<: *defaults
     <<: *windows_defaults
@@ -148,14 +194,14 @@ jobs:
     steps:
       - run: git config --global core.autocrlf false
       - checkout
-      - install_node_npm:
-          node_version: << parameters.node_version >>
       - install_jdk_windows:
           jdk_version: << parameters.jdk_version >>
       - install_gradle_windows:
           gradle_version: << parameters.gradle_version >>
-      - install_deps
+      - node/install:
+          node-version: << parameters.node_version >>
       - show_node_version
+      - node-install-packages
       - run:
           name: Run tests
           command: npm test
@@ -163,7 +209,7 @@ jobs:
   test-unix:
     <<: *defaults
     docker:
-      - image: circleci/node:<< parameters.node_version >>
+      - image: cimg/node:<< parameters.node_version >>
     environment:
       GRADLE_VERSION: << parameters.gradle_version >>
     steps:
@@ -173,7 +219,7 @@ jobs:
           jdk_version: << parameters.jdk_version >>
       - install_gradle_unix:
           gradle_version: << parameters.gradle_version >>
-      - install_deps
+      - node-install-packages
       - show_node_version
       - run:
           name: Run tests
@@ -182,10 +228,9 @@ jobs:
   release:
     <<: *defaults
     docker:
-      - image: circleci/node:<< parameters.node_version >>
+      - image: cimg/node:<< parameters.node_version >>
     steps:
       - checkout
-      - install_deps
       - run: sudo npm i -g semantic-release@19 @semantic-release/exec pkg
       - run:
           name: Publish to GitHub
@@ -200,24 +245,32 @@ workflows:
           context:
             - snyk-bot-slack
           channel: os-team-managed-alerts
+          <<: *filters_branches_ignore_main
+
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '12'
+          node_version: '20.9'
+          <<: *filters_branches_ignore_main
+
       - test-unix:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix
+          requires:
+            - Lint
+          <<: *filters_branches_ignore_main
+
       - test-windows:
           name: Test OS=Windows Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_win
+          requires:
+            - Lint
+          <<: *filters_branches_ignore_main
 
       - release:
           name: Release
           context: nodejs-app-release
-          node_version: '14.17.6'
-          filters:
-            branches:
-              only:
-                - master
+          node_version: '20.9'
+          <<: *filters_branches_only_main
