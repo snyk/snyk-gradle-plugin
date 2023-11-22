@@ -565,6 +565,26 @@ test('multi-project: correct deps for subproject with the same name, one depende
   expect(nodeIds.indexOf('joda-time:joda-time@2.2')).toBe(-1);
 });
 
+test('multi-project: right subproject to scan, using --sub-project', async () => {
+  const result = await inspect(
+    '.',
+    path.join(fixtureDir('subprojects-same-name'), 'build.gradle'),
+    { subProject: 'greeter/subproj' },
+  );
+
+  expect(result.dependencyGraph.rootPkg.name).toBe(
+    'subprojects-same-name/greeter/subproj',
+  );
+  expect(result.meta!.gradleProjectName).toBe(
+    'subprojects-same-name/greeter/subproj',
+  );
+  expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    'greeter',
+    'subproj',
+    'greeter/subproj',
+  ]);
+});
+
 test('multi-project: correct deps for subproject with the same name, one dependent on another, using --sub-project', async () => {
   const result = await inspect(
     '.',
