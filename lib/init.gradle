@@ -334,7 +334,7 @@ allprojects { Project currProj ->
             def shouldScanProject = {
                 onlyProj == null ||
                 (onlyProj == '.' && it.name == defaultProjectName) ||
-                it.name == onlyProj
+                formatPath(it.path) == onlyProj
             }
             def projectsDict = [:]
 
