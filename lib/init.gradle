@@ -405,20 +405,14 @@ allprojects { Project currProj ->
             // when resolving the project A, so that it selects a concrete variant of dependency B.
             def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
             def attributesAsStrings = [:] // Map<String, Set<string>>
-            rootProject.allprojects.each { proj ->
-                findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-                    .each { Configuration conf ->
-                        def attrs = conf.attributes
-                        attrs.keySet().each({ attr ->
-                            def value = attrs.getAttribute(attr)
-                            if (!allConfigurationAttributes.containsKey(attr)) {
-                                allConfigurationAttributes[attr] = new HashSet()
-                                attributesAsStrings[attr.name] = new HashSet()
-                            }
-                            allConfigurationAttributes[attr].add(value)
-                            attributesAsStrings[attr.name].add(value.toString())
-                        })
+
+            rootProject.allprojects.each { Project project ->
+                findMatchingConfigs(project.configurations, confNameFilter, confAttrSpec).each { Configuration config ->
+                    config.attributes.each { Attribute<?> attr, Object value ->
+                        allConfigurationAttributes.computeIfAbsent(attr) { new HashSet<>() }.add(value)
+                        attributesAsStrings.computeIfAbsent(attr.name) { new HashSet<>() }.add(value.toString())
                     }
+                }
             }
 
             String defaultProjectName = task.project.name
