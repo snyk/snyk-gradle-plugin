@@ -308,7 +308,7 @@ allprojects { Project currProj ->
                 findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
                     .each { conf ->
                         def attrs = conf.attributes
-                        attrs.keySet().each({ attr ->
+                        attrs.keySet().toList().each({ attr ->
                             def value = attrs.getAttribute(attr)
                             if (!allConfigurationAttributes.containsKey(attr)) {
                                 allConfigurationAttributes[attr] = new HashSet()
