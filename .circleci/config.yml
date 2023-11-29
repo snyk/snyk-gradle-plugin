@@ -231,7 +231,7 @@ jobs:
       - image: cimg/node:<< parameters.node_version >>
     steps:
       - checkout
-      - run: sudo npm i -g semantic-release@19 @semantic-release/exec pkg
+      - run: sudo npm i -g semantic-release@22 @semantic-release/exec pkg
       - run:
           name: Publish to GitHub
           command: semantic-release
