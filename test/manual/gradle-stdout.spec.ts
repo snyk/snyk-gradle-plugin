@@ -19,7 +19,7 @@ describe('findProjectsInExtractedJSON', () => {
         projects: {
           'tardis-master': {
             targetFile,
-            gradleGraph: {
+            snykGraph: {
               'com.tardis:b@1.0.13': {
                 name: 'com.tardis:b',
                 version: '1.0.13',
