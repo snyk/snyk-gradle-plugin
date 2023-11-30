@@ -233,6 +233,9 @@ jobs:
       - checkout
       - run: sudo npm i -g semantic-release@22 @semantic-release/exec pkg
       - run:
+          name: Install NPM packages
+          command: npm i
+      - run:
           name: Publish to GitHub
           command: semantic-release
 
