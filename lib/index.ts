@@ -735,7 +735,8 @@ function buildArgs(
 
   // Gradle 7 introduced configuration caching which we don't support yet
   // If it is enabled in a gradle.properties file, it can be disabled on the command line with --no-configuration-cache
-  if (gradleVersion.match(/Gradle 7/)) args.push('--no-configuration-cache');
+  if (gradleVersion.match(/Gradle 7/) || gradleVersion.match(/Gradle 8/))
+    args.push('--no-configuration-cache');
 
   // There might be a legacy --configuration option in 'args'.
   // It has been superseded by --configuration-matching option for Snyk CLI (see buildArgs),

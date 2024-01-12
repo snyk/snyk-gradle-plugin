@@ -1,5 +1,4 @@
 apply plugin: 'java'
-apply plugin: 'maven'
 
 group = 'com.github.jitpack'
 
@@ -65,10 +64,10 @@ dependencies.attributesSchema {
 
 
 dependencies {
-  compile 'com.google.guava:guava:18.0'
+  implementation 'com.google.guava:guava:18.0'
   apiConf 'commons-httpclient:commons-httpclient:3.1'
   runtimeConf 'org.apache.commons:commons-lang3:3.8.1'
-  compile project(':subproj')
+  implementation project(':subproj')
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {

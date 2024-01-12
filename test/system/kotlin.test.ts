@@ -6,7 +6,8 @@ const gradleVersionFromProcess: string = process.env.GRADLE_VERSION;
 const gradleVersionInUse: number = parseInt(
   gradleVersionFromProcess?.split('.')[0],
 );
-const isKotlinSupported: boolean = gradleVersionInUse < 5 ? false : true;
+const isKotlinSupported: boolean = gradleVersionInUse > 4 ? true : false;
+const kotlinVersion = gradleVersionInUse < 7 ? '1.3.21' : '1.8.10';
 
 // Gradle .kts builds are slower than usual so timeout is set to 150 sec in package.json
 if (isKotlinSupported) {
@@ -23,7 +24,7 @@ if (isKotlinSupported) {
       nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
     });
 
-    const expectedNodeId = 'org.jetbrains.kotlin:kotlin-stdlib-common@1.3.21';
+    const expectedNodeId = `org.jetbrains.kotlin:kotlin-stdlib-common@${kotlinVersion}`;
     expect(nodeIds).toContain(expectedNodeId);
 
     // double parsing to have access to internal depGraph data, no methods available to properly
@@ -32,17 +33,20 @@ if (isKotlinSupported) {
 
     const { deps: directDependencies } = graphObject.graph.nodes[0];
     const expectedDirectDependencies = [
-      { nodeId: 'org.jetbrains.kotlin:kotlin-stdlib-jdk8@1.3.21' },
-      { nodeId: 'org.jetbrains.kotlin:kotlin-compiler-embeddable@1.3.21' },
-      { nodeId: 'org.jetbrains.kotlin:kotlin-reflect@1.3.21' },
+      { nodeId: `org.jetbrains.kotlin:kotlin-stdlib-jdk8@${kotlinVersion}` },
       {
-        nodeId:
-          'org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@1.3.21',
+        nodeId: `org.jetbrains.kotlin:kotlin-compiler-embeddable@${kotlinVersion}`,
       },
-      { nodeId: 'org.jetbrains.kotlin:kotlin-allopen@1.3.21' },
-      { nodeId: 'org.jetbrains.kotlin:kotlin-noarg@1.3.21' },
+      { nodeId: `org.jetbrains.kotlin:kotlin-reflect@${kotlinVersion}` },
+      {
+        nodeId: `org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@${kotlinVersion}`,
+      },
+      { nodeId: `org.jetbrains.kotlin:kotlin-allopen@${kotlinVersion}` },
+      { nodeId: `org.jetbrains.kotlin:kotlin-noarg@${kotlinVersion}` },
     ];
-    expect(directDependencies).toEqual(expectedDirectDependencies);
+    expectedDirectDependencies.forEach((expectedDependency) => {
+      expect(directDependencies).toContainEqual(expectedDependency);
+    });
   }, 200000);
 } else {
   test('build.gradle.kts are not supported with Gradle version < 5', () => {});

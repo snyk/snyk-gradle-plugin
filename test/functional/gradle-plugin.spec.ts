@@ -159,25 +159,28 @@ describe('Gradle Plugin', () => {
     );
   });
 
-  it('make sure configuration cache is switched off for Gradle 7', () => {
-    const result = testableMethods.buildArgs(
-      '.',
-      null,
-      '/tmp/init.gradle',
-      {},
-      'Gradle 7',
-    );
-    expect(result).toEqual(
-      expect.arrayContaining([
-        'snykResolvedDepsJson',
-        '-q',
-        '-Dorg.gradle.parallel=',
-        '-Dorg.gradle.console=plain',
-        '-PonlySubProject=.',
-        '-I',
+  it.each([7, 8])(
+    'make sure configuration cache is switched off for Gradle %s',
+    async (version) => {
+      const result = testableMethods.buildArgs(
+        '.',
+        null,
         '/tmp/init.gradle',
-        '--no-configuration-cache',
-      ]),
-    );
-  });
+        {},
+        `Gradle ${version}`,
+      );
+      expect(result).toEqual(
+        expect.arrayContaining([
+          'snykResolvedDepsJson',
+          '-q',
+          '-Dorg.gradle.parallel=',
+          '-Dorg.gradle.console=plain',
+          '-PonlySubProject=.',
+          '-I',
+          '/tmp/init.gradle',
+          '--no-configuration-cache',
+        ]),
+      );
+    },
+  );
 });

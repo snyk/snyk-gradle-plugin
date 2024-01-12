@@ -27,15 +27,15 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 | ------- | --------- |
 | Windows | ✅        |
 | Linux   | ✅        |
-| OSX     | ️✅       |
+| OSX     | ️✅        |
 
 ## Supported Node versions
 
 | Node | Supported |
 | ---- | --------- |
-| 12   | ✅        |
-| 14   | ✅        |
 | 16   | ✅        |
+| 18   | ✅        |
+| 20   | ✅        |
 
 ## Supported Gradle versions
 
@@ -45,6 +45,7 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 | 5      | ✅        |
 | 6      | ✅        |
 | 7      | ✅        |
+| 8      | ✅        |
 
 # Supported Snyk command line arguments:
 

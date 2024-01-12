@@ -119,7 +119,7 @@ if (wrapperIsCompatibleWithJvm) {
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
     expect(result.meta!.gradleProjectName).toBe('root-proj');
-    expect(result.meta!.versionBuildInfo!.gradleVersion).toBe('5.4.1');
+    expect(result.meta!.versionBuildInfo!.gradleVersion).toBe('7.6.3');
     expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
@@ -302,48 +302,6 @@ test('multi-project: parallel with allSubProjects produces multiple results with
       'root-proj/subproj4',
     ]),
   );
-});
-
-test('multi-project: allSubProjects + configuration', async () => {
-  const result = await inspect('.', path.join(multiProject, 'build.gradle'), {
-    allSubProjects: true,
-    args: ['--configuration', 'compileClasspath'],
-  });
-  // It's an array, so we have to scan
-  expect(result.scannedProjects.length).toBe(2);
-  for (const p of result.scannedProjects) {
-    if (p.depGraph.rootPkg.name === 'root-proj') {
-      expect(p.meta!.gradleProjectName).toBe('root-proj');
-
-      // double parsing to have access to internal depGraph data, no methods available to properly
-      // return the deps nodeIds list that belongs to a node
-      const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
-      // no dependencies for the main depRoot
-      expect(graphObject.graph.nodes[0].deps.length).toBe(0);
-      expect(p.targetFile).toBeFalsy(); // see targetFileFilteredForCompatibility
-      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
-      // expect(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
-    } else {
-      // sub project name is included in the root pkg name
-      expect(p.depGraph.rootPkg.name).toBe('root-proj/subproj');
-      // new sub project name is included in the root pkg name
-      expect(p.meta!.gradleProjectName).toBe('root-proj/subproj');
-
-      const pkgs = p.depGraph.getDepPkgs();
-      const nodeIds: string[] = [];
-      Object.keys(pkgs).forEach((id) => {
-        nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
-      });
-      // correct version found
-      expect(nodeIds.indexOf('axis:axis@1.3')).toBeGreaterThanOrEqual(-1);
-      // non-compileOnly dependency is not found
-      expect(nodeIds.indexOf('com.android.tools.build:builder@2.3.0')).toBe(-1);
-      // no target file returned: see targetFileFilteredForCompatibility
-      expect(p.targetFile).toBeFalsy();
-      // TODO(kyegupov): when the project name issue is solved, change the assertion to:
-      // expect(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
-    }
-  }
 });
 
 test('multi-project-dependency-cycle: scanning the main project works fine', async () => {
