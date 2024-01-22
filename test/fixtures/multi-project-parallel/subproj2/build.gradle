@@ -7,5 +7,5 @@ repositories {
 }
 
 dependencies {
-    compile "io.swagger:swagger-annotations:1.5.13"
+    implementation "io.swagger:swagger-annotations:1.5.13"
 }

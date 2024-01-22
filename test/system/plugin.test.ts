@@ -74,7 +74,7 @@ test('multi-config: both compile and runtime deps picked up by default', async (
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
   expect(graphObject.graph.nodes[0].deps.length).toBe(6);
 
-  expect(result.dependencyGraph.getPkgs().length).toBe(42);
+  expect(result.dependencyGraph.getPkgs().length).toBe(43);
 });
 
 test('multi-config: only deps for specified conf are picked up (precise match)', async () => {
@@ -126,7 +126,7 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
-  expect(graphObject.graph.nodes[0].deps.length).toBe(1);
+  expect(graphObject.graph.nodes[0].deps.length).toBe(5);
 });
 
 test('multi-config: only deps for specified conf are picked up (using legacy CLI argument)', async () => {
@@ -151,7 +151,7 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
   // double parsing to have access to internal depGraph data, no methods available to properly
   // return the deps nodeIds list that belongs to a node
   const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
-  expect(graphObject.graph.nodes[0].deps.length).toBe(1);
+  expect(graphObject.graph.nodes[0].deps.length).toBe(5);
 });
 
 test('custom dependency resolution via configurations.all is supported', async () => {

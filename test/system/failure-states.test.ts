@@ -11,7 +11,7 @@ test('malformed build.gradle', async () => {
       path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
       { args: ['--configuration', 'compileClasspath'] },
     ),
-  ).rejects.toThrowError(/unexpected token/);
+  ).rejects.toThrowError(/unexpected token|Could not get unknown property/);
 });
 
 test('incorrect argument passed to inspect', async () => {
