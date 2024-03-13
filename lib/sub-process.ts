@@ -1,6 +1,6 @@
 import * as childProcess from 'child_process';
 import debugModule = require('debug');
-import { quoteAll } from 'shescape';
+import { quoteAll } from 'shescape/stateless';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 
