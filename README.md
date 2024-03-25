@@ -33,7 +33,6 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 
 | Node | Supported |
 | ---- | --------- |
-| 16   | ✅        |
 | 18   | ✅        |
 | 20   | ✅        |
 

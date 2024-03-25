@@ -27,28 +27,28 @@ windows_defaults: &windows_defaults
 test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
-      node_version: [ '16.18', '18.18', '20.9' ]
+      node_version: [ '18.18', '20.9' ]
       jdk_version: [ '8.0.292.j9-adpt' ]
       gradle_version: [ '4.10', '5.5', '6.2.1']
 
 test_matrix_unix_new_versions: &test_matrix_unix_new_versions
   matrix:
     parameters:
-      node_version: [ '16.18', '18.18', '20.9' ]
+      node_version: [ '18.18', '20.9' ]
       jdk_version: [ '17.0.9-jbr' ]
       gradle_version: [ '7.3', '8.4' ]
 
 test_matrix_win: &test_matrix_win
   matrix:
     parameters:
-      node_version: [ '16', '18', '20' ]
+      node_version: [ '18', '20' ]
       jdk_version: [ '8' ]
       gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win_new_versions: &test_matrix_win_new_versions
   matrix:
     parameters:
-      node_version: [ '16', '18', '20' ]
+      node_version: [ '18', '20' ]
       jdk_version: [ '17' ]
       gradle_version: [ '7.3', '8.4' ]
 
