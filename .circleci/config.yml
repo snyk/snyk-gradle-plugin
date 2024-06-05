@@ -3,7 +3,7 @@ version: 2.1
 orbs:
   node: circleci/node@5.1.0
   win: circleci/windows@2.4.0
-  prodsec: snyk/prodsec-orb@1.0
+  prodsec: snyk/prodsec-orb@1
 
 defaults: &defaults
   parameters:
@@ -185,6 +185,23 @@ commands:
           paths:
             - ~\AppData\Local\Temp\jdk
 jobs:
+  security-scans:
+    resource_class: small
+    <<: *defaults
+    docker:
+      - image: cimg/node:<< parameters.node_version >>
+    steps:
+      - checkout
+      - node-install-packages
+      - run:
+          name: Generate package-lock.json (Required for snyk OS scanning)
+          command: npm install --package-lock
+      - show_node_version
+      - prodsec/security_scans:
+          mode: auto
+          open-source-additional-arguments: --exclude=test
+          iac-scan: disabled
+
   lint:
     <<: *defaults
     docker:
@@ -263,6 +280,13 @@ workflows:
             - snyk-bot-slack
           channel: os-team-managed-alerts
           <<: *filters_branches_ignore_main
+
+      - security-scans:
+          name: Security Scans
+          node_version: "20.9"
+          context:
+            - open_source-managed
+            - nodejs-install
 
       - lint:
           name: Lint
