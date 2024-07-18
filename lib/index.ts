@@ -121,7 +121,7 @@ export async function inspect(
     meta: {},
   };
 
-  if (api.isMultiSubProject(options)) {
+  if (api.isMultiSubProject(options) || options['multi-config-splitting']) {
     if (subProject) {
       throw new Error(
         'gradle-sub-project flag is incompatible with multiDepRoots',
@@ -303,10 +303,13 @@ async function getAllDepsAllProjects(
   );
   return Object.keys(allProjectDeps.projects).map((projectId) => {
     const { defaultProject } = allProjectDeps;
-    const gradleProjectName =
-      projectId === defaultProject
-        ? defaultProject
-        : `${defaultProject}/${projectId}`;
+    const gradleProjectName = getGradleProjectName(
+      projectId,
+      defaultProject,
+      defaultProject,
+      options['multi-config-splitting'],
+    );
+
     return {
       targetFile: targetFileFilteredForCompatibility(
         allProjectDeps.projects[projectId].targetFile,
@@ -439,7 +442,9 @@ async function getAllDepsWithPlugin(
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
   const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
-    'init.gradle',
+    options['multi-config-splitting']
+      ? 'init-multi-config.gradle'
+      : 'init.gradle',
   );
   const args = buildArgs(
     root,
@@ -526,7 +531,11 @@ async function getAllDeps(
         concurrency: 100,
       });
     }
-    return await processProjectsInExtractedJSON(extractedJSON, coordinateMap);
+    return await processProjectsInExtractedJSON(
+      extractedJSON,
+      coordinateMap,
+      options['multi-config-splitting'],
+    );
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -612,21 +621,21 @@ ${chalk.red.bold(mainErrorMessage)}`;
 export async function processProjectsInExtractedJSON(
   extractedJSON: JsonDepsScriptResult,
   coordinateMap?: CoordinateMap,
+  multiConfigSplitting: boolean = false,
 ) {
-  for (const projectId in extractedJSON.projects) {
-    const { defaultProject, defaultProjectKey } = extractedJSON;
+  for (var projectId in extractedJSON.projects) {
+    const { defaultProject, defaultProjectKey } = extractedJSON; // [TODO-PI] Check if these two are always the same
     const { gradleGraph, projectVersion } = extractedJSON.projects[projectId];
 
     if (!gradleGraph) {
       continue;
     }
-
-    const isSubProject = projectId !== defaultProjectKey;
-
-    let rootPkgName = defaultProject;
-    if (isSubProject) {
-      rootPkgName = `${defaultProject}/${projectId}`;
-    }
+    const rootPkgName = getGradleProjectName(
+      projectId,
+      defaultProjectKey,
+      defaultProject,
+      multiConfigSplitting,
+    );
 
     extractedJSON.projects[projectId].depGraph = await buildGraph(
       gradleGraph,
@@ -763,6 +772,28 @@ function buildArgs(
   });
 
   return args.filter(Boolean);
+}
+
+function getGradleProjectName(
+  projectId: string,
+  defaultProjectKey: string,
+  defaultProject: string,
+  multiConfigSplitting: boolean,
+): string {
+  const [projectIdWithoutConfig, scannedConfiguration] = projectId.split('#');
+  const isSubProject = projectIdWithoutConfig !== defaultProjectKey;
+
+  let rootPkgName = `${defaultProject}`;
+
+  if (isSubProject) {
+    rootPkgName += `/${projectId}`;
+  }
+
+  if (multiConfigSplitting && scannedConfiguration) {
+    rootPkgName += `#${scannedConfiguration}`;
+  }
+
+  return rootPkgName;
 }
 
 export const exportsForTests = {

@@ -81,7 +81,7 @@ test('multi-config: only deps for specified conf are picked up (precise match)',
   const result = await inspect(
     '.',
     path.join(fixtureDir('multi-config'), 'build.gradle'),
-    { 'configuration-matching': '^compileClasspath$' },
+    { 'configuration-matching': '^(runtimeClasspath|testRuntimeClasspath)$' },
   );
   expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
   expect(result.meta!.gradleProjectName).toBe('multi-config');

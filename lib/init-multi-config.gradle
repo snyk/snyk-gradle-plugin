@@ -4,57 +4,7 @@ import java.util.regex.Matcher
 import org.gradle.util.GradleVersion
 import org.gradle.api.internal.artifacts.DefaultResolvedDependency
 
-// Snyk dependency resolution script for Gradle.
-// Tested on Gradle versions from v2.14 to v6.8.1
 
-// This script does the following: for all the projects in the build file,
-// generate a merged configuration of all the available configurations,
-// and then list the dependencies as a tree.
-
-// It's the responsibility of the caller to pick the project(s) they are
-// interested in from the results.
-
-// CLI usages:
-// gradle -q -I init.gradle snykResolvedDepsJson
-// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=specificConf -PonlySubProject=sub-project
-// gradle -q -I init.gradle snykResolvedDepsJson -Pconfiguration=confNameRegex -PconfAttr=buildtype:debug,usage:java-runtime
-
-// (-q to have clean output, -P supplies args as per https://stackoverflow.com/a/48370451)
-
-// confAttr parameter (supported only in Gradle 3+) is used to perform attribute-based dependency variant matching
-// (important for Android: https://developer.android.com/studio/build/dependencies#variant_aware)
-// Its value is a comma-separated list of key:value pairs. The "key" is a case-insensitive substring
-// of the class name of the attribute (e.g. "buildtype" would match com.android.build.api.attributes.BuildTypeAttr),
-// the value should be a case-insensitive stringified value of the attribute
-
-// Output format:
-//
-// Since Gradle is chatty and often prints a "Welcome" banner even with -q option,
-// the only output lines that matter are:
-// - prefixed "SNYKECHO ": should be immediately printed as debug information by the caller
-// - prefixed "JSONDEPS ": JSON representation of the dependencies trees for all projects in the following format
-
-// interface JsonDepsScriptResult {
-//   defaultProject: string;
-//   projects: ProjectsDict;
-//   allSubProjectNames: string[];
-// }
-// interface ProjectsDict {
-//   [project: string]: GradleProjectInfo;
-// }
-
-// interface GradleProjectInfo {
-//   depGraph: DepGraph;
-//   gradleGraph: GradleGraph;
-//   targetFile: string;
-// }
-// interface GradleGraph {
-//   [id: string]: {
-//     name: string;
-//     version: string;
-//     parentIds: string[];
-//   };
-// }
 
 class GradleGraph {
     Map<String, Map> nodes = [:]
@@ -343,41 +293,6 @@ allprojects { Project currProj ->
             println("JSONATTRS $jsonAttrs")
 
             rootProject.allprojects.findAll(shouldScanProject).each { proj ->
-                def confNameFilter = "^(runtimeClasspath|compileClasspath|myPersonalConfig)\$";
-                def confAttrSpec = (project.hasProperty('confAttr')
-                    ? confAttr.toLowerCase().split(',').collect { it.split(':') }
-                    : null
-                    )
-                def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-                if (GradleVersion.current() < GradleVersion.version('3.0')) {
-                    proj.configurations.each({ debugLog("conf.name=$it.name") })
-                    return matching
-                }
-                proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
-                // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
-                // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
-                // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
-                def resolvable = []
-                matching.each({ it ->
-                    if (!it.canBeResolved) { return }
-                    try {
-                        // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode  
-                        it.resolvedConfiguration
-                        resolvable.add(it)
-                    } catch (Exception ex) {
-                        // Swallow the error
-                        debugLog("Skipping config ${it.name} due to resolvedConfiguration error.")
-                    }
-                })
-                debugLog("resolvableConfigs=$resolvable")
-            }
-
-
-
-
-
-
-
                 debugLog("processing project: name=$proj.name; path=$proj.path")
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
 
