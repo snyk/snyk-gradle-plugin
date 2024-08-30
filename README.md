@@ -7,6 +7,7 @@ Snyk helps you find, fix and monitor for known vulnerabilities in your dependenc
 | :information_source: This repository is only a plugin to be used with the Snyk CLI tool. To use this plugin to test and fix vulnerabilities in your project, install the Snyk CLI tool first. Head over to [snyk.io](https://github.com/snyk/snyk) to get started. |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
+
 # Snyk Gradle CLI Plugin
 
 This plugin provides dependency metadata for Gradle projects that use `gradle` and have a `build.gradle` file.
