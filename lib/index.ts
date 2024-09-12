@@ -415,7 +415,7 @@ function getVersionBuildInfo(
   }
 }
 
-async function getGradleVersion(
+export async function getGradleVersion(
   root: string,
   command: string,
 ): Promise<string> {
