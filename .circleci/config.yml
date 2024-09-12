@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   node: circleci/node@5.1.0
-  win: circleci/windows@2.4.0
+  win: circleci/windows@5.0.0
   prodsec: snyk/prodsec-orb@1
 
 defaults: &defaults
@@ -11,6 +11,9 @@ defaults: &defaults
       type: string
       default: ''
     jdk_version:
+      type: string
+      default: ''
+    jdk_path:
       type: string
       default: ''
     node_version:
@@ -43,13 +46,15 @@ test_matrix_win: &test_matrix_win
     parameters:
       node_version: [ '16', '18', '20' ]
       jdk_version: [ '8' ]
+      jdk_path: [ 'C:\Program Files\Eclipse Adoptium\jdk-8.0.422.5-hotspot' ]
       gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win_new_versions: &test_matrix_win_new_versions
   matrix:
     parameters:
       node_version: [ '16', '18', '20' ]
-      jdk_version: [ '17' ]
+      jdk_version: [ '17.0.2' ]
+      jdk_path: [ 'C:\Program Files\OpenJDK\jdk-17.0.2' ]
       gradle_version: [ '7.3', '8.4' ]
 
 filters_branches_only_main: &filters_branches_only_main
@@ -99,7 +104,7 @@ commands:
             - chocolatey-gradle-cache-{{ arch }}-v3
       - run:
           name: Installing Gradle
-          command: choco install gradle --version=<< parameters.gradle_version >> --cache ~\AppData\Local\Temp\gradle
+          command: choco install -y gradle --version=<< parameters.gradle_version >> --cache ~\AppData\Local\Temp\gradle
       - save_cache:
           key: chocolatey-gradle-cache-{{ arch }}-v3
           paths:
@@ -179,7 +184,12 @@ commands:
             - chocolatey-jdk-cache-{{ arch }}-v4
       - run:
           name: Installing JDK
-          command: choco install openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+          command: |
+            if [[ << parameters.jdk_version >> == "8" ]]; then
+              choco install -y openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+            else
+              choco install --force -y openjdk --version=<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+            fi
       - save_cache:
           key: chocolatey-jdk-cache-{{ arch }}-v4
           paths:
@@ -219,6 +229,7 @@ jobs:
     <<: *windows_defaults
     environment:
       JDK: << parameters.jdk_version >>
+      #      JAVA_HOME: << parameters.jdk_path >>
       npm_config_loglevel: silent
       GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.daemon.idletimeout=180000 -Xmx3g -XX:+HeapDumpOnOutOfMemoryError -Dkotlin.compiler.execution.strategy=in-process'
       JAVA_OPTS: ' -Xmx512M -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8'
@@ -235,7 +246,15 @@ jobs:
       - node-install-packages
       - run:
           name: Run tests
-          command: npm test
+          command: |
+            export JAVA_HOME="<< parameters.jdk_path >>"
+            export PATH=$JAVA_HOME/bin:$PATH
+             if [[ << parameters.jdk_version >> == "8" ]]; then
+              java -version
+            else
+              java --version
+            fi
+            npm test
 
   test-unix:
     <<: *defaults
