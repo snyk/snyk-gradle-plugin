@@ -1,6 +1,6 @@
 import * as childProcess from 'child_process';
 import debugModule = require('debug');
-import { quoteAll } from 'shescape';
+import { escapeAll } from 'shescape';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 
@@ -12,7 +12,7 @@ export function execute(
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
   const spawnOptions: childProcess.SpawnOptions = {
-    shell: true,
+    shell: false,
     env: { ...process.env },
   };
   if (options?.cwd) {
@@ -22,7 +22,7 @@ export function execute(
     spawnOptions.env = { ...process.env, ...options.env };
   }
 
-  args = quoteAll(args, spawnOptions);
+  args = escapeAll(args, spawnOptions);
 
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
   // which overides the cli internal proxy configuration.

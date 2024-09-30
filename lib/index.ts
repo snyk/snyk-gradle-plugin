@@ -396,17 +396,35 @@ function getVersionBuildInfo(
 export async function getGradleVersion(
   root: string,
   command: string,
+  args?: string[],
 ): Promise<string> {
   debugLog('`gradle -v` command run: ' + command);
   let gradleVersionOutput = '[COULD NOT RUN gradle -v]';
+  const completeArgs = args ? args.concat(['-v']) : ['-v'];
   try {
-    gradleVersionOutput = await subProcess.execute(command, ['-v'], {
+    gradleVersionOutput = await subProcess.execute(command, completeArgs, {
       cwd: root,
     });
   } catch (_) {
     // intentionally empty
   }
   return gradleVersionOutput;
+}
+
+function generateWrapperProcessArgs(
+  commandPath: string,
+  args: string[],
+): { command: string; args: string[] } {
+  let parseArgs: string[] = [];
+  let command = commandPath;
+  const isWinLocal = /^win/.test(os.platform());
+  if (isWinLocal && command !== 'gradle') {
+    command = 'cmd.exe';
+    parseArgs.push('/c');
+    parseArgs.push(commandPath);
+  }
+  parseArgs = parseArgs.concat(args);
+  return { command, args: parseArgs };
 }
 
 async function getAllDepsWithPlugin(
@@ -427,12 +445,15 @@ async function getAllDepsWithPlugin(
     gradleVersion,
   );
 
-  const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
-  debugLog('Executing ' + fullCommandText);
+  const { command: wrapperedCommand, args: wrapperArgs } =
+    generateWrapperProcessArgs(command, args);
 
+  const fullCommandText =
+    'gradle command: ' + wrapperedCommand + ' ' + wrapperArgs.join(' ');
+  debugLog('Executing ' + fullCommandText);
   const stdoutText = await subProcess.execute(
-    command,
-    args,
+    wrapperedCommand,
+    wrapperArgs,
     { cwd: root },
     printIfEcho,
   );
@@ -467,7 +488,13 @@ async function getAllDeps(
   snykHttpClient: SnykHttpClient,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const gradleVersion = await getGradleVersion(root, command);
+  const { command: wrapperedCommand, args: wrapperArgs } =
+    generateWrapperProcessArgs(command, []);
+  const gradleVersion = await getGradleVersion(
+    root,
+    wrapperedCommand,
+    wrapperArgs,
+  );
   if (gradleVersion.match(/Gradle 1/)) {
     throw new Error('Gradle 1.x is not supported');
   }
@@ -636,7 +663,6 @@ function toCamelCase(input: string) {
 
 function getCommand(root: string, targetFile: string) {
   const isWinLocal = /^win/.test(os.platform()); // local check, can be stubbed in tests
-  const quotLocal = isWinLocal ? '"' : "'";
   const wrapperScript = isWinLocal ? 'gradlew.bat' : './gradlew';
   // try to find a sibling wrapper script first
   let pathToWrapper = path.resolve(
@@ -645,12 +671,12 @@ function getCommand(root: string, targetFile: string) {
     wrapperScript,
   );
   if (fs.existsSync(pathToWrapper)) {
-    return quotLocal + pathToWrapper + quotLocal;
+    return pathToWrapper;
   }
   // now try to find a wrapper in the root
   pathToWrapper = path.resolve(root, wrapperScript);
   if (fs.existsSync(pathToWrapper)) {
-    return quotLocal + pathToWrapper + quotLocal;
+    return pathToWrapper;
   }
   return 'gradle';
 }

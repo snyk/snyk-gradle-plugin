@@ -34,7 +34,7 @@ test('darwin without wrapper invokes gradle directly', async () => {
 test('darwin with wrapper invokes wrapper script', async () => {
   await expect(inspect(rootWithWrapper, 'build.gradle')).rejects.toThrow();
   expect(subProcessExecSpy.mock.calls[0][0]).toBe(
-    "'" + path.join(rootWithWrapper, 'gradlew') + "'",
+    path.join(rootWithWrapper, 'gradlew'),
   );
 });
 
@@ -43,6 +43,6 @@ test('darwin with wrapper in root invokes wrapper script', async () => {
     inspect(subWithWrapper, path.join('app', 'build.gradle')),
   ).rejects.toThrow();
   expect(subProcessExecSpy.mock.calls[0][0]).toBe(
-    "'" + path.join(subWithWrapper, 'gradlew') + "'",
+    path.join(subWithWrapper, 'gradlew'),
   );
 });
