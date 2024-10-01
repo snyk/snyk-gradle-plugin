@@ -200,3 +200,15 @@ test('repeated transitive lines terminated at duplicate node and labeled pruned'
   const result = await inspect('.', path.join(pathToFixture, 'build.gradle'));
   expect(result.dependencyGraph?.equals(expected)).toBe(true);
 });
+
+test('repeated transitive lines not pruned if verbose graph', async () => {
+  const pathToFixture = fixtureDir('verbose');
+  const expectedJson = JSON.parse(
+    fs.readFileSync(path.join(pathToFixture, 'dep-graph.json'), 'utf-8'),
+  );
+  const expected = depGraphLib.createFromJSON(expectedJson);
+  const result = await inspect('.', path.join(pathToFixture, 'build.gradle'), {
+    'print-graph': true,
+  });
+  expect(result.dependencyGraph?.equals(expected)).toBe(true);
+});
