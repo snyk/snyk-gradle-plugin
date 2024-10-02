@@ -214,13 +214,16 @@ test('repeated transitive lines not pruned if verbose graph', async () => {
   expect(result.dependencyGraph?.equals(expected)).toBe(true);
 });
 
-test('generateWrapperProcessArgs should return gradle is wrapper is not used', () =>{
+test('generateWrapperProcessArgs should return gradle is wrapper is not used', () => {
   const result = generateWrapperProcessArgs('gradle', ['-v']);
-  expect(result).toEqual({command: 'gradle', args: ['-v']});
-})
-test('generateWrapperProcessArgs should return wrapped command is os is windows ', () =>{
- const platformMock = jest.spyOn(os, 'platform');
+  expect(result).toEqual({ command: 'gradle', args: ['-v'] });
+});
+test('generateWrapperProcessArgs should return wrapped command is os is windows ', () => {
+  const platformMock = jest.spyOn(os, 'platform');
   platformMock.mockReturnValue('win32');
   const result = generateWrapperProcessArgs('foo/bar/gradlew.bat', ['-v']);
-  expect(result).toEqual({command: 'cmd.exe', args: ['/c','foo/bar/gradlew.bat','-v']});
-})
+  expect(result).toEqual({
+    command: 'cmd.exe',
+    args: ['/c', 'foo/bar/gradlew.bat', '-v'],
+  });
+});
