@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as depGraphLib from '@snyk/dep-graph';
 import { fixtureDir } from '../common';
-import { inspect } from '../../lib';
+import { generateWrapperProcessArgs, inspect } from '../../lib';
+import * as os from 'os';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const withInitScript = fixtureDir('with-init-script');
@@ -212,3 +213,14 @@ test('repeated transitive lines not pruned if verbose graph', async () => {
   });
   expect(result.dependencyGraph?.equals(expected)).toBe(true);
 });
+
+test('generateWrapperProcessArgs should return gradle is wrapper is not used', () =>{
+  const result = generateWrapperProcessArgs('gradle', ['-v']);
+  expect(result).toEqual({command: 'gradle', args: ['-v']});
+})
+test('generateWrapperProcessArgs should return wrapped command is os is windows ', () =>{
+ const platformMock = jest.spyOn(os, 'platform');
+  platformMock.mockReturnValue('win32');
+  const result = generateWrapperProcessArgs('foo/bar/gradlew.bat', ['-v']);
+  expect(result).toEqual({command: 'cmd.exe', args: ['/c','foo/bar/gradlew.bat','-v']});
+})

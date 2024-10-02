@@ -411,7 +411,7 @@ export async function getGradleVersion(
   return gradleVersionOutput;
 }
 
-function generateWrapperProcessArgs(
+export function generateWrapperProcessArgs(
   commandPath: string,
   args: string[],
 ): { command: string; args: string[] } {
