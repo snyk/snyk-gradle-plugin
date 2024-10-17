@@ -1,4 +1,4 @@
-import { DepGraphBuilder, PkgInfo, PkgManager } from '@snyk/dep-graph';
+import { DepGraphBuilder, PkgManager } from '@snyk/dep-graph';
 
 import type { CoordinateMap } from './types';
 
@@ -13,14 +13,12 @@ export interface GradleGraph {
 interface QueueItem {
   id: string;
   parentId: string;
-  ancestry: string[];
 }
 
 export async function buildGraph(
   gradleGraph: GradleGraph,
   rootPkgName: string,
   projectVersion: string,
-  verbose?: boolean,
   coordinateMap?: CoordinateMap,
 ) {
   const pkgManager: PkgManager = { name: 'gradle' };
@@ -35,16 +33,15 @@ export async function buildGraph(
     return depGraphBuilder.build();
   }
 
-  const visitedMap: Record<string, PkgInfo> = {};
+  const visited: string[] = [];
   const queue: QueueItem[] = [];
-  queue.push(...findChildren('root-node', [], gradleGraph)); // queue direct dependencies
+  queue.push(...findChildren('root-node', gradleGraph)); // queue direct dependencies
 
   // breadth first search
   while (queue.length > 0) {
     const item = queue.shift();
     if (!item) continue;
     let { id, parentId } = item;
-    const { ancestry } = item;
     // take a copy as id maybe mutated below and we need this id when finding childing in GradleGraph
     const gradleGraphId = `${id}`;
     const node = gradleGraph[id];
@@ -62,9 +59,7 @@ export async function buildGraph(
         parentId = coordinateMap[parentId];
       }
     }
-
-    const visited = visitedMap[id];
-    if (!verbose && visited) {
+    if (visited.includes(id)) {
       const prunedId = id + ':pruned';
       depGraphBuilder.addPkgNode({ name, version }, prunedId, {
         labels: { pruned: 'true' },
@@ -72,27 +67,10 @@ export async function buildGraph(
       depGraphBuilder.connectDep(parentId, prunedId);
       continue; // don't queue any more children
     }
-
-    if (verbose && ancestry.includes(id)) {
-      const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode(visited, prunedId, {
-        labels: { pruned: 'cyclic' },
-      });
-      depGraphBuilder.connectDep(parentId, prunedId);
-      continue; // don't queue any more children
-    }
-
-    if (verbose && visited) {
-      // use visited node when omitted dependencies found (verbose)
-      depGraphBuilder.addPkgNode(visited, id);
-      depGraphBuilder.connectDep(parentId, id);
-    } else {
-      depGraphBuilder.addPkgNode({ name, version }, id);
-      depGraphBuilder.connectDep(parentId, id);
-      visitedMap[id] = { name, version };
-    }
-    // Remember to push updated ancestry here
-    queue.push(...findChildren(gradleGraphId, [...ancestry, id], gradleGraph)); // queue children
+    depGraphBuilder.addPkgNode({ name, version }, id);
+    depGraphBuilder.connectDep(parentId, id);
+    queue.push(...findChildren(gradleGraphId, gradleGraph)); // queue children
+    visited.push(id);
   }
 
   return depGraphBuilder.build();
@@ -100,14 +78,13 @@ export async function buildGraph(
 
 export function findChildren(
   parentId: string,
-  ancestry: string[],
   gradleGraph: GradleGraph,
 ): QueueItem[] {
   const result: QueueItem[] = [];
   for (const id of Object.keys(gradleGraph)) {
     const node = gradleGraph[id];
     if (node?.parentIds?.includes(parentId)) {
-      result.push({ id, ancestry, parentId });
+      result.push({ id, parentId });
     }
   }
   return result;

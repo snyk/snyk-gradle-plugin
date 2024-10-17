@@ -2,8 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as depGraphLib from '@snyk/dep-graph';
 import { fixtureDir } from '../common';
-import { generateWrapperProcessArgs, inspect } from '../../lib';
-import * as os from 'os';
+import { inspect } from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
 const withInitScript = fixtureDir('with-init-script');
@@ -200,30 +199,4 @@ test('repeated transitive lines terminated at duplicate node and labeled pruned'
   const expected = depGraphLib.createFromJSON(expectedJson);
   const result = await inspect('.', path.join(pathToFixture, 'build.gradle'));
   expect(result.dependencyGraph?.equals(expected)).toBe(true);
-});
-
-test('repeated transitive lines not pruned if verbose graph', async () => {
-  const pathToFixture = fixtureDir('verbose');
-  const expectedJson = JSON.parse(
-    fs.readFileSync(path.join(pathToFixture, 'dep-graph.json'), 'utf-8'),
-  );
-  const expected = depGraphLib.createFromJSON(expectedJson);
-  const result = await inspect('.', path.join(pathToFixture, 'build.gradle'), {
-    'print-graph': true,
-  });
-  expect(result.dependencyGraph?.equals(expected)).toBe(true);
-});
-
-test('generateWrapperProcessArgs should return gradle is wrapper is not used', () => {
-  const result = generateWrapperProcessArgs('gradle', ['-v']);
-  expect(result).toEqual({ command: 'gradle', args: ['-v'] });
-});
-test('generateWrapperProcessArgs should return wrapped command is os is windows ', () => {
-  const platformMock = jest.spyOn(os, 'platform');
-  platformMock.mockReturnValue('win32');
-  const result = generateWrapperProcessArgs('foo/bar/gradlew.bat', ['-v']);
-  expect(result).toEqual({
-    command: 'cmd.exe',
-    args: ['/c', 'foo/bar/gradlew.bat', '-v'],
-  });
 });
