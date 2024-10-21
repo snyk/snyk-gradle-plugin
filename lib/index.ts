@@ -13,14 +13,12 @@ import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import { buildGraph, GradleGraph } from './graph';
 import type {
   CoordinateMap,
-  GradleInspectOptions,
   PomCoords,
   Sha1Map,
   SnykHttpClient,
 } from './types';
 import { getMavenPackageInfo } from './search';
 import debugModule = require('debug');
-import { CliOptions } from './types';
 
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -45,7 +43,35 @@ const cannotResolveVariantMarkers = [
   'Unable to find a matching variant of project',
 ];
 
-type Options = api.InspectOptions & GradleInspectOptions & CliOptions;
+// TODO(kyegupov): the types below will be extracted to a common plugin interface library
+
+export interface GradleInspectOptions {
+  // A regular expression (Java syntax, case-insensitive) to select Gradle configurations.
+  // If only one configuration matches, its attributes will be used for dependency resolution;
+  // otherwise, an artificial merged configuration will be created (see configuration-attributes
+  // below).
+  // Attributes are important for dependency resolution in Android builds (see
+  // https://developer.android.com/studio/build/dependencies#variant_aware )
+  // This replaces legacy `-- --configuration=foo` argument specification.
+  'configuration-matching'?: string;
+
+  // A comma-separated list of key:value pairs, e.g. "buildtype=release,usage=java-runtime".
+  // If specified, will scan all configurations for attributes with names that contain "keys" (case-insensitive)
+  // and have values that have a string representation that match the specified one, and will copy
+  // these attributes into the merged configuration.
+  // Attributes are important for dependency resolution in Android builds (see
+  // https://developer.android.com/studio/build/dependencies#variant_aware )
+  'configuration-attributes'?: string;
+
+  // For some reason, `--no-daemon` is not required for Unix, but on Windows, without this flag, apparently,
+  // Gradle process just never exits, from the Node's standpoint.
+  // Leaving default usage `--no-daemon`, because of backwards compatibility
+  daemon?: boolean;
+  initScript?: string;
+  gradleNormalizeDeps?: boolean;
+}
+
+type Options = api.InspectOptions & GradleInspectOptions;
 type VersionBuildInfo = api.VersionBuildInfo;
 
 // Overload type definitions, so that when you call inspect() with an `options` literal (e.g. in tests),
@@ -53,17 +79,13 @@ type VersionBuildInfo = api.VersionBuildInfo;
 export async function inspect(
   root: string,
   targetFile: string,
-  options?: api.SingleSubprojectInspectOptions &
-    GradleInspectOptions &
-    CliOptions,
+  options?: api.SingleSubprojectInspectOptions & GradleInspectOptions,
   snykHttpClient?: SnykHttpClient,
 ): Promise<api.SinglePackageResult>;
 export async function inspect(
   root: string,
   targetFile: string,
-  options: api.MultiSubprojectInspectOptions &
-    GradleInspectOptions &
-    CliOptions,
+  options: api.MultiSubprojectInspectOptions & GradleInspectOptions,
   snykHttpClient?: SnykHttpClient,
 ): Promise<api.MultiProjectResult>;
 
@@ -531,11 +553,7 @@ async function getAllDeps(
         concurrency: 100,
       });
     }
-    return await processProjectsInExtractedJSON(
-      extractedJSON,
-      options['print-graph'],
-      coordinateMap,
-    );
+    return await processProjectsInExtractedJSON(extractedJSON, coordinateMap);
   } catch (err) {
     const error: Error = err;
     const gradleErrorMarkers = /^\s*>\s.*$/;
@@ -620,7 +638,6 @@ ${chalk.red.bold(mainErrorMessage)}`;
 
 export async function processProjectsInExtractedJSON(
   extractedJSON: JsonDepsScriptResult,
-  verbose?: boolean,
   coordinateMap?: CoordinateMap,
 ) {
   for (const projectId in extractedJSON.projects) {
@@ -642,7 +659,6 @@ export async function processProjectsInExtractedJSON(
       gradleGraph,
       rootPkgName,
       projectVersion,
-      verbose,
       coordinateMap,
     );
     // this property usage ends here
