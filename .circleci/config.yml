@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   node: circleci/node@5.1.0
   win: circleci/windows@5.0.0
+
   prodsec: snyk/prodsec-orb@1
 
 defaults: &defaults
@@ -26,6 +27,13 @@ windows_defaults: &windows_defaults
     name: win/default
     size: large
     shell: bash
+
+test_matrix_alpine: &test_matrix_alpine
+  matrix:
+    parameters:
+      node_version: [ '16.18', '18.18', '20.9' ]
+      jdk_version: [ '8.0.292.j9-adpt' ]
+      gradle_version: [ '4.10', '5.5', '6.2.1'] 
 
 test_matrix_unix: &test_matrix_unix
   matrix:
@@ -275,6 +283,29 @@ jobs:
           name: Run tests
           command: npm test
 
+  test-alpine:
+    <<: *defaults
+    docker:
+      - image: node:<< parameters.node_version >>-alpine
+    environment:
+      GRADLE_VERSION: << parameters.gradle_version >>
+    steps:
+      - checkout
+      - run:
+          name: Add build deps
+          command: apk add curl bash zip libgcc libstdc++
+      - install_sdkman
+      - install_jdk_unix:
+          jdk_version: << parameters.jdk_version >>
+      - install_gradle_unix:
+          gradle_version: << parameters.gradle_version >>
+      - node-install-packages
+      - show_node_version
+      - run:
+          name: Run tests
+          command: npm test
+    
+
   release:
     <<: *defaults
     docker:
@@ -311,6 +342,14 @@ workflows:
           name: Lint
           context: nodejs-install
           node_version: '20.9'
+          <<: *filters_branches_ignore_main
+
+      - test-alpine:
+          name: Test OS=Alpine Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
+          context: nodejs-install
+          <<: *test_matrix_alpine
+          requires:
+            - Lint
           <<: *filters_branches_ignore_main
 
       - test-unix:
