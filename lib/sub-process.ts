@@ -52,6 +52,10 @@ export function execute(
       stderr = stderr + data;
     });
 
+    proc.on('error', (error) => {
+      stderr = stderr + error;
+    });
+
     proc.on('close', (code: number) => {
       if (code !== 0) {
         const fullCommand = command + ' ' + args.join(' ');

@@ -498,7 +498,6 @@ async function getAllDeps(
   if (gradleVersion.match(/Gradle 1/)) {
     throw new Error('Gradle 1.x is not supported');
   }
-
   try {
     const extractedJSON = await getAllDepsWithPlugin(
       root,

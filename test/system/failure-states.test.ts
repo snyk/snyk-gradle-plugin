@@ -1,7 +1,6 @@
 import * as path from 'path';
 import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
-
 const rootNoWrapper = fixtureDir('no wrapper');
 
 test('malformed build.gradle', async () => {
