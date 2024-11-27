@@ -142,7 +142,7 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
             if (!graph.nodes.get(childId)) {
                 def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
                 graph.setNode(childId, childDependency)
-                
+
                 def moduleArtifacts = d.getModuleArtifacts()
                 if (moduleArtifacts[0] && moduleArtifacts[0].getExtension()) {
                     // TODO: filter out this project's modules from deps.
@@ -226,16 +226,17 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
         return matching
     }
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
-    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which 
+    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which
     // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
     // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
     def resolvable = []
     matching.each({ it ->
         if (!it.canBeResolved) { return }
         try {
-            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode  
+            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode
             it.resolvedConfiguration
             resolvable.add(it)
+            debugLog("Added resolvedConfiguration for conf.name=$it.name")
         } catch (Exception ex) {
             // Swallow the error
             debugLog("Skipping config ${it.name} due to resolvedConfiguration error.")
@@ -286,7 +287,7 @@ allprojects { Project currProj ->
         ? confAttr.toLowerCase().split(',').collect { it.split(':') }
         : null
     )
-    
+
     task snykResolvedDepsJson {
         doLast { task ->
             if (snykDepsConfExecuted) {
@@ -356,12 +357,12 @@ allprojects { Project currProj ->
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
-                List nonemptyFirstLevelDeps = [] 
+                List nonemptyFirstLevelDeps = []
                 resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                
+
                 def projGraph = getGradleGraph(nonemptyFirstLevelDeps)
                 String projKey = formatPath(proj.path)
                 // if project is root ":", it's formatted to "" - we can't have an empty string as a key so use default name
@@ -387,14 +388,14 @@ allprojects { Project currProj ->
             println("JSONDEPS $jsonDeps")
         }
     }
-    
+
     task snykNormalizedResolvedDepsJson {
 
         doLast { task ->
             if (snykDepsConfExecuted) {
                 return
             }
-            
+
             snykDepsConfExecuted = true
             debugLog('snykNormalizedResolvedDepsJson task is executing via doLast')
             // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
@@ -457,16 +458,16 @@ allprojects { Project currProj ->
                     throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
                             ' for project ' + proj + ' could not be resolved.')
                 }
-                
-                List nonemptyFirstLevelDeps = [] 
+
+                List nonemptyFirstLevelDeps = []
                 resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
 
                 debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
                 debugLog('converting gradle graph to snyk-graph format')
-                
+
                 def projGraph = getGradleGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
                 String projKey = formatPath(proj.path)
-            
+
                 if (projKey == "") {
                     debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
                     projKey = defaultProjectKey
