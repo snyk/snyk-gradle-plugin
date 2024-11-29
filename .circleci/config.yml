@@ -229,7 +229,7 @@ jobs:
     <<: *windows_defaults
     environment:
       JDK: << parameters.jdk_version >>
-      #      JAVA_HOME: << parameters.jdk_path >>
+      JAVA_HOME: << parameters.jdk_path >>
       npm_config_loglevel: silent
       GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.daemon.idletimeout=180000 -Xmx3g -XX:+HeapDumpOnOutOfMemoryError -Dkotlin.compiler.execution.strategy=in-process'
       JAVA_OPTS: ' -Xmx512M -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8'
