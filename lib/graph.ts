@@ -50,11 +50,15 @@ export async function buildGraph(
     const node = gradleGraph[id];
     if (!node) continue;
     let { name = 'unknown', version = 'unknown' } = node;
+    let pkgIdProvenance: string | undefined = undefined;
 
     if (coordinateMap) {
       if (coordinateMap[id]) {
         id = coordinateMap[id];
         const [newName, newVersion] = id.split('@');
+        if (name !== newName || version !== newVersion) {
+          pkgIdProvenance = `${name}@${version}`; // record pkg id provenance if re coordinated
+        }
         name = newName;
         version = newVersion;
       }
@@ -66,28 +70,36 @@ export async function buildGraph(
     const visited = visitedMap[id];
     if (!verbose && visited) {
       const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode({ name, version }, prunedId, {
-        labels: { pruned: 'true' },
-      });
+      depGraphBuilder.addPkgNode(
+        { name, version },
+        prunedId,
+        createNodeInfo(pkgIdProvenance, 'true'),
+      );
       depGraphBuilder.connectDep(parentId, prunedId);
       continue; // don't queue any more children
     }
 
     if (verbose && ancestry.includes(id)) {
       const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode(visited, prunedId, {
-        labels: { pruned: 'cyclic' },
-      });
+      depGraphBuilder.addPkgNode(
+        visited,
+        prunedId,
+        createNodeInfo(pkgIdProvenance, 'cyclic'),
+      );
       depGraphBuilder.connectDep(parentId, prunedId);
       continue; // don't queue any more children
     }
 
     if (verbose && visited) {
       // use visited node when omitted dependencies found (verbose)
-      depGraphBuilder.addPkgNode(visited, id);
+      depGraphBuilder.addPkgNode(visited, id, createNodeInfo(pkgIdProvenance));
       depGraphBuilder.connectDep(parentId, id);
     } else {
-      depGraphBuilder.addPkgNode({ name, version }, id);
+      depGraphBuilder.addPkgNode(
+        { name, version },
+        id,
+        createNodeInfo(pkgIdProvenance),
+      );
       depGraphBuilder.connectDep(parentId, id);
       visitedMap[id] = { name, version };
     }
@@ -96,6 +108,16 @@ export async function buildGraph(
   }
 
   return depGraphBuilder.build();
+}
+
+function createNodeInfo(
+  pkgIdProvenance?: string,
+  pruned?: 'cyclic' | 'true',
+): { labels: Record<string, string> } | undefined {
+  const labels: Record<string, string> = {};
+  if (pruned) labels.pruned = pruned;
+  if (pkgIdProvenance) labels.pkgIdProvenance = pkgIdProvenance;
+  return Object.keys(labels).length ? { labels } : undefined;
 }
 
 export function findChildren(

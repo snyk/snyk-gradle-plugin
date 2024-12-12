@@ -219,7 +219,7 @@ describe('buildGraph', () => {
     const received = await buildGraph(
       {
         'com.private:a@1': {
-          name: 'a',
+          name: 'com.private:a',
           version: '1',
           parentIds: ['root-node'],
         },
@@ -234,6 +234,7 @@ describe('buildGraph', () => {
       false,
       {
         'com.private:a@1': 'unknown:a@unknown',
+        'com.public:b@1': 'com.public:b@1',
       },
     );
     const expected = new DepGraphBuilder(
@@ -243,6 +244,9 @@ describe('buildGraph', () => {
     expected.addPkgNode(
       { name: 'unknown:a', version: 'unknown' },
       'unknown:a@unknown',
+      {
+        labels: { pkgIdProvenance: 'com.private:a@1' },
+      },
     );
     expected.connectDep(expected.rootNodeId, 'unknown:a@unknown');
     expected.addPkgNode(
@@ -251,6 +255,47 @@ describe('buildGraph', () => {
     );
     expected.connectDep('unknown:a@unknown', 'com.public:b@1');
     expect(received.equals(expected.build())).toBe(true);
+  });
+  it('labels nodes with pkgIdProvenance when the co-ordinate is changed', async () => {
+    const received = await buildGraph(
+      {
+        'com.private:a@1': {
+          name: 'com.private:a',
+          version: '1',
+          parentIds: ['root-node'],
+        },
+        'com.public:b@1': {
+          name: 'com.public:b',
+          version: '1',
+          parentIds: ['com.private:a@1'],
+        },
+      },
+      'project',
+      '1.2.3',
+      false,
+      {
+        'com.private:a@1': 'com.public:a@2', // co-ordinate changed (gets a label)
+        'com.public:b@1': 'com.public:b@1', // co-ordinate unchanged (no label)
+      },
+    );
+    const expectLabel = received.getPkgNodes({
+      name: 'com.public:a',
+      version: '2',
+    });
+    expect(expectLabel).toContainEqual({
+      info: {
+        labels: {
+          pkgIdProvenance: 'com.private:a@1',
+        },
+      },
+    });
+    const expectNoLabel = received.getPkgNodes({
+      name: 'com.public:b',
+      version: '1',
+    });
+    expect(expectNoLabel).toContainEqual({
+      info: {},
+    });
   });
 });
 
