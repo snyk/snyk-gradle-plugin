@@ -61,13 +61,6 @@
       }
     },
     {
-      "id": "org.junit:junit-bom@5.8.2",
-      "info": {
-        "name": "org.junit:junit-bom",
-        "version": "5.8.2"
-      }
-    },
-    {
       "id": "org.apiguardian:apiguardian-api@1.1.2",
       "info": {
         "name": "org.apiguardian:apiguardian-api",
@@ -137,9 +130,6 @@
           },
           {
             "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2"
-          },
-          {
-            "nodeId": "org.junit:junit-bom@5.8.2"
           }
         ]
       },
@@ -171,9 +161,6 @@
             "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned"
           },
           {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
-          },
-          {
             "nodeId": "org.apiguardian:apiguardian-api@1.1.2"
           }
         ]
@@ -186,9 +173,6 @@
             "nodeId": "org.junit.platform:junit-platform-commons@1.8.2"
           },
           {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
-          },
-          {
             "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
           },
           {
@@ -197,23 +181,8 @@
         ]
       },
       {
-        "nodeId": "org.junit:junit-bom@5.8.2",
-        "pkgId": "org.junit:junit-bom@5.8.2",
-        "deps": []
-      },
-      {
         "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned",
         "pkgId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
-        "deps": [],
-        "info": {
-          "labels": {
-            "pruned": "true"
-          }
-        }
-      },
-      {
-        "nodeId": "org.junit:junit-bom@5.8.2:pruned",
-        "pkgId": "org.junit:junit-bom@5.8.2",
         "deps": [],
         "info": {
           "labels": {
@@ -230,9 +199,6 @@
         "nodeId": "org.junit.platform:junit-platform-commons@1.8.2",
         "pkgId": "org.junit.platform:junit-platform-commons@1.8.2",
         "deps": [
-          {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
-          },
           {
             "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
           }
