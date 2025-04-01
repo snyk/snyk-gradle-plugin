@@ -144,6 +144,7 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
         dep.each { d ->
             def moduleArtifacts = d.getModuleArtifacts()
             moduleArtifacts.each { a ->
+                debugLog("resolvedArtifact id=${a.id}, type=${a.type}, extension=${a.extension}, classifier=${a.classifier}, moduleVersion=${a.moduleVersion}")
                 def childName = "${d.moduleGroup}:${d.moduleName}"
                 def childId = "${childName}"
                 if (a.classifier) childId += ":${a.classifier}"
