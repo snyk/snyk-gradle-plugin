@@ -144,21 +144,18 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
         dep.each { d ->
             def moduleArtifacts = d.getModuleArtifacts()
             moduleArtifacts.each { a ->
-                debugLog("resolvedArtifact id=${a.id}, type=${a.type}, extension=${a.extension}, classifier=${a.classifier}, moduleVersion=${a.moduleVersion}")
                 def childName = "${d.moduleGroup}:${d.moduleName}"
-                def childId = "${childName}"
-                if (a.classifier) childId += ":${a.classifier}"
-                childId += "@${d.moduleVersion}"
-                if (!graph.nodes.get(childId)) {
+                def childId = ""
+                try {
+                    childId = hash(a.getFile())
+                    sha1Map.setCoordinate(childId, "${childName}@${d.moduleVersion}");
+                } catch (Exception e) {
+                    debugLog("Failed to hash artifact ${a.id}, error=${e}")
+                }
+                if (childId && !graph.nodes.get(childId)) {
                     def childDependency = ['name': childName, 'version': d.moduleVersion]
                     graph.setNode(childId, childDependency)
                     graph.setEdge(parentId, childId)
-                    try {
-                        def fileHash = hash(a.getFile())
-                        sha1Map.setCoordinate(fileHash, "${childName}@${d.moduleVersion}");
-                    } catch (Exception e) {
-                        debugLog("Failed to hash artifact ${moduleArtifacts[0]}, error=${e}")
-                    }
                     if (!currentChain.contains(childId) && d.children) {
                         currentChain.add(childId)
                         loadSha1MapGraph(d.children, graph, childId, currentChain, sha1Map)

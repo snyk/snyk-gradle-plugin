@@ -215,26 +215,26 @@ describe('buildGraph', () => {
     expect(received.equals(expected.build())).toBe(true);
   });
 
-  it('returns expected graph with coordinate map', async () => {
+  it('returns expected graph with sha1 map', async () => {
     const received = await buildGraph(
       {
-        'com.private:a@1': {
+        '1234': {
           name: 'com.private:a',
           version: '1',
           parentIds: ['root-node'],
         },
-        'com.public:b@1': {
+        '5678': {
           name: 'com.public:b',
           version: '1',
-          parentIds: ['com.private:a@1'],
+          parentIds: ['1234'],
         },
       },
       'project',
       '1.2.3',
       false,
       {
-        'com.private:a@1': 'unknown:a@unknown',
-        'com.public:b@1': 'com.public:b@1',
+        '1234': 'com.private:a@1',
+        '5678': 'com.public:b@1',
       },
     );
     const expected = new DepGraphBuilder(
@@ -242,40 +242,37 @@ describe('buildGraph', () => {
       { name: 'project', version: '1.2.3' },
     );
     expected.addPkgNode(
-      { name: 'unknown:a', version: 'unknown' },
-      'unknown:a@unknown',
-      {
-        labels: { pkgIdProvenance: 'com.private:a@1' },
-      },
+      { name: 'com.private:a', version: '1' },
+      'com.private:a@1',
     );
-    expected.connectDep(expected.rootNodeId, 'unknown:a@unknown');
+    expected.connectDep(expected.rootNodeId, 'com.private:a@1');
     expected.addPkgNode(
       { name: 'com.public:b', version: '1' },
       'com.public:b@1',
     );
-    expected.connectDep('unknown:a@unknown', 'com.public:b@1');
+    expected.connectDep('com.private:a@1', 'com.public:b@1');
     expect(received.equals(expected.build())).toBe(true);
   });
   it('labels nodes with pkgIdProvenance when the co-ordinate is changed', async () => {
     const received = await buildGraph(
       {
-        'com.private:a@1': {
+        '1234': {
           name: 'com.private:a',
           version: '1',
           parentIds: ['root-node'],
         },
-        'com.public:b@1': {
+        '5678': {
           name: 'com.public:b',
           version: '1',
-          parentIds: ['com.private:a@1'],
+          parentIds: ['1234'],
         },
       },
       'project',
       '1.2.3',
       false,
       {
-        'com.private:a@1': 'com.public:a@2', // co-ordinate changed (gets a label)
-        'com.public:b@1': 'com.public:b@1', // co-ordinate unchanged (no label)
+        '1234': 'com.public:a@2', // co-ordinate changed (gets a label)
+        '5678': 'com.public:b@1', // co-ordinate unchanged (no label)
       },
     );
     const expectLabel = received.getPkgNodes({

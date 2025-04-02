@@ -1,6 +1,6 @@
 import { DepGraphBuilder, PkgInfo, PkgManager } from '@snyk/dep-graph';
 
-import type { CoordinateMap } from './types';
+import type { Sha1Map } from './types';
 
 export interface GradleGraph {
   [id: string]: {
@@ -21,7 +21,7 @@ export async function buildGraph(
   rootPkgName: string,
   projectVersion: string,
   verbose?: boolean,
-  coordinateMap?: CoordinateMap,
+  sha1Map?: Sha1Map,
 ) {
   const pkgManager: PkgManager = { name: 'gradle' };
   const isEmptyGraph = !gradleGraph || Object.keys(gradleGraph).length === 0;
@@ -52,18 +52,18 @@ export async function buildGraph(
     let { name = 'unknown', version = 'unknown' } = node;
     let pkgIdProvenance: string | undefined = undefined;
 
-    if (coordinateMap) {
-      if (coordinateMap[id]) {
-        id = coordinateMap[id];
+    if (sha1Map) {
+      if (sha1Map[id]) {
+        id = sha1Map[id];
         const [newName, newVersion] = id.split('@');
         if (name !== newName || version !== newVersion) {
           pkgIdProvenance = `${name}@${version}`; // record pkg id provenance if re coordinated
+          name = newName;
+          version = newVersion;
         }
-        name = newName;
-        version = newVersion;
       }
-      if (coordinateMap[parentId]) {
-        parentId = coordinateMap[parentId];
+      if (sha1Map[parentId]) {
+        parentId = sha1Map[parentId];
       }
     }
 
