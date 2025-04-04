@@ -12,7 +12,6 @@ import { MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import { buildGraph, GradleGraph } from './graph';
 import type {
-  CoordinateMap,
   GradleInspectOptions,
   PomCoords,
   Sha1Map,
@@ -509,7 +508,7 @@ async function getAllDeps(
     if (versionBuildInfo) {
       extractedJSON.versionBuildInfo = versionBuildInfo;
     }
-    const coordinateMap: CoordinateMap = {};
+    const sha1Map: Sha1Map = {};
     if (extractedJSON.sha1Map) {
       const getCoordinateFromHash = async (hash: string): Promise<void> => {
         const originalCoordinate = extractedJSON.sha1Map[hash];
@@ -520,7 +519,7 @@ async function getAllDeps(
             depCoord,
             snykHttpClient,
           );
-          coordinateMap[originalCoordinate] = coordinate;
+          sha1Map[hash] = coordinate;
         } catch (err) {
           debugLog(err);
         }
@@ -533,7 +532,7 @@ async function getAllDeps(
     return await processProjectsInExtractedJSON(
       extractedJSON,
       options['print-graph'],
-      coordinateMap,
+      sha1Map,
     );
   } catch (err) {
     const error: Error = err;
@@ -620,7 +619,7 @@ ${chalk.red.bold(mainErrorMessage)}`;
 export async function processProjectsInExtractedJSON(
   extractedJSON: JsonDepsScriptResult,
   verbose?: boolean,
-  coordinateMap?: CoordinateMap,
+  sha1Map?: Sha1Map,
 ) {
   for (const projectId in extractedJSON.projects) {
     const { defaultProject, defaultProjectKey } = extractedJSON;
@@ -642,7 +641,7 @@ export async function processProjectsInExtractedJSON(
       rootPkgName,
       projectVersion,
       verbose,
-      coordinateMap,
+      sha1Map,
     );
     // this property usage ends here
     delete extractedJSON.projects[projectId].gradleGraph;

@@ -1,7 +1,6 @@
-import { PackageURL } from 'packageurl-js';
-
-import { debugLog } from '.';
 import type { GetPackageData, PomCoords, SnykHttpClient } from './types';
+import { PackageURL } from 'packageurl-js';
+import { debugLog } from '.';
 
 const PACKAGE_SEARCH_TYPE = 'maven';
 const PACKAGE_SEARCH_VERSION = '2022-09-21~beta';
@@ -31,6 +30,8 @@ export async function getMavenPackageInfo(
     debugLog(
       `Failed to resolve ${JSON.stringify(depCoords)} using sha1 '${sha1}.`,
     );
+    // use input coordinates if sha1 cannot be resolved for whatever reason
+    return `${depCoords.groupId}:${depCoords.artifactId}@${depCoords.version}`;
   }
 
   let groupId: string;
