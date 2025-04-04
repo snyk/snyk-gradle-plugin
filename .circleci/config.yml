@@ -297,7 +297,7 @@ workflows:
           name: Scan repository for secrets
           context:
             - snyk-bot-slack
-          channel: os-team-managed-alerts
+          channel: snyk-vuln-alerts-sca
           <<: *filters_branches_ignore_main
 
       - security-scans:
