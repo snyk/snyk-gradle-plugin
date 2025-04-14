@@ -61,13 +61,6 @@
       }
     },
     {
-      "id": "org.junit:junit-bom@5.8.2",
-      "info": {
-        "name": "org.junit:junit-bom",
-        "version": "5.8.2"
-      }
-    },
-    {
       "id": "org.apiguardian:apiguardian-api@1.1.2",
       "info": {
         "name": "org.apiguardian:apiguardian-api",
@@ -97,64 +90,61 @@
         "pkgId": "version-catalog-toml@unspecified",
         "deps": [
           {
-            "nodeId": "org.mockito:mockito-core@4.5.1"
+            "nodeId": "org.mockito:mockito-core:jar@4.5.1"
           },
           {
-            "nodeId": "org.mockito:mockito-inline@4.5.1"
+            "nodeId": "org.mockito:mockito-inline:jar@4.5.1"
           },
           {
-            "nodeId": "org.junit.jupiter:junit-jupiter@5.8.2"
+            "nodeId": "org.junit.jupiter:junit-jupiter:jar@5.8.2"
           }
         ]
       },
       {
-        "nodeId": "org.mockito:mockito-core@4.5.1",
+        "nodeId": "org.mockito:mockito-core:jar@4.5.1",
         "pkgId": "org.mockito:mockito-core@4.5.1",
         "deps": [
           {
-            "nodeId": "net.bytebuddy:byte-buddy@1.12.9"
+            "nodeId": "net.bytebuddy:byte-buddy:jar@1.12.9"
           },
           {
-            "nodeId": "net.bytebuddy:byte-buddy-agent@1.12.9"
+            "nodeId": "net.bytebuddy:byte-buddy-agent:jar@1.12.9"
           }
         ]
       },
       {
-        "nodeId": "org.mockito:mockito-inline@4.5.1",
+        "nodeId": "org.mockito:mockito-inline:jar@4.5.1",
         "pkgId": "org.mockito:mockito-inline@4.5.1",
         "deps": [
           {
-            "nodeId": "org.mockito:mockito-core@4.5.1:pruned"
+            "nodeId": "org.mockito:mockito-core:jar@4.5.1:pruned"
           }
         ]
       },
       {
-        "nodeId": "org.junit.jupiter:junit-jupiter@5.8.2",
+        "nodeId": "org.junit.jupiter:junit-jupiter:jar@5.8.2",
         "pkgId": "org.junit.jupiter:junit-jupiter@5.8.2",
         "deps": [
           {
-            "nodeId": "org.junit.jupiter:junit-jupiter-params@5.8.2"
+            "nodeId": "org.junit.jupiter:junit-jupiter-params:jar@5.8.2"
           },
           {
-            "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2"
-          },
-          {
-            "nodeId": "org.junit:junit-bom@5.8.2"
+            "nodeId": "org.junit.jupiter:junit-jupiter-api:jar@5.8.2"
           }
         ]
       },
       {
-        "nodeId": "net.bytebuddy:byte-buddy@1.12.9",
+        "nodeId": "net.bytebuddy:byte-buddy:jar@1.12.9",
         "pkgId": "net.bytebuddy:byte-buddy@1.12.9",
         "deps": []
       },
       {
-        "nodeId": "net.bytebuddy:byte-buddy-agent@1.12.9",
+        "nodeId": "net.bytebuddy:byte-buddy-agent:jar@1.12.9",
         "pkgId": "net.bytebuddy:byte-buddy-agent@1.12.9",
         "deps": []
       },
       {
-        "nodeId": "org.mockito:mockito-core@4.5.1:pruned",
+        "nodeId": "org.mockito:mockito-core:jar@4.5.1:pruned",
         "pkgId": "org.mockito:mockito-core@4.5.1",
         "deps": [],
         "info": {
@@ -164,45 +154,34 @@
         }
       },
       {
-        "nodeId": "org.junit.jupiter:junit-jupiter-params@5.8.2",
+        "nodeId": "org.junit.jupiter:junit-jupiter-params:jar@5.8.2",
         "pkgId": "org.junit.jupiter:junit-jupiter-params@5.8.2",
         "deps": [
           {
-            "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned"
+            "nodeId": "org.junit.jupiter:junit-jupiter-api:jar@5.8.2:pruned"
           },
           {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
-          },
-          {
-            "nodeId": "org.apiguardian:apiguardian-api@1.1.2"
+            "nodeId": "org.apiguardian:apiguardian-api:jar@1.1.2"
           }
         ]
       },
       {
-        "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
+        "nodeId": "org.junit.jupiter:junit-jupiter-api:jar@5.8.2",
         "pkgId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
         "deps": [
           {
-            "nodeId": "org.junit.platform:junit-platform-commons@1.8.2"
+            "nodeId": "org.junit.platform:junit-platform-commons:jar@1.8.2"
           },
           {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
+            "nodeId": "org.apiguardian:apiguardian-api:jar@1.1.2:pruned"
           },
           {
-            "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
-          },
-          {
-            "nodeId": "org.opentest4j:opentest4j@1.2.0"
+            "nodeId": "org.opentest4j:opentest4j:jar@1.2.0"
           }
         ]
       },
       {
-        "nodeId": "org.junit:junit-bom@5.8.2",
-        "pkgId": "org.junit:junit-bom@5.8.2",
-        "deps": []
-      },
-      {
-        "nodeId": "org.junit.jupiter:junit-jupiter-api@5.8.2:pruned",
+        "nodeId": "org.junit.jupiter:junit-jupiter-api:jar@5.8.2:pruned",
         "pkgId": "org.junit.jupiter:junit-jupiter-api@5.8.2",
         "deps": [],
         "info": {
@@ -212,34 +191,21 @@
         }
       },
       {
-        "nodeId": "org.junit:junit-bom@5.8.2:pruned",
-        "pkgId": "org.junit:junit-bom@5.8.2",
-        "deps": [],
-        "info": {
-          "labels": {
-            "pruned": "true"
-          }
-        }
-      },
-      {
-        "nodeId": "org.apiguardian:apiguardian-api@1.1.2",
+        "nodeId": "org.apiguardian:apiguardian-api:jar@1.1.2",
         "pkgId": "org.apiguardian:apiguardian-api@1.1.2",
         "deps": []
       },
       {
-        "nodeId": "org.junit.platform:junit-platform-commons@1.8.2",
+        "nodeId": "org.junit.platform:junit-platform-commons:jar@1.8.2",
         "pkgId": "org.junit.platform:junit-platform-commons@1.8.2",
         "deps": [
           {
-            "nodeId": "org.junit:junit-bom@5.8.2:pruned"
-          },
-          {
-            "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned"
+            "nodeId": "org.apiguardian:apiguardian-api:jar@1.1.2:pruned"
           }
         ]
       },
       {
-        "nodeId": "org.apiguardian:apiguardian-api@1.1.2:pruned",
+        "nodeId": "org.apiguardian:apiguardian-api:jar@1.1.2:pruned",
         "pkgId": "org.apiguardian:apiguardian-api@1.1.2",
         "deps": [],
         "info": {
@@ -249,7 +215,7 @@
         }
       },
       {
-        "nodeId": "org.opentest4j:opentest4j@1.2.0",
+        "nodeId": "org.opentest4j:opentest4j:jar@1.2.0",
         "pkgId": "org.opentest4j:opentest4j@1.2.0",
         "deps": []
       }
