@@ -420,7 +420,6 @@ export function generateWrapperProcessArgs(
   const isWinLocal = /^win/.test(os.platform());
   if (isWinLocal && command !== 'gradle') {
     command = 'cmd.exe';
-    parseArgs.push('/c');
     parseArgs.push(`"${commandPath}"`);
   }
   parseArgs = parseArgs.concat(args);
@@ -701,7 +700,12 @@ function buildArgs(
     }
     args.push('--build-file');
 
-    args.push(resolvedTargetFilePath);
+    const isWinLocal = /^win/.test(os.platform());
+    if (isWinLocal) {
+      args.push(`"${resolvedTargetFilePath}"`);
+    } else {
+      args.push(resolvedTargetFilePath);
+    }
   }
 
   // Arguments to init script are supplied as properties: https://stackoverflow.com/a/48370451
@@ -714,7 +718,14 @@ function buildArgs(
 
   if (options.initScript) {
     const formattedInitScript = path.resolve(options.initScript);
-    args.push('--init-script', formattedInitScript);
+    args.push('--init-script');
+
+    const isWinLocal = /^win/.test(os.platform());
+    if (isWinLocal) {
+      args.push(`"${formattedInitScript}"`);
+    } else {
+      args.push(formattedInitScript);
+    }
   }
 
   const isWin = /^win/.test(os.platform());

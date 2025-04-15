@@ -1,6 +1,7 @@
 import * as childProcess from 'child_process';
 import debugModule = require('debug');
 import { escapeAll } from 'shescape';
+import * as os from 'node:os';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 
@@ -23,6 +24,13 @@ export function execute(
   }
 
   args = escapeAll(args, spawnOptions);
+
+  // on windows only wrap the args in " after /c as if an arg contains spaces,
+  // cmd.exe stops reading the executable path at the first space and then treat everything after as arguments.
+  const isWinLocal = /^win/.test(os.platform());
+  if (isWinLocal && command == 'cmd.exe') {
+    args = ['/c', `"${args.join(' ')}"`];
+  }
 
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
   // which overides the cli internal proxy configuration.
