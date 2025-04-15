@@ -421,7 +421,7 @@ export function generateWrapperProcessArgs(
   if (isWinLocal && command !== 'gradle') {
     command = 'cmd.exe';
     parseArgs.push('/c');
-    parseArgs.push(commandPath);
+    parseArgs.push(`"${commandPath}"`);
   }
   parseArgs = parseArgs.concat(args);
   return { command, args: parseArgs };

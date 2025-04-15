@@ -5,10 +5,22 @@ import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
 
 const rootNoWrapper = fixtureDir('no wrapper');
+const rootNoWrapperBat = fixtureDir('no wrapper bat');
 const withInitScript = fixtureDir('with-init-script');
 
 test('run inspect()', async () => {
   const result = await inspect('.', path.join(rootNoWrapper, 'build.gradle'));
+  const pkgs = result.dependencyGraph.getDepPkgs();
+  const nodeIds: string[] = [];
+  Object.keys(pkgs).forEach((id) => {
+    nodeIds.push(`${pkgs[id].name}@${pkgs[id].version}`);
+  });
+
+  expect(nodeIds.indexOf('batik:batik-dom@1.6')).toBeGreaterThanOrEqual(0);
+});
+
+test('run inspect() with no wrapper and bat file', async () => {
+  const result = await inspect('.', path.join(rootNoWrapperBat, 'build.gradle'));
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
   Object.keys(pkgs).forEach((id) => {
