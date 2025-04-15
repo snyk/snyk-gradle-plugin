@@ -434,9 +434,8 @@ async function getAllDepsWithPlugin(
   gradleVersion: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
-    'init.gradle',
-  );
+  const { injectedPluginFilePath, cleanupCallback } =
+    await injectedPlugin('init.gradle');
   const args = buildArgs(
     root,
     targetFile,

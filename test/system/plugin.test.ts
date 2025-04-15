@@ -20,7 +20,10 @@ test('run inspect()', async () => {
 });
 
 test('run inspect() with no wrapper and bat file', async () => {
-  const result = await inspect('.', path.join(rootNoWrapperBat, 'build.gradle'));
+  const result = await inspect(
+    '.',
+    path.join(rootNoWrapperBat, 'build.gradle'),
+  );
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
   Object.keys(pkgs).forEach((id) => {
