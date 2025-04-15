@@ -69,7 +69,7 @@ test('multi-config: both compile and runtime deps picked up by default', async (
   );
 
   expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
-  expect(result.meta!.gradleProjectName).toBe('multi-config');
+  expect(result.meta?.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -99,7 +99,7 @@ test('multi-config: only deps for specified conf are picked up (precise match)',
     { 'configuration-matching': '^compileClasspath$' },
   );
   expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
-  expect(result.meta!.gradleProjectName).toBe('multi-config');
+  expect(result.meta?.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -125,7 +125,7 @@ test('multi-config: only deps for specified conf are picked up (fuzzy match)', a
     { 'configuration-matching': 'pileclass' },
   ); // case-insensitive regexp matching "compileClasspath"
   expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
-  expect(result.meta!.gradleProjectName).toBe('multi-config');
+  expect(result.meta?.gradleProjectName).toBe('multi-config');
 
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
@@ -151,7 +151,7 @@ test('multi-config: only deps for specified conf are picked up (using legacy CLI
     { args: ['--configuration', 'compileClasspath'] },
   );
   expect(result.dependencyGraph.rootPkg.name).toBe('multi-config');
-  expect(result.meta!.gradleProjectName).toBe('multi-config');
+  expect(result.meta?.gradleProjectName).toBe('multi-config');
   const pkgs = result.dependencyGraph.getDepPkgs();
   const nodeIds: string[] = [];
   Object.keys(pkgs).forEach((id) => {

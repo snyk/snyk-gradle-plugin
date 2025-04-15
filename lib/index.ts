@@ -199,10 +199,10 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   }
   debugLog(
     'The command produced JSONDEPS output of ' +
-      jsonLine!.length +
+      jsonLine.length +
       ' characters',
   );
-  return JSON.parse(jsonLine!);
+  return JSON.parse(jsonLine);
 }
 
 async function getAllDepsOneProject(
@@ -434,8 +434,9 @@ async function getAllDepsWithPlugin(
   gradleVersion: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const { injectedPluginFilePath, cleanupCallback } =
-    await injectedPlugin('init.gradle');
+  const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
+    'init.gradle',
+  );
   const args = buildArgs(
     root,
     targetFile,

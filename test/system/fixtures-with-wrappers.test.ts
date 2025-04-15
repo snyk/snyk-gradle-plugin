@@ -95,9 +95,7 @@ describe('inspect() fixtures', () => {
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
-      const expectedDepGraphJson = require(
-        `${fixturePath}/dep-graph-gradleNormalizeDeps-failed-search.json`,
-      );
+      const expectedDepGraphJson = require(`${fixturePath}/dep-graph-gradleNormalizeDeps-failed-search.json`);
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,

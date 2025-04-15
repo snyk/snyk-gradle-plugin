@@ -33,8 +33,8 @@ describe('multi-project', () => {
       path.join(multiProject, 'subproj', 'build.gradle'),
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
-    expect(result.meta!.gradleProjectName).toBe('subproj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
+    expect(result.meta?.gradleProjectName).toBe('subproj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([]);
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -50,8 +50,8 @@ describe('multi-project', () => {
   test('multi-project, ran from root, targeting subproj', async () => {
     const result = await inspect(multiProject, 'subproj/build.gradle');
     expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
-    expect(result.meta!.gradleProjectName).toBe('subproj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
+    expect(result.meta?.gradleProjectName).toBe('subproj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([]);
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -70,8 +70,8 @@ describe('multi-project', () => {
       'build.gradle',
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
-    expect(result.meta!.gradleProjectName).toBe('subproj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
+    expect(result.meta?.gradleProjectName).toBe('subproj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([]);
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -94,8 +94,8 @@ describe('multi-project', () => {
       options,
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
-    expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
+    expect(result.meta?.gradleProjectName).toBe('root-proj/subproj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual(['subproj']);
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -113,9 +113,9 @@ describe('multi-project', () => {
 
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
 
-    expect(result.meta!.gradleProjectName).toBe('root-proj');
+    expect(result.meta?.gradleProjectName).toBe('root-proj');
 
-    expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
+    expect(result.plugin.meta?.allSubProjectNames).toEqual(['subproj']);
 
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
@@ -130,9 +130,9 @@ describe('multi-project', () => {
         path.join(fixtureDir('multi-project gradle wrapper'), 'build.gradle'),
       );
       expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
-      expect(result.meta!.gradleProjectName).toBe('root-proj');
-      expect(result.meta!.versionBuildInfo!.gradleVersion).toBe('7.6.3');
-      expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
+      expect(result.meta?.gradleProjectName).toBe('root-proj');
+      expect(result.meta?.versionBuildInfo?.gradleVersion).toBe('7.6.3');
+      expect(result.plugin.meta?.allSubProjectNames).toEqual(['subproj']);
       // double parsing to have access to internal depGraph data, no methods available to properly
       // return the deps nodeIds list that belongs to a node
       const graphObject: any = JSON.parse(
@@ -149,7 +149,7 @@ describe('multi-project', () => {
       'build.gradle',
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
-    expect(result.meta!.gradleProjectName).toBe('root-proj');
+    expect(result.meta?.gradleProjectName).toBe('root-proj');
 
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
@@ -167,9 +167,9 @@ describe('multi-project', () => {
       options,
     );
 
-    expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
+    expect(result.plugin.meta?.allSubProjectNames).toEqual(['subproj']);
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
-    expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
+    expect(result.meta?.gradleProjectName).toBe('root-proj/subproj');
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -190,7 +190,7 @@ describe('multi-project', () => {
     expect(result.scannedProjects.length).toBe(2);
     for (const p of result.scannedProjects) {
       if (p.depGraph.rootPkg.name === 'root-proj') {
-        expect(p.meta!.gradleProjectName).toBe('root-proj');
+        expect(p.meta?.gradleProjectName).toBe('root-proj');
         // double parsing to have access to internal depGraph data, no methods available to properly
         // return the deps nodeIds list that belongs to a node
         const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
@@ -200,7 +200,7 @@ describe('multi-project', () => {
         // expect(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
       } else {
         expect(p.depGraph.rootPkg.name).toBe('root-proj/subproj');
-        expect(p.meta!.gradleProjectName).toBe('root-proj/subproj');
+        expect(p.meta?.gradleProjectName).toBe('root-proj/subproj');
 
         const pkgs = p.depGraph.getDepPkgs();
         const nodeIds: string[] = [];
@@ -229,7 +229,7 @@ describe('multi-project', () => {
     expect(result.scannedProjects[0].depGraph.rootPkg.name).toBe(
       'api-configuration',
     );
-    expect(result.scannedProjects[0].meta!.gradleProjectName).toBe(
+    expect(result.scannedProjects[0].meta?.gradleProjectName).toBe(
       'api-configuration',
     );
 
@@ -253,13 +253,13 @@ describe('multi-project', () => {
       options,
     );
 
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'subproj',
       'subproj-fail',
     ]);
 
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj/subproj');
-    expect(result.meta!.gradleProjectName).toBe('root-proj/subproj');
+    expect(result.meta?.gradleProjectName).toBe('root-proj/subproj');
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -292,9 +292,9 @@ describe('multi-project', () => {
     const names = new Set<string>();
     const newNames = new Set<string>();
     for (const p of result.scannedProjects) {
-      names.add(p.depGraph.rootPkg.name!);
-      newNames.add(p.meta!.gradleProjectName);
-      expect(p.meta!.versionBuildInfo.gradleVersion !== null);
+      names.add(p.depGraph.rootPkg.name);
+      newNames.add(p.meta?.gradleProjectName);
+      expect(p.meta?.versionBuildInfo.gradleVersion !== null);
     }
     expect(names).toEqual(
       new Set<string>([
@@ -325,8 +325,8 @@ describe('multi-project', () => {
       {},
     );
     expect(result.dependencyGraph.rootPkg.name).toBe('root-proj');
-    expect(result.meta!.gradleProjectName).toBe('root-proj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual(['subproj']);
+    expect(result.meta?.gradleProjectName).toBe('root-proj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual(['subproj']);
 
     // double parsing to have access to internal depGraph data, no methods available to properly
     // return the deps nodeIds list that belongs to a node
@@ -353,7 +353,7 @@ describe('multi-project', () => {
 
     for (const p of result.scannedProjects) {
       if (p.depGraph.rootPkg.name === 'root-proj') {
-        expect(p.meta!.gradleProjectName).toBe('root-proj');
+        expect(p.meta?.gradleProjectName).toBe('root-proj');
         // double parsing to have access to internal depGraph data, no methods available to properly
         // return the deps nodeIds list that belongs to a node
         const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
@@ -374,7 +374,7 @@ describe('multi-project', () => {
       '.',
       path.join(fixtureDir('multi-project-same-name'), 'build.gradle'),
     );
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'lib',
       'greeter/lib',
@@ -389,7 +389,7 @@ describe('multi-project', () => {
         'build.gradle',
       ),
     );
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'lib',
       'greeter/subproject-with-same-name-as-root',
@@ -423,7 +423,7 @@ describe('multi-project', () => {
       '.',
       path.join(fixtureDir('multi-project-different-names'), 'build.gradle'),
     );
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'lib-top',
       'greeter/lib',
@@ -531,8 +531,8 @@ describe('multi-project', () => {
     );
 
     expect(result.dependencyGraph.rootPkg.name).toBe('subproj');
-    expect(result.meta!.gradleProjectName).toBe('subproj');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([]);
+    expect(result.meta?.gradleProjectName).toBe('subproj');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([]);
 
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
@@ -559,10 +559,10 @@ describe('multi-project', () => {
     expect(result.dependencyGraph.rootPkg.name).toBe(
       'subprojects-same-name/greeter/subproj',
     );
-    expect(result.meta!.gradleProjectName).toBe(
+    expect(result.meta?.gradleProjectName).toBe(
       'subprojects-same-name/greeter/subproj',
     );
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'subproj',
       'greeter/subproj',
@@ -579,10 +579,10 @@ describe('multi-project', () => {
     expect(result.dependencyGraph.rootPkg.name).toBe(
       'subprojects-same-name/subproj',
     );
-    expect(result.meta!.gradleProjectName).toBe(
+    expect(result.meta?.gradleProjectName).toBe(
       'subprojects-same-name/subproj',
     );
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'subproj',
       'greeter/subproj',
@@ -614,8 +614,8 @@ describe('multi-project', () => {
     expect(result.dependencyGraph.rootPkg.name).toBe(
       'gradle-sandbox/greeter/lib',
     );
-    expect(result.meta!.gradleProjectName).toBe('gradle-sandbox/greeter/lib');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.meta?.gradleProjectName).toBe('gradle-sandbox/greeter/lib');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'greeter',
       'lib-top',
       'greeter/lib',
@@ -643,8 +643,8 @@ describe('multi-project', () => {
     );
 
     expect(result.dependencyGraph.rootPkg.name).toBe('test/module');
-    expect(result.meta!.gradleProjectName).toBe('test/module');
-    expect(result.plugin.meta!.allSubProjectNames).toEqual([
+    expect(result.meta?.gradleProjectName).toBe('test/module');
+    expect(result.plugin.meta?.allSubProjectNames).toEqual([
       'module',
       'module/tools',
     ]);
