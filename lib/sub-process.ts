@@ -1,5 +1,6 @@
 import * as childProcess from 'child_process';
 import { escapeAll } from 'shescape';
+import * as os from 'os';
 import debugModule = require('debug');
 
 const debugLogging = debugModule('snyk-gradle-plugin');
@@ -12,7 +13,7 @@ export function execute(
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
   const spawnOptions: childProcess.SpawnOptions = {
-    shell: false,
+    shell: /^win/.test(os.platform()),
     env: { ...process.env },
   };
   if (options?.cwd) {
