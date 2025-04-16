@@ -18,9 +18,9 @@ import type {
   Sha1Map,
   SnykHttpClient,
 } from './types';
+import { CliOptions } from './types';
 import { getMavenPackageInfo } from './search';
 import debugModule = require('debug');
-import { CliOptions } from './types';
 
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -420,7 +420,7 @@ export function generateWrapperProcessArgs(
   const isWinLocal = /^win/.test(os.platform());
   if (isWinLocal && command !== 'gradle') {
     command = 'cmd.exe';
-    parseArgs.push(`"${commandPath}"`);
+    parseArgs.push('/c', 'call', `"${commandPath}"`);
   }
   parseArgs = parseArgs.concat(args);
   return { command, args: parseArgs };
