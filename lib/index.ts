@@ -20,7 +20,6 @@ import type {
 } from './types';
 import { CliOptions } from './types';
 import { getMavenPackageInfo } from './search';
-import { quoteValueOnWindows } from './utils';
 import debugModule = require('debug');
 
 type ScannedProject = legacyCommon.ScannedProject;
@@ -421,7 +420,7 @@ export function generateWrapperProcessArgs(
   const isWinLocal = /^win/.test(os.platform());
   if (isWinLocal && command !== 'gradle') {
     command = 'cmd.exe';
-    parseArgs.push(`"${commandPath}"`);
+    parseArgs.push(commandPath);
   }
   parseArgs = parseArgs.concat(args);
   return { command, args: parseArgs };
@@ -701,7 +700,7 @@ function buildArgs(
     }
     args.push('--build-file');
 
-    args.push(quoteValueOnWindows(resolvedTargetFilePath));
+    args.push(resolvedTargetFilePath);
   }
 
   // Arguments to init script are supplied as properties: https://stackoverflow.com/a/48370451
@@ -714,7 +713,7 @@ function buildArgs(
 
   if (options.initScript) {
     const formattedInitScript = path.resolve(options.initScript);
-    args.push('--init-script', quoteValueOnWindows(formattedInitScript));
+    args.push('--init-script', formattedInitScript);
   }
 
   const isWin = /^win/.test(os.platform());

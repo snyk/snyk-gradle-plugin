@@ -1,5 +1,5 @@
 import * as childProcess from 'child_process';
-import { escapeAll } from 'shescape';
+import { escapeAll, quoteAll } from 'shescape';
 import * as os from 'os';
 import debugModule = require('debug');
 
@@ -27,7 +27,7 @@ export function execute(
 
   if (/^win/.test(os.platform()) && command === 'cmd.exe') {
     spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
-    args = ['/c', `"${args.join(' ')}"`];
+    args = ['/c', `"${quoteAll(args).join(' ')}"`];
   }
 
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
