@@ -1,0 +1,37 @@
+apply plugin: 'java'
+
+group = 'com.github.jitpack'
+
+sourceCompatibility = 1.8 // java 8
+targetCompatibility = 1.8
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'batik:batik-dom:1.6'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    if (project.gradle.gradleVersion >= '6.3') {
+        archiveClassifier.set('sources')
+    } else {
+        classifier = 'sources'
+    }
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    if (project.gradle.gradleVersion >= '6.3') {
+        archiveClassifier.set('javadoc')
+    } else {
+        classifier = 'javadoc'
+    }
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}

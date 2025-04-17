@@ -17,7 +17,7 @@ if (isKotlinSupported) {
       path.join(fixtureDir('gradle-kts'), 'build.gradle.kts'),
     );
     expect(result.dependencyGraph.rootPkg.name).toMatch('gradle-kts');
-    expect(result.meta!.gradleProjectName).toMatch('gradle-kts');
+    expect(result.meta?.gradleProjectName).toMatch('gradle-kts');
     const pkgs = result.dependencyGraph.getDepPkgs();
     const nodeIds: string[] = [];
     Object.keys(pkgs).forEach((id) => {
@@ -49,5 +49,6 @@ if (isKotlinSupported) {
     });
   }, 200000);
 } else {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   test('build.gradle.kts are not supported with Gradle version < 5', () => {});
 }

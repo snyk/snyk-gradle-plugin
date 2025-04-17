@@ -46,7 +46,7 @@ test_matrix_win: &test_matrix_win
     parameters:
       node_version: [ '16', '18', '20' ]
       jdk_version: [ '8' ]
-      jdk_path: [ 'C:\Program Files\Eclipse Adoptium\jdk-8.0.432.6-hotspot' ]
+      jdk_path: [ 'C:\Program Files\Eclipse Adoptium\jdk-8.0.442.6-hotspot' ]
       gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win_new_versions: &test_matrix_win_new_versions

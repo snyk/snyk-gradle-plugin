@@ -24,7 +24,7 @@ describe('Gradle Version Build Info', () => {
       'JVM:          1.8.0_222 (Eclipse OpenJ9 openj9-0.15.1)\n' +
       'OS:           Mac OS X 10.14.6 x86_64';
 
-    const versionBuildInfo = testableMethods.getVersionBuildInfo(gradleOutput)!;
+    const versionBuildInfo = testableMethods.getVersionBuildInfo(gradleOutput);
 
     expect(versionBuildInfo).toEqual({
       gradleVersion: '4.10.3',
@@ -69,7 +69,7 @@ describe('Gradle Version Build Info', () => {
       'JVM:          9.0.4 (Oracle Corporation 9.0.4+11)\n' +
       'OS:           Mac OS X 10.15 x86_64';
     const versionBuildInfo =
-      testableMethods.getVersionBuildInfo(expectedGradleOutput)!;
+      testableMethods.getVersionBuildInfo(expectedGradleOutput);
 
     expect(versionBuildInfo).toEqual({
       gradleVersion: '5.4.1',

@@ -1,6 +1,7 @@
 import * as childProcess from 'child_process';
+import { escapeAll, quoteAll } from 'shescape';
+import * as os from 'os';
 import debugModule = require('debug');
-import { escapeAll } from 'shescape';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 
@@ -23,6 +24,11 @@ export function execute(
   }
 
   args = escapeAll(args, spawnOptions);
+
+  if (/^win/.test(os.platform()) && command === 'cmd.exe') {
+    spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
+    args = ['/c', `"${quoteAll(args).join(' ')}"`];
+  }
 
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
   // which overides the cli internal proxy configuration.

@@ -18,9 +18,9 @@ import type {
   Sha1Map,
   SnykHttpClient,
 } from './types';
+import { CliOptions } from './types';
 import { getMavenPackageInfo } from './search';
 import debugModule = require('debug');
-import { CliOptions } from './types';
 
 type ScannedProject = legacyCommon.ScannedProject;
 
@@ -199,10 +199,10 @@ function extractJsonFromScriptOutput(stdoutText: string): JsonDepsScriptResult {
   }
   debugLog(
     'The command produced JSONDEPS output of ' +
-      jsonLine!.length +
+      jsonLine.length +
       ' characters',
   );
-  return JSON.parse(jsonLine!);
+  return JSON.parse(jsonLine);
 }
 
 async function getAllDepsOneProject(
@@ -420,7 +420,6 @@ export function generateWrapperProcessArgs(
   const isWinLocal = /^win/.test(os.platform());
   if (isWinLocal && command !== 'gradle') {
     command = 'cmd.exe';
-    parseArgs.push('/c');
     parseArgs.push(commandPath);
   }
   parseArgs = parseArgs.concat(args);
