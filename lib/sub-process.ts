@@ -13,7 +13,7 @@ export function execute(
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
   const spawnOptions: childProcess.SpawnOptions = {
-    shell: /^win/.test(os.platform()),
+    shell: false,
     env: { ...process.env },
   };
   if (options?.cwd) {
@@ -24,6 +24,11 @@ export function execute(
   }
 
   args = escapeAll(args, spawnOptions);
+
+  if (/^win/.test(os.platform()) && command === 'cmd.exe') {
+    spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
+    args = ['/c', `"${args.join(' ')}"`];
+  }
 
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
   // which overides the cli internal proxy configuration.
