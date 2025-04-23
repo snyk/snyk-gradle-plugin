@@ -41,28 +41,28 @@
         "pkgId": "custom-configuration@unspecified",
         "deps": [
           {
-            "nodeId": "org.mockito:mockito-core@4.6.1"
+            "nodeId": "org.mockito:mockito-core:jar@4.6.1"
           },
           {
-            "nodeId": "org.scala-lang:scala-library@2.13.8"
+            "nodeId": "org.scala-lang:scala-library:jar@2.13.8"
           },
           {
-            "nodeId": "org.slf4j:slf4j-api@1.7.36"
+            "nodeId": "org.slf4j:slf4j-api:jar@1.7.36"
           }
         ]
       },
       {
-        "nodeId": "org.mockito:mockito-core@4.6.1",
+        "nodeId": "org.mockito:mockito-core:jar@4.6.1",
         "pkgId": "org.mockito:mockito-core@4.6.1",
         "deps": []
       },
       {
-        "nodeId": "org.scala-lang:scala-library@2.13.8",
+        "nodeId": "org.scala-lang:scala-library:jar@2.13.8",
         "pkgId": "org.scala-lang:scala-library@2.13.8",
         "deps": []
       },
       {
-        "nodeId": "org.slf4j:slf4j-api@1.7.36",
+        "nodeId": "org.slf4j:slf4j-api:jar@1.7.36",
         "pkgId": "org.slf4j:slf4j-api@1.7.36",
         "deps": []
       }

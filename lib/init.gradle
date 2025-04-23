@@ -113,54 +113,58 @@ def hash(File file) {
     file.eachByte(1024 * 4) { buffer, len ->
         md.update(buffer, 0, len)
     }
-        return md.digest().encodeHex().toString()
+    return md.digest().encodeHex().toString()
 }
 
 def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
     deps.each { dep ->
-            dep.each { d ->
-                def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
+        dep.each { d ->
+            def moduleArtifacts = d.getModuleArtifacts()
+            moduleArtifacts.each { a ->
+                def childName = "${d.moduleGroup}:${d.moduleName}"
+                def childId = "${childName}:${a.type}"
+                if (a.classifier) childId += ":${a.classifier}"
+                childId += "@${d.moduleVersion}"
                 if (!graph.nodes.get(childId)) {
-                    def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
+                    def childDependency = ['name': childName, 'version': d.moduleVersion]
                     graph.setNode(childId, childDependency)
                 }
-                //  In Gradle 2, there can be several instances of the same dependency present at each level,
-                //  each for a different configuration. In this case, we need to merge the dependencies.
                 if (!currentChain.contains(childId) && d.children) {
                     currentChain.add(childId)
                     loadGraph(d.children, graph, childId, currentChain)
                 }
                 graph.setEdge(parentId, childId)
             }
+        }
     }
 }
 
 def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
         dep.each { d ->
-            def childId = "${d.moduleGroup}:${d.moduleName}@${d.moduleVersion}"
-            if (!graph.nodes.get(childId)) {
-                def childDependency = ['name': "${d.moduleGroup}:${d.moduleName}", 'version': d.moduleVersion]
-                graph.setNode(childId, childDependency)
-
-                def moduleArtifacts = d.getModuleArtifacts()
-                if (moduleArtifacts[0] && moduleArtifacts[0].getExtension()) {
-                    // TODO: filter out this project's modules from deps.
-                    try {
-                        def fileHash = hash(moduleArtifacts[0].getFile())
-                        sha1Map.setCoordinate(fileHash, childId);
-                    } catch (Exception e) {
-                        debugLog("Failed to hash artifact ${moduleArtifacts[0]}")
-                    }
+            def moduleArtifacts = d.getModuleArtifacts()
+            moduleArtifacts.each { a ->
+                def childName = "${d.moduleGroup}:${d.moduleName}"
+                def sha1Hash = ""
+                try {
+                    sha1Hash = hash(a.getFile())
+                    def childId = "${childName}:${a.type}"
+                    if (a.classifier) childId += ":${a.classifier}"
+                    childId += "@${d.moduleVersion}"
+                    sha1Map.setCoordinate(sha1Hash, childId);
+                } catch (Exception e) {
+                    debugLog("Failed to hash artifact ${a.id}, error=${e}")
                 }
+                if (sha1Hash && !graph.nodes.get(sha1Hash)) {
+                    def childDependency = ['name': childName, 'version': d.moduleVersion]
+                    graph.setNode(sha1Hash, childDependency)
+                }
+                if (!currentChain.contains(sha1Hash) && d.children) {
+                    currentChain.add(sha1Hash)
+                    loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                }
+                graph.setEdge(parentId, sha1Hash)
             }
-            //  In Gradle 2, there can be several instances of the same dependency present at each level,
-            //  each for a different configuration. In this case, we need to merge the dependencies.
-            if (!currentChain.contains(childId) && d.children) {
-                currentChain.add(childId)
-                loadSha1MapGraph(d.children, graph, childId, currentChain, sha1Map)
-            }
-            graph.setEdge(parentId, childId)
         }
     }
 }

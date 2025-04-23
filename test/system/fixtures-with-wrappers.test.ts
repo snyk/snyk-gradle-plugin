@@ -53,8 +53,12 @@ describe('inspect() fixtures', () => {
           depCoords: Partial<PomCoords>,
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           _snykHttpClient: SnykHttpClient,
-        ) =>
-          `${depCoords.groupId}:${depCoords.artifactId}@${depCoords.version}`,
+        ) => {
+          const classifier = depCoords.classifier
+            ? `:${depCoords.classifier}`
+            : '';
+          return `${depCoords.groupId}:${depCoords.artifactId}:${depCoords.type}${classifier}@${depCoords.version}`;
+        },
       );
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
@@ -95,7 +99,7 @@ describe('inspect() fixtures', () => {
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
-      const expectedDepGraphJson = require(`${fixturePath}/dep-graph-gradleNormalizeDeps-failed-search.json`);
+      const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,

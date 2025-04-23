@@ -21,14 +21,12 @@ export interface Sha1Map {
   [hash: string]: string;
 }
 
-export interface CoordinateMap {
-  [originalCoordinate: string]: string;
-}
-
 export interface PomCoords {
   groupId: string;
   artifactId: string;
   version: string;
+  type: string;
+  classifier?: string;
 }
 
 interface PackageResource {

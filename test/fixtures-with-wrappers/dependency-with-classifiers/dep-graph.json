@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": "dependency-with-classifiers@unspecified",
+      "info": {
+        "name": "dependency-with-classifiers",
+        "version": "unspecified"
+      }
+    },
+    {
+      "id": "net.sf.json-lib:json-lib@2.4",
+      "info": {
+        "name": "net.sf.json-lib:json-lib",
+        "version": "2.4"
+      }
+    },
+    {
+      "id": "commons-beanutils:commons-beanutils@1.8.0",
+      "info": {
+        "name": "commons-beanutils:commons-beanutils",
+        "version": "1.8.0"
+      }
+    },
+    {
+      "id": "commons-logging:commons-logging@1.1.1",
+      "info": {
+        "name": "commons-logging:commons-logging",
+        "version": "1.1.1"
+      }
+    },
+    {
+      "id": "commons-collections:commons-collections@3.2.1",
+      "info": {
+        "name": "commons-collections:commons-collections",
+        "version": "3.2.1"
+      }
+    },
+    {
+      "id": "net.sf.ezmorph:ezmorph@1.0.6",
+      "info": {
+        "name": "net.sf.ezmorph:ezmorph",
+        "version": "1.0.6"
+      }
+    },
+    {
+      "id": "commons-lang:commons-lang@2.5",
+      "info": {
+        "name": "commons-lang:commons-lang",
+        "version": "2.5"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": "dependency-with-classifiers@unspecified",
+        "deps": [
+          {
+            "nodeId": "net.sf.json-lib:json-lib:jar:jdk13@2.4"
+          },
+          {
+            "nodeId": "net.sf.json-lib:json-lib:jar:jdk15@2.4"
+          }
+        ]
+      },
+      {
+        "nodeId": "net.sf.json-lib:json-lib:jar:jdk13@2.4",
+        "pkgId": "net.sf.json-lib:json-lib@2.4",
+        "deps": [
+          {
+            "nodeId": "commons-beanutils:commons-beanutils:jar@1.8.0"
+          },
+          {
+            "nodeId": "commons-logging:commons-logging:jar@1.1.1"
+          },
+          {
+            "nodeId": "commons-collections:commons-collections:jar@3.2.1"
+          },
+          {
+            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6"
+          },
+          {
+            "nodeId": "commons-lang:commons-lang:jar@2.5"
+          }
+        ]
+      },
+      {
+        "nodeId": "net.sf.json-lib:json-lib:jar:jdk15@2.4",
+        "pkgId": "net.sf.json-lib:json-lib@2.4",
+        "deps": [
+          {
+            "nodeId": "commons-beanutils:commons-beanutils:jar@1.8.0:pruned"
+          },
+          {
+            "nodeId": "commons-logging:commons-logging:jar@1.1.1:pruned"
+          },
+          {
+            "nodeId": "commons-collections:commons-collections:jar@3.2.1:pruned"
+          },
+          {
+            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned"
+          },
+          {
+            "nodeId": "commons-lang:commons-lang:jar@2.5:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "commons-beanutils:commons-beanutils:jar@1.8.0",
+        "pkgId": "commons-beanutils:commons-beanutils@1.8.0",
+        "deps": [
+          {
+            "nodeId": "commons-logging:commons-logging:jar@1.1.1:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "commons-logging:commons-logging:jar@1.1.1",
+        "pkgId": "commons-logging:commons-logging@1.1.1",
+        "deps": []
+      },
+      {
+        "nodeId": "commons-collections:commons-collections:jar@3.2.1",
+        "pkgId": "commons-collections:commons-collections@3.2.1",
+        "deps": []
+      },
+      {
+        "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6",
+        "pkgId": "net.sf.ezmorph:ezmorph@1.0.6",
+        "deps": [
+          {
+            "nodeId": "commons-lang:commons-lang:jar@2.5:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "commons-lang:commons-lang:jar@2.5",
+        "pkgId": "commons-lang:commons-lang@2.5",
+        "deps": []
+      },
+      {
+        "nodeId": "commons-beanutils:commons-beanutils:jar@1.8.0:pruned",
+        "pkgId": "commons-beanutils:commons-beanutils@1.8.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "commons-logging:commons-logging:jar@1.1.1:pruned",
+        "pkgId": "commons-logging:commons-logging@1.1.1",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "commons-collections:commons-collections:jar@3.2.1:pruned",
+        "pkgId": "commons-collections:commons-collections@3.2.1",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned",
+        "pkgId": "net.sf.ezmorph:ezmorph@1.0.6",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "commons-lang:commons-lang:jar@2.5:pruned",
+        "pkgId": "commons-lang:commons-lang@2.5",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      }
+    ]
+  }
+}

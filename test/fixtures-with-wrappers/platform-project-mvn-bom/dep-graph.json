@@ -12,13 +12,6 @@
       }
     },
     {
-      "id": "org.springframework.boot:spring-boot-dependencies@1.5.8.RELEASE",
-      "info": {
-        "name": "org.springframework.boot:spring-boot-dependencies",
-        "version": "1.5.8.RELEASE"
-      }
-    },
-    {
       "id": "com.google.code.gson:gson@2.8.2",
       "info": {
         "name": "com.google.code.gson:gson",
@@ -48,37 +41,29 @@
         "pkgId": "platform-project-mvn-bom@unspecified",
         "deps": [
           {
-            "nodeId": "org.springframework.boot:spring-boot-dependencies@1.5.8.RELEASE"
+            "nodeId": "com.google.code.gson:gson:jar@2.8.2"
           },
           {
-            "nodeId": "com.google.code.gson:gson@2.8.2"
-          },
-          {
-            "nodeId": "dom4j:dom4j@1.6.1"
+            "nodeId": "dom4j:dom4j:jar@1.6.1"
           }
         ]
       },
       {
-        "nodeId": "org.springframework.boot:spring-boot-dependencies@1.5.8.RELEASE",
-        "pkgId": "org.springframework.boot:spring-boot-dependencies@1.5.8.RELEASE",
-        "deps": []
-      },
-      {
-        "nodeId": "com.google.code.gson:gson@2.8.2",
+        "nodeId": "com.google.code.gson:gson:jar@2.8.2",
         "pkgId": "com.google.code.gson:gson@2.8.2",
         "deps": []
       },
       {
-        "nodeId": "dom4j:dom4j@1.6.1",
+        "nodeId": "dom4j:dom4j:jar@1.6.1",
         "pkgId": "dom4j:dom4j@1.6.1",
         "deps": [
           {
-            "nodeId": "xml-apis:xml-apis@1.4.01"
+            "nodeId": "xml-apis:xml-apis:jar@1.4.01"
           }
         ]
       },
       {
-        "nodeId": "xml-apis:xml-apis@1.4.01",
+        "nodeId": "xml-apis:xml-apis:jar@1.4.01",
         "pkgId": "xml-apis:xml-apis@1.4.01",
         "deps": []
       }
