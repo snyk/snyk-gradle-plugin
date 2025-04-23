@@ -27,9 +27,11 @@ export function execute(
 
   if (/^win/.test(os.platform()) && command === 'cmd.exe') {
     spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
-    args = ['/c', `"${quoteAll(args).join(' ')}"`];
-  }
 
+    const updated = updateCommandAndArgsForWindows(command, args);
+    command = updated.command;
+    args = updated.args;
+  }
   // Before spawning an external process, we look if we need to restore the system proxy configuration,
   // which overides the cli internal proxy configuration.
   if (process.env.SNYK_SYSTEM_HTTP_PROXY !== undefined) {
@@ -85,4 +87,22 @@ ${stderr}
       resolve(stdout);
     });
   });
+}
+
+function updateCommandAndArgsForWindows(
+  command: string,
+  args: string[],
+): { command: string; args: string[] } {
+  args = quoteAll(args); // to handle any spaces in args relating to file path
+
+  if (command !== 'gradle') {
+    // when command is not gradle we need to wrap the command in "
+    // then wrap the combined string of all args to enable windows to interpret the command correctly
+    args = [`"${command}"`, ...args];
+    args = ['/c', `"${args.join(' ')}"`];
+  } else {
+    args = ['/c', command, ...args];
+  }
+
+  return { command: 'cmd.exe', args };
 }

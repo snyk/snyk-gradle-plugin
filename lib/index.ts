@@ -411,21 +411,6 @@ export async function getGradleVersion(
   return gradleVersionOutput;
 }
 
-export function generateWrapperProcessArgs(
-  commandPath: string,
-  args: string[],
-): { command: string; args: string[] } {
-  let parseArgs: string[] = [];
-  let command = commandPath;
-  const isWinLocal = /^win/.test(os.platform());
-  if (isWinLocal && command !== 'gradle') {
-    command = 'cmd.exe';
-    parseArgs.push(commandPath);
-  }
-  parseArgs = parseArgs.concat(args);
-  return { command, args: parseArgs };
-}
-
 async function getAllDepsWithPlugin(
   root: string,
   targetFile: string,
@@ -444,15 +429,11 @@ async function getAllDepsWithPlugin(
     gradleVersion,
   );
 
-  const { command: wrapperedCommand, args: wrapperArgs } =
-    generateWrapperProcessArgs(command, args);
-
-  const fullCommandText =
-    'gradle command: ' + wrapperedCommand + ' ' + wrapperArgs.join(' ');
+  const fullCommandText = 'gradle command: ' + command + ' ' + args.join(' ');
   debugLog('Executing ' + fullCommandText);
   const stdoutText = await subProcess.execute(
-    wrapperedCommand,
-    wrapperArgs,
+    command,
+    args,
     { cwd: root },
     printIfEcho,
   );
@@ -487,13 +468,7 @@ async function getAllDeps(
   snykHttpClient: SnykHttpClient,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const { command: wrapperedCommand, args: wrapperArgs } =
-    generateWrapperProcessArgs(command, []);
-  const gradleVersion = await getGradleVersion(
-    root,
-    wrapperedCommand,
-    wrapperArgs,
-  );
+  const gradleVersion = await getGradleVersion(root, command, []);
   if (gradleVersion.match(/Gradle 1/)) {
     throw new Error('Gradle 1.x is not supported');
   }
