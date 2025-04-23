@@ -31,8 +31,8 @@ if (isWinLocal) {
       inspect(subWithWrapper, path.join('app', 'build.gradle')),
     ).rejects.toThrow();
     expect(subProcessExecSpy.mock.calls[0]).toEqual([
-      'cmd.exe',
-      [`${subWithWrapper}\\gradlew.bat`, '-v'],
+      `${subWithWrapper}\\gradlew.bat`,
+      ['-v'],
       {
         cwd: `${subWithWrapper}`,
       },
@@ -42,8 +42,8 @@ if (isWinLocal) {
   test('windows with wrapper invokes wrapper bat', async () => {
     await expect(inspect(rootWithWrapper, 'build.gradle')).rejects.toThrow();
     expect(subProcessExecSpy.mock.calls[0]).toEqual([
-      'cmd.exe',
-      [`${rootWithWrapper}\\gradlew.bat`, '-v'],
+      `${rootWithWrapper}\\gradlew.bat`,
+      ['-v'],
       {
         cwd: `${rootWithWrapper}`,
       },
