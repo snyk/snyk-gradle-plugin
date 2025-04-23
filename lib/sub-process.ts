@@ -25,7 +25,7 @@ export function execute(
 
   args = escapeAll(args, spawnOptions);
 
-  if (/^win/.test(os.platform()) && command === 'cmd.exe') {
+  if (/^win/.test(os.platform())) {
     spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
 
     const updated = updateCommandAndArgsForWindows(command, args);
