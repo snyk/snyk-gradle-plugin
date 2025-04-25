@@ -19,7 +19,9 @@ if (!fixtures.length) {
     // up producing two versions, the locked version
     // and the new one. It looks like the new release
     // is included in the 'default' configuration
-    .filter((dir) => dir !== 'with-lock-file');
+    .filter((dir) => dir !== 'with-lock-file')
+    // handled by a separate test
+    .filter((dir) => dir !== 'init-gradle');
 }
 
 describe('inspect() fixtures', () => {
@@ -38,7 +40,7 @@ describe('inspect() fixtures', () => {
 
       const result = await inspect('.', pathToBuildConfig);
 
-      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
+      expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
   });
 
@@ -69,7 +71,7 @@ describe('inspect() fixtures', () => {
         gradleNormalizeDeps: true,
       });
 
-      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
+      expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
   });
 
@@ -105,7 +107,40 @@ describe('inspect() fixtures', () => {
         gradleNormalizeDeps: true,
       });
 
-      expect(result.dependencyGraph.toJSON()).toEqual(expectedDepGraphJson);
+      expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
     }, 100000);
+  });
+
+  test(`fixture: init-gradle/app with gradleNormalizeDeps`, async () => {
+    jest.spyOn(search, 'getMavenPackageInfo').mockImplementation(
+      async (
+        _sha1: string,
+        depCoords: Partial<PomCoords>,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _snykHttpClient: SnykHttpClient,
+      ) => {
+        const classifier = depCoords.classifier
+          ? `:${depCoords.classifier}`
+          : '';
+        return `${depCoords.groupId}:${depCoords.artifactId}:${depCoords.type}${classifier}@${depCoords.version}`;
+      },
+    );
+    const fixturePath = getPathToFixture('init-gradle');
+    const expectedDepGraphJson = require(`${fixturePath}/app/dep-graph.json`);
+
+    const result = await inspect(fixturePath, 'app/build.gradle', {
+      gradleNormalizeDeps: true,
+    });
+
+    expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
+  });
+
+  test(`fixture: init-gradle/app`, async () => {
+    const fixturePath = getPathToFixture('init-gradle');
+    const expectedDepGraphJson = require(`${fixturePath}/app/dep-graph.json`);
+
+    const result = await inspect(fixturePath, 'app/build.gradle');
+
+    expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
   });
 });

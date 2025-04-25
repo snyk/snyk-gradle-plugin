@@ -116,6 +116,11 @@ def hash(File file) {
     return md.digest().encodeHex().toString()
 }
 
+def hashString(String str) {
+    def md = java.security.MessageDigest.getInstance('SHA-1')
+    return md.digest(str.bytes).encodeHex().toString()
+}
+
 def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
     deps.each { dep ->
         dep.each { d ->
@@ -145,15 +150,21 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
             def moduleArtifacts = d.getModuleArtifacts()
             moduleArtifacts.each { a ->
                 def childName = "${d.moduleGroup}:${d.moduleName}"
+                def childId = "${childName}:${a.type}"
+                if (a.classifier) childId += ":${a.classifier}"
+                childId += "@${d.moduleVersion}"
                 def sha1Hash = ""
                 try {
                     sha1Hash = hash(a.getFile())
-                    def childId = "${childName}:${a.type}"
-                    if (a.classifier) childId += ":${a.classifier}"
-                    childId += "@${d.moduleVersion}"
                     sha1Map.setCoordinate(sha1Hash, childId);
                 } catch (Exception e) {
+                    // sometimes artifacts have no file to hash
+                    // for example, a reference to another project
+                    // implementation project(':utilities')
+                    // in this case hash the childId
                     debugLog("Failed to hash artifact ${a.id}, error=${e}")
+                    sha1Hash = hashString(childId)
+                    sha1Map.setCoordinate(sha1Hash, childId);
                 }
                 if (sha1Hash && !graph.nodes.get(sha1Hash)) {
                     def childDependency = ['name': childName, 'version': d.moduleVersion]
