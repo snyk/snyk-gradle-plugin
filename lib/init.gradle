@@ -348,20 +348,20 @@ allprojects { Project currProj ->
                     }
             }
             // name of target project - either specified by --file or the root of a multi-module build
-            String defaultProjectName = task.project.name
+            String defaultProjectName = currProj.name
             // the path of the above, preferred over name because path is unique
-            String defaultProjectKey = isRootPath(task.project.path) ? defaultProjectName : formatPath(task.project.path)
+            String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
             // collect all subprojects names that are not target
             List allSubProjectNames = []
             allprojects
-                .findAll({ it.path != task.project.path })
+                .findAll({ it.path != currProj.path })
                 .each({
                     String projKey = formatPath(it.path)
                     allSubProjectNames.add(projKey)
                 })
             def shouldScanProject = {
                 onlyProj == null ||
-                (onlyProj == '.' && it.name == defaultProjectName) ||
+                (onlyProj == '.' && it.path == currProj.path) ||
                 it.name == onlyProj ||
                 formatPath(it.path) == onlyProj
             }
@@ -450,18 +450,18 @@ allprojects { Project currProj ->
                     }
             }
 
-            String defaultProjectName = task.project.name
-            String defaultProjectKey = isRootPath(task.project.path) ? defaultProjectName : formatPath(task.project.path)
+            String defaultProjectName = currProj.name
+            String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
             List allSubProjectNames = []
             allprojects
-                .findAll({ it.path != task.project.path })
+                .findAll({ it.path != currProj.path })
                 .each({
                     String projKey = formatPath(it.path)
                     allSubProjectNames.add(projKey)
                 })
             def shouldScanProject = {
                 onlyProj == null ||
-                (onlyProj == '.' && it.name == defaultProjectName) ||
+                (onlyProj == '.' && it.path == currProj.path) ||
                 it.name == onlyProj ||
                 formatPath(it.path) == onlyProj
             }
