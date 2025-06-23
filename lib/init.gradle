@@ -124,7 +124,13 @@ def hashString(String str) {
 def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
     deps.each { dep ->
         dep.each { d ->
-            def moduleArtifacts = d.getModuleArtifacts()
+            def moduleArtifacts
+            try {
+                moduleArtifacts = d.getModuleArtifacts()
+            } catch (Exception ex) {
+                debugLog("failed to get artifacts for dep: `$d`")
+                return
+            }
             moduleArtifacts.each { a ->
                 def childName = "${d.moduleGroup}:${d.moduleName}"
                 def childId = "${childName}:${a.type}"
@@ -147,7 +153,13 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
 def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
         dep.each { d ->
-            def moduleArtifacts = d.getModuleArtifacts()
+            def moduleArtifacts
+            try {
+                moduleArtifacts = d.getModuleArtifacts()
+            } catch (Exception ex) {
+                debugLog("failed to get artifacts for dep: `$d`")
+                return
+            }
             moduleArtifacts.each { a ->
                 def childName = "${d.moduleGroup}:${d.moduleName}"
                 def childId = "${childName}:${a.type}"
