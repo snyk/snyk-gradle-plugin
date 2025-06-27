@@ -159,8 +159,8 @@ describe('Gradle Plugin', () => {
     );
   });
 
-  it.each([7, 8])(
-    'make sure configuration cache is switched off for Gradle %s',
+  it.each([7, 8, 9, 10])(
+    'make sure configuration cache is switched off for Gradle %s and higher',
     async (version) => {
       const result = testableMethods.buildArgs(
         '.',
