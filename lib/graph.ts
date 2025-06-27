@@ -15,7 +15,34 @@ export interface GradleGraph {
 interface QueueItem {
   id: string;
   parentId: string;
-  ancestry: string[];
+  ancestry: Set<string>;
+}
+
+function precomputeChildrenMap(
+  gradleGraph: GradleGraph,
+): Map<string, string[]> {
+  const childrenMap = new Map<string, string[]>();
+  for (const id of Object.keys(gradleGraph)) {
+    const node = gradleGraph[id];
+    if (node?.parentIds) {
+      for (const parentId of node.parentIds) {
+        if (!childrenMap.has(parentId)) {
+          childrenMap.set(parentId, []);
+        }
+        childrenMap.get(parentId).push(id);
+      }
+    }
+  }
+  return childrenMap;
+}
+
+function findChildren(
+  parentId: string,
+  ancestry: Set<string>,
+  childrenMap: Map<string, string[]>,
+): QueueItem[] {
+  const childrenIds = childrenMap.get(parentId) || [];
+  return childrenIds.map((id) => ({ id, ancestry, parentId }));
 }
 
 export async function buildGraph(
@@ -37,9 +64,11 @@ export async function buildGraph(
     return depGraphBuilder.build();
   }
 
+  const childrenMap = precomputeChildrenMap(gradleGraph);
+
   const visitedMap: Record<string, PkgInfo> = {};
   const queue = new Queue<QueueItem>();
-  findChildren('root-node', [], gradleGraph).forEach((item) =>
+  findChildren('root-node', new Set(), childrenMap).forEach((item) =>
     queue.enqueue(item),
   );
 
@@ -74,31 +103,31 @@ export async function buildGraph(
     }
 
     const visited = visitedMap[id];
-    if (!verbose && visited) {
-      const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode(
-        { name, version },
-        prunedId,
-        createNodeInfo(pkgIdProvenance, 'true'),
-      );
-      depGraphBuilder.connectDep(parentId, prunedId);
-      continue; // don't queue any more children
-    }
+    if (visited) {
+      if (!verbose) {
+        const prunedId = id + ':pruned';
+        depGraphBuilder.addPkgNode(
+          { name, version },
+          prunedId,
+          createNodeInfo(pkgIdProvenance, 'true'),
+        );
+        depGraphBuilder.connectDep(parentId, prunedId);
+        continue; // don't queue any more children
+      }
 
-    if (verbose && ancestry.includes(id)) {
-      const prunedId = id + ':pruned';
-      depGraphBuilder.addPkgNode(
-        visited,
-        prunedId,
-        createNodeInfo(pkgIdProvenance, 'cyclic'),
-      );
-      depGraphBuilder.connectDep(parentId, prunedId);
-      continue; // don't queue any more children
-    }
+      if (ancestry.has(id)) {
+        const prunedId = id + ':pruned';
+        depGraphBuilder.addPkgNode(
+          visited,
+          prunedId,
+          createNodeInfo(pkgIdProvenance, 'cyclic'),
+        );
+        depGraphBuilder.connectDep(parentId, prunedId);
+        continue; // don't queue any more children
+      }
 
-    if (verbose && visited) {
+      // Node already exists in dep graph builder
       // use visited node when omitted dependencies found (verbose)
-      depGraphBuilder.addPkgNode(visited, id, createNodeInfo(pkgIdProvenance));
       depGraphBuilder.connectDep(parentId, id);
     } else {
       depGraphBuilder.addPkgNode(
@@ -110,8 +139,9 @@ export async function buildGraph(
       visitedMap[id] = { name, version };
     }
     // Remember to push updated ancestry here
-    findChildren(gradleGraphId, [...ancestry, id], gradleGraph).forEach(
-      (item) => queue.enqueue(item),
+    const newAncestry = new Set(ancestry).add(id);
+    findChildren(gradleGraphId, newAncestry, childrenMap).forEach((item) =>
+      queue.enqueue(item),
     );
   }
 
@@ -126,19 +156,4 @@ function createNodeInfo(
   if (pruned) labels.pruned = pruned;
   if (pkgIdProvenance) labels.pkgIdProvenance = pkgIdProvenance;
   return Object.keys(labels).length ? { labels } : undefined;
-}
-
-export function findChildren(
-  parentId: string,
-  ancestry: string[],
-  gradleGraph: GradleGraph,
-): QueueItem[] {
-  const result: QueueItem[] = [];
-  for (const id of Object.keys(gradleGraph)) {
-    const node = gradleGraph[id];
-    if (node?.parentIds?.includes(parentId)) {
-      result.push({ id, ancestry, parentId });
-    }
-  }
-  return result;
 }
