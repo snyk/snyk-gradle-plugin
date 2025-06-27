@@ -1,4 +1,5 @@
 import { DepGraphBuilder, PkgInfo, PkgManager } from '@snyk/dep-graph';
+import Queue from '@common.js/yocto-queue';
 
 import type { Sha1Map } from './types';
 import { parseCoordinate } from './coordinate';
@@ -37,12 +38,14 @@ export async function buildGraph(
   }
 
   const visitedMap: Record<string, PkgInfo> = {};
-  const queue: QueueItem[] = [];
-  queue.push(...findChildren('root-node', [], gradleGraph)); // queue direct dependencies
+  const queue = new Queue<QueueItem>();
+  findChildren('root-node', [], gradleGraph).forEach((item) =>
+    queue.enqueue(item),
+  );
 
   // breadth first search
-  while (queue.length > 0) {
-    const item = queue.shift();
+  while (queue.size > 0) {
+    const item = queue.dequeue();
     if (!item) continue;
     let { id, parentId } = item;
     const { ancestry } = item;
@@ -107,7 +110,9 @@ export async function buildGraph(
       visitedMap[id] = { name, version };
     }
     // Remember to push updated ancestry here
-    queue.push(...findChildren(gradleGraphId, [...ancestry, id], gradleGraph)); // queue children
+    findChildren(gradleGraphId, [...ancestry, id], gradleGraph).forEach(
+      (item) => queue.enqueue(item),
+    );
   }
 
   return depGraphBuilder.build();
