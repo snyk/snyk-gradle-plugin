@@ -39,7 +39,7 @@ test_matrix_unix_new_versions: &test_matrix_unix_new_versions
     parameters:
       node_version: [ '16.18', '18.18', '20.9' ]
       jdk_version: [ '17.0.9-jbr' ]
-      gradle_version: [ '7.3', '8.4' ]
+      gradle_version: [ '7.3', '8.4', '9.0.0' ]
 
 test_matrix_win: &test_matrix_win
   matrix:
@@ -55,7 +55,7 @@ test_matrix_win_new_versions: &test_matrix_win_new_versions
       node_version: [ '16', '18', '20' ]
       jdk_version: [ '17.0.2' ]
       jdk_path: [ 'C:\Program Files\OpenJDK\jdk-17.0.2' ]
-      gradle_version: [ '7.3', '8.4' ]
+      gradle_version: [ '7.3', '8.4', '9.0.0' ]
 
 filters_branches_only_main: &filters_branches_only_main
   filters:
