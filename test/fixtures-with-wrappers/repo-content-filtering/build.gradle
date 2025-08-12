@@ -12,7 +12,7 @@ repositories {
             excludeGroupByRegex "org.checkerframework.*"
         }
     }
-    jcenter()
+    gradlePluginPortal()
 }
 
 dependencies {
