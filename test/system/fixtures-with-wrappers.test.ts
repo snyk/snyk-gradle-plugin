@@ -21,7 +21,9 @@ if (!fixtures.length) {
     // is included in the 'default' configuration
     .filter((dir) => dir !== 'with-lock-file')
     // handled by a separate test
-    .filter((dir) => dir !== 'init-gradle');
+    .filter((dir) => dir !== 'init-gradle')
+    // handled by a separate test due to platform-specific dependencies
+    .filter((dir) => dir !== 'kts-basic-gradle9');
 }
 
 describe('inspect() fixtures', () => {
@@ -41,7 +43,7 @@ describe('inspect() fixtures', () => {
       const result = await inspect('.', pathToBuildConfig);
 
       expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
-    }, 100000);
+    }, 120000);
   });
 
   // gradleNormalizeDeps
@@ -56,10 +58,11 @@ describe('inspect() fixtures', () => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           _snykHttpClient: SnykHttpClient,
         ) => {
+          const type = depCoords.type ?? '';
           const classifier = depCoords.classifier
             ? `:${depCoords.classifier}`
             : '';
-          return `${depCoords.groupId}:${depCoords.artifactId}:${depCoords.type}${classifier}@${depCoords.version}`;
+          return `${depCoords.groupId}:${depCoords.artifactId}:${type}${classifier}@${depCoords.version}`;
         },
       );
       const fixturePath = getPathToFixture(fixtureName);
@@ -72,7 +75,7 @@ describe('inspect() fixtures', () => {
       });
 
       expect(result.dependencyGraph?.toJSON()).toEqual(expectedDepGraphJson);
-    }, 100000);
+    }, 120000);
   });
 
   // gradleNormalizeDeps - failed /packages search

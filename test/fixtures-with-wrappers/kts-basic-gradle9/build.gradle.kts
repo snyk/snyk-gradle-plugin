@@ -1,14 +1,13 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-version = "1.0.0-SNAPSHOT"
-
 plugins {
-	val kotlinVersion = "1.9.10"
+	val kotlinVersion = "2.0.0"
 	id("org.jetbrains.kotlin.jvm") version kotlinVersion
 	id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
 	id("org.jetbrains.kotlin.plugin.jpa") version kotlinVersion
 }
 
+version = "1.0.0-SNAPSHOT"
 
 repositories {
 	mavenCentral()
@@ -19,8 +18,4 @@ dependencies {
 	testImplementation("org.jetbrains.kotlin:kotlin-reflect") {
 		exclude(module = "junit")
 	}
-}
-
-configurations {
-  runtimeClasspath.get().shouldResolveConsistentlyWith(compileClasspath.get())
 }

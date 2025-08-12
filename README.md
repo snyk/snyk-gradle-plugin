@@ -46,6 +46,7 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 | 6      | ✅        |
 | 7      | ✅        |
 | 8      | ✅        |
+| 9      | ✅        |
 
 # Supported Snyk command line arguments:
 

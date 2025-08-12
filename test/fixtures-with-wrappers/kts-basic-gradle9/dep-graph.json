@@ -1,0 +1,561 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
+  },
+  "pkgs": [
+    {
+      "id": "kts-basic-gradle9@1.0.0-SNAPSHOT",
+      "info": {
+        "name": "kts-basic-gradle9",
+        "version": "1.0.0-SNAPSHOT"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-stdlib-jdk8@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-build-tools-impl@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-build-tools-impl",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-compiler-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-compiler-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-allopen-compiler-plugin-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-allopen-compiler-plugin-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-noarg-compiler-plugin-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-noarg-compiler-plugin-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-native-prebuilt@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-native-prebuilt",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-reflect@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-reflect",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-stdlib-jdk7@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-stdlib@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-stdlib",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-build-tools-api@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-build-tools-api",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-compiler-runner@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-compiler-runner",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-script-runtime@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-script-runtime",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-reflect@1.6.10",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-reflect",
+        "version": "1.6.10"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-daemon-embeddable@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-daemon-embeddable",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.intellij.deps:trove4j@1.0.20200330",
+      "info": {
+        "name": "org.jetbrains.intellij.deps:trove4j",
+        "version": "1.0.20200330"
+      }
+    },
+    {
+      "id": "org.jetbrains:annotations@13.0",
+      "info": {
+        "name": "org.jetbrains:annotations",
+        "version": "13.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-daemon-client@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-daemon-client",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-build-common@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-build-common",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm@1.5.0",
+      "info": {
+        "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm",
+        "version": "1.5.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-scripting-jvm@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-scripting-jvm",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "id": "org.jetbrains.kotlin:kotlin-scripting-common@2.0.0",
+      "info": {
+        "name": "org.jetbrains.kotlin:kotlin-scripting-common",
+        "version": "2.0.0"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": "kts-basic-gradle9@1.0.0-SNAPSHOT",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:sources@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-build-tools-impl:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-allopen-compiler-plugin-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-noarg-compiler-plugin-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-native-prebuilt::macos-aarch64@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar:sources@2.0.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:sources@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib-jdk8@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:sources@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar:sources@2.0.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-build-tools-impl:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-build-tools-impl@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-build-tools-api:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-compiler-runner:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:jar@2.0.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-compiler-embeddable@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-script-runtime:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar@1.6.10"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-daemon-embeddable:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.intellij.deps:trove4j:jar@1.0.20200330"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-allopen-compiler-plugin-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-allopen-compiler-plugin-embeddable@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-noarg-compiler-plugin-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-noarg-compiler-plugin-embeddable@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-native-prebuilt::macos-aarch64@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-native-prebuilt@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-reflect@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar:sources@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-reflect@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar:sources@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains:annotations:jar@13.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:sources@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib-jdk7@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar:sources@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar:sources@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-build-tools-api:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-build-tools-api@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-compiler-runner:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-compiler-runner@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-daemon-client:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-build-common:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:jar@1.5.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-compiler-embeddable@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-jvm:jar@2.0.0"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-common:jar@2.0.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-script-runtime:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-script-runtime@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-reflect:jar@1.6.10",
+        "pkgId": "org.jetbrains.kotlin:kotlin-reflect@1.6.10",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-daemon-embeddable:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-daemon-embeddable@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.intellij.deps:trove4j:jar@1.0.20200330",
+        "pkgId": "org.jetbrains.intellij.deps:trove4j@1.0.20200330",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar:sources@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-stdlib@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains:annotations:jar@13.0",
+        "pkgId": "org.jetbrains:annotations@13.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-daemon-client:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-daemon-client@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-build-common:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-build-common@2.0.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:jar@1.5.0",
+        "pkgId": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm@1.5.0",
+        "deps": []
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-jvm:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-jvm@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-script-runtime:jar@2.0.0:pruned"
+          },
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-scripting-common:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-common:jar@2.0.0",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-common@2.0.0",
+        "deps": [
+          {
+            "nodeId": "org.jetbrains.kotlin:kotlin-stdlib:jar@2.0.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-script-runtime:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-script-runtime@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.jetbrains.kotlin:kotlin-scripting-common:jar@2.0.0:pruned",
+        "pkgId": "org.jetbrains.kotlin:kotlin-scripting-common@2.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      }
+    ]
+  }
+}
