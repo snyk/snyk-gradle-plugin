@@ -656,9 +656,10 @@ function buildArgs(
     if (!fs.existsSync(resolvedTargetFilePath)) {
       throw new Error('File not found: "' + resolvedTargetFilePath + '"');
     }
-    args.push('--build-file');
 
-    args.push(resolvedTargetFilePath);
+    const resolvedTargetDir = path.dirname(resolvedTargetFilePath);
+    args.push('--project-dir');
+    args.push(resolvedTargetDir);
   }
 
   // Arguments to init script are supplied as properties: https://stackoverflow.com/a/48370451

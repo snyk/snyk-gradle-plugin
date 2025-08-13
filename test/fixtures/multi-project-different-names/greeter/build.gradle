@@ -1,9 +1,15 @@
+import org.gradle.util.GradleVersion
+
 plugins {
     id 'application'
     id 'distribution'
 }
 
-mainClassName = 'gradle.app.GreetPerson'
+if (GradleVersion.current() >= GradleVersion.version('7.0')) {
+    application.mainClass.set('gradle.app.GreetPerson')
+} else {
+    mainClassName = 'gradle.app.GreetPerson'
+}
 
 repositories {
     mavenCentral()
