@@ -12,7 +12,7 @@ repositories {
 
 catalog {
     versionCatalog {
-        version("kotlin", "1.6.21")
+        version("kotlin", "1.9.10")
         version("jvm", "17")
 
         plugin("kotlin-lang", "org.jetbrains.kotlin.jvm").versionRef("kotlin")
