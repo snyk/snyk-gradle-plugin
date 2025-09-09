@@ -9,8 +9,8 @@ const kotlinVersion =
   gradleVersionInUse < 7
     ? '1.3.21'
     : gradleVersionInUse < 9
-    ? '1.8.10'
-    : '2.2.0';
+      ? '1.8.10'
+      : '2.2.0';
 const classifierMap: Record<number, string> = {
   7: ':gradle71',
   8: ':gradle76',
