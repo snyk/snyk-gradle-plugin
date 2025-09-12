@@ -13,7 +13,7 @@ import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import { buildGraph, GradleGraph } from './graph';
 import type { GradleInspectOptions, Sha1Map, SnykHttpClient } from './types';
 import { getMavenPackageInfo } from './search';
-import debugModule = require('debug');
+import * as debugModule from 'debug';
 import { CliOptions } from './types';
 import { parseCoordinate } from './coordinate';
 
@@ -400,7 +400,7 @@ export async function getGradleVersion(
     gradleVersionOutput = await subProcess.execute(command, completeArgs, {
       cwd: root,
     });
-  } catch (_) {
+  } catch {
     // intentionally empty
   }
   return gradleVersionOutput;

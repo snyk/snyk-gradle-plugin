@@ -6,7 +6,7 @@ export interface RequestInfo {
   path: string;
   body?: any;
   headers?: OutgoingHttpHeaders;
-  qs?: {};
+  qs?: Record<string, string>;
   json?: boolean;
   timeout?: number;
   family?: number;

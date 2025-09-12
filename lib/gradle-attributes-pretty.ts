@@ -31,7 +31,7 @@ export function getGradleAttributesPretty(output: string): string | undefined {
       )
       .join('\n');
     return jsonAttrsPretty;
-  } catch (e) {
+  } catch {
     return undefined;
   }
 }

@@ -1,7 +1,7 @@
 import * as childProcess from 'child_process';
 import { escapeAll, quoteAll } from 'shescape';
 import * as os from 'os';
-import debugModule = require('debug');
+import * as debugModule from 'debug';
 
 const debugLogging = debugModule('snyk-gradle-plugin');
 

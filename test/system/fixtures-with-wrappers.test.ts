@@ -38,7 +38,9 @@ describe('inspect() fixtures', () => {
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
-      const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
+      const expectedDepGraphJson = JSON.parse(
+        fs.readFileSync(`${fixturePath}/dep-graph.json`, 'utf8'),
+      );
 
       const result = await inspect('.', pathToBuildConfig);
 
@@ -68,7 +70,9 @@ describe('inspect() fixtures', () => {
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
-      const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
+      const expectedDepGraphJson = JSON.parse(
+        fs.readFileSync(`${fixturePath}/dep-graph.json`, 'utf8'),
+      );
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,
@@ -104,7 +108,9 @@ describe('inspect() fixtures', () => {
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
-      const expectedDepGraphJson = require(`${fixturePath}/dep-graph.json`);
+      const expectedDepGraphJson = JSON.parse(
+        fs.readFileSync(`${fixturePath}/dep-graph.json`, 'utf8'),
+      );
 
       const result = await inspect('.', pathToBuildConfig, {
         gradleNormalizeDeps: true,
@@ -129,7 +135,9 @@ describe('inspect() fixtures', () => {
       },
     );
     const fixturePath = getPathToFixture('init-gradle');
-    const expectedDepGraphJson = require(`${fixturePath}/app/dep-graph.json`);
+    const expectedDepGraphJson = JSON.parse(
+      fs.readFileSync(`${fixturePath}/app/dep-graph.json`, 'utf8'),
+    );
 
     const result = await inspect(fixturePath, 'app/build.gradle', {
       gradleNormalizeDeps: true,
@@ -140,7 +148,9 @@ describe('inspect() fixtures', () => {
 
   test(`fixture: init-gradle/app`, async () => {
     const fixturePath = getPathToFixture('init-gradle');
-    const expectedDepGraphJson = require(`${fixturePath}/app/dep-graph.json`);
+    const expectedDepGraphJson = JSON.parse(
+      fs.readFileSync(`${fixturePath}/app/dep-graph.json`, 'utf8'),
+    );
 
     const result = await inspect(fixturePath, 'app/build.gradle');
 
