@@ -272,20 +272,46 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
 }
+
+// Only include configurations that actually have dependencies
+def hasResolvableDependencies(config, resolvableConfigs) {
+    def resolvableDependencies = []
+    // Does this dependency come from a resolvable configuration?
+    config.firstLevelModuleDependencies.each { dep ->
+        def isResolvableDependency = resolvableConfigs.any { conf -> conf.name == dep.configuration }
+        if (isResolvableDependency) {
+            resolvableDependencies.add(dep)
+        }
+    }
+    
+    if (resolvableDependencies.isEmpty()) {
+        return false
+    }
+    return true
+}
+
 List getResolvedConfigs(resolvableConfigs){
     List resolvedConfigs = []
     resolvableConfigs.each({ config ->
         ResolvedConfiguration resConf = config.getResolvedConfiguration()
         debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
         if (!resConf.hasError()) {
-            resolvedConfigs.add(resConf)
-            debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
+            if (hasResolvableDependencies(resConf, resolvableConfigs)) {
+                resolvedConfigs.add(resConf)
+                debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
+            } else {
+                debugLog("Skipping resolved config `$config.name' no resolvable dependencies found")
+            }
         } else {
             // even if some dependencies fail to resolve, we prefer a partial result to none
             LenientConfiguration lenientConf = resConf.getLenientConfiguration()
-            debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
-            debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
-            resolvedConfigs.add(lenientConf)
+            if (hasResolvableDependencies(lenientConf, resolvableConfigs)) {
+                resolvedConfigs.add(lenientConf)
+                debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
+                debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
+            } else {
+                debugLog("Skipping lenient config `$config.name' no resolvable dependencies found")
+            }
         }
     })
     return resolvedConfigs
@@ -379,11 +405,6 @@ allprojects { Project currProj ->
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
                 List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
-
-                if (resolvedConfigs.isEmpty() && !resolvableConfigs.isEmpty()) {
-                    throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
-                            ' for project ' + proj + ' could not be resolved.')
-                }
                 List nonemptyFirstLevelDeps = []
                 resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
 
@@ -481,11 +502,6 @@ allprojects { Project currProj ->
 
                 def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
                 List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
-                if (!resolvableConfigs.isEmpty() && resolvedConfigs.isEmpty()) {
-                    throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
-                            ' for project ' + proj + ' could not be resolved.')
-                }
-
                 List nonemptyFirstLevelDeps = []
                 resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
 

@@ -649,4 +649,31 @@ describe('multi-project', () => {
       'module/tools',
     ]);
   });
+
+  test('multi-project-compile: ignores empty configurations and dependencies that are not resolvable', async () => {
+    const result = await inspect(
+      '.',
+      path.join(fixtureDir('multi-project-compile'), 'build.gradle'),
+      { allSubProjects: true },
+    );
+
+    expect(result.scannedProjects.length).toBe(3);
+
+    const allDependencies = new Set<string>();
+    for (const project of result.scannedProjects) {
+      const pkgs = project.depGraph?.getDepPkgs() || [];
+      Object.keys(pkgs).forEach((id) => {
+        allDependencies.add(`${pkgs[id].name}@${pkgs[id].version}`);
+      });
+    }
+
+    // Check that we only have one version of tomcat-embed-core
+    const tomcatVersions = Array.from(allDependencies).filter((dep) =>
+      dep.startsWith('org.apache.tomcat.embed:tomcat-embed-core@'),
+    );
+
+    expect(tomcatVersions).toEqual([
+      'org.apache.tomcat.embed:tomcat-embed-core@9.0.99',
+    ]);
+  });
 });
