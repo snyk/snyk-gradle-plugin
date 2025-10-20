@@ -13,9 +13,6 @@ defaults: &defaults
     jdk_version:
       type: string
       default: ''
-    jdk_path:
-      type: string
-      default: ''
     node_version:
       type: string
       default: ''
@@ -46,7 +43,6 @@ test_matrix_win: &test_matrix_win
     parameters:
       node_version: [ '16', '18', '20' ]
       jdk_version: [ '8' ]
-      jdk_path: [ 'C:\Program Files\Eclipse Adoptium\jdk-8.0.442.6-hotspot' ]
       gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win_new_versions: &test_matrix_win_new_versions
@@ -54,7 +50,6 @@ test_matrix_win_new_versions: &test_matrix_win_new_versions
     parameters:
       node_version: [ '16', '18', '20' ]
       jdk_version: [ '17.0.2' ]
-      jdk_path: [ 'C:\Program Files\OpenJDK\jdk-17.0.2' ]
       gradle_version: [ '7.3', '8.4', '9.1.0' ]
 
 filters_branches_only_main: &filters_branches_only_main
@@ -181,7 +176,7 @@ commands:
       - restore_cache:
           name: Restoring Java binary from cache
           keys:
-            - chocolatey-jdk-cache-{{ arch }}-v4
+            - chocolatey-jdk-cache-{{ arch }}-v5
       - run:
           name: Installing JDK
           command: |
@@ -191,7 +186,7 @@ commands:
               choco install --force -y openjdk --version=<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
             fi
       - save_cache:
-          key: chocolatey-jdk-cache-{{ arch }}-v4
+          key: chocolatey-jdk-cache-{{ arch }}-v5
           paths:
             - ~\AppData\Local\Temp\jdk
 jobs:
@@ -229,7 +224,6 @@ jobs:
     <<: *windows_defaults
     environment:
       JDK: << parameters.jdk_version >>
-      JAVA_HOME: << parameters.jdk_path >>
       npm_config_loglevel: silent
       GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.daemon.idletimeout=180000 -Xmx3g -XX:+HeapDumpOnOutOfMemoryError -Dkotlin.compiler.execution.strategy=in-process'
       JAVA_OPTS: ' -Xmx512M -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8'
@@ -247,9 +241,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            export JAVA_HOME="<< parameters.jdk_path >>"
-            export PATH=$JAVA_HOME/bin:$PATH
-             if [[ << parameters.jdk_version >> == "8" ]]; then
+            if [[ << parameters.jdk_version >> == "8" ]]; then
               java -version
             else
               java --version
