@@ -195,9 +195,11 @@ describe('multi-project', () => {
         // return the deps nodeIds list that belongs to a node
         const graphObject: any = JSON.parse(JSON.stringify(p.depGraph));
         expect(graphObject.graph.nodes[0].deps.length).toBe(0);
-        expect(p.targetFile).toBeFalsy(); // see targetFileFilteredForCompatibility
-        // TODO(kyegupov): when the project name issue is solved, change the assertion to:
-        // expect(p.targetFile, 'multi-project' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
+        const expectedTargetFile = path.relative(
+          '.',
+          path.join(multiProject, 'build.gradle'),
+        );
+        expect(p.targetFile).toBe(expectedTargetFile);
       } else {
         expect(p.depGraph.rootPkg.name).toBe('root-proj/subproj');
         expect(p.meta?.gradleProjectName).toBe('root-proj/subproj');
@@ -212,9 +214,11 @@ describe('multi-project', () => {
           nodeIds.indexOf('com.android.tools:annotations@25.3.0'),
         ).toBeGreaterThanOrEqual(-1);
 
-        expect(p.targetFile).toBeFalsy(); // see targetFileFilteredForCompatibility
-        // TODO(kyegupov): when the project name issue is solved, change the assertion to:
-        // expect(p.targetFile, 'subproj' + dirSep + 'build.gradle', 'correct targetFile for the main depRoot');
+        const expectedTargetFile = path.relative(
+          '.',
+          path.join(multiProject, 'subproj', 'build.gradle'),
+        );
+        expect(p.targetFile).toBe(expectedTargetFile);
       }
     }
   });
@@ -241,6 +245,11 @@ describe('multi-project', () => {
     expect(
       nodeIds.indexOf('commons-httpclient:commons-httpclient@3.1'),
     ).toBeGreaterThanOrEqual(-1);
+    const expectedTargetFile = path.relative(
+      '.',
+      path.join(fixtureDir('api-configuration'), 'build.gradle'),
+    );
+    expect(result.scannedProjects[0].targetFile).toBe(expectedTargetFile);
   });
 
   test('multi-project-some-unscannable: gradle-sub-project for a good subproject works', async () => {

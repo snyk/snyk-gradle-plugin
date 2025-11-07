@@ -280,15 +280,17 @@ async function getAllDepsAllProjects(
       projectId === defaultProject
         ? defaultProject
         : `${defaultProject}/${projectId}`;
+
+    const absoluteTargetFile = allProjectDeps.projects[projectId].targetFile;
+    const relativeTargetFile = path.relative(root, absoluteTargetFile);
+
     return {
-      targetFile: targetFileFilteredForCompatibility(
-        allProjectDeps.projects[projectId].targetFile,
-      ),
+      targetFile: relativeTargetFile,
       meta: {
         gradleProjectName,
         projectName: gradleProjectName,
         versionBuildInfo: allProjectDeps.versionBuildInfo,
-        targetFile: allProjectDeps.projects[projectId].targetFile,
+        targetFile: absoluteTargetFile,
       },
       depGraph: allProjectDeps.projects[projectId].depGraph,
     };
