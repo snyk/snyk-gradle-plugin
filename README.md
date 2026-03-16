@@ -57,7 +57,11 @@ Additional command line arguments:
 
 - `--all-sub-projects` for "multi project" configurations, test all sub-projects.
 
-- `--configuration-matching=<string>` Resolve dependencies using all configuration(s) that match the provided Java regular expression (case-insensitive), aggregating their dependencies into a single scan result, e.g. '^releaseRuntimeClasspath$'.
+- `--configuration-matching=<string>` Resolve dependencies using all configuration(s) that match the provided Java regular expression (case-insensitive), aggregating their dependencies into a single scan result.
+
+  Examples:
+  - `'^releaseRuntimeClasspath$'` -- scan only the `releaseRuntimeClasspath` configuration.
+  - `'^(?!test).*$'` -- scan all configurations except those starting with "test" (e.g. excludes `testCompileClasspath`, `testRuntimeClasspath`).
 
 - `--configuration-attributes=<string>` Select certain values of configuration attributes to resolve the dependencies. E.g.: 'buildtype:release,usage:java-runtime'
 
