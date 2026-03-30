@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.8'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example.repro'
+
+// Use source/target compatibility (not a strict toolchain) so any JVM 17+ running Gradle
+// can build the fixture — avoids "no locally installed toolchains match 17" when only JDK 20+ is installed.
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2024.0.1'
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.kafka:spring-kafka:3.3.11'
+    implementation 'org.springframework.cloud:spring-cloud-starter-stream-kafka:4.3.0'
+    implementation 'org.apache.kafka:kafka-clients:3.9.1'
+    implementation 'at.yawk.lz4:lz4-java:1.8.1'
+}
+
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('at.yawk.lz4:lz4-java') using module('org.lz4:lz4-java:1.8.1') because 'repro: merge yawk -> org.lz4'
+    }
+}
