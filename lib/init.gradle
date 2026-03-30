@@ -131,8 +131,23 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
                 debugLog("failed to get artifacts for dep: `$d`")
                 return
             }
+            def childName = "${d.moduleGroup}:${d.moduleName}"
+            // PR #299 iterates moduleArtifacts only; when the list is empty (optional deps, variant
+            // resolution, merged configs), no node and no child walk ran — dropping transitives (e.g. lz4-java).
+            // Fallback: one logical jar node per resolved dependency, same as default type convention.
+            if (!moduleArtifacts || moduleArtifacts.isEmpty()) {
+                def fallbackChildId = "${childName}:jar@${d.moduleVersion}"
+                if (!graph.nodes.get(fallbackChildId)) {
+                    graph.setNode(fallbackChildId, ['name': childName, 'version': d.moduleVersion])
+                }
+                if (!currentChain.contains(fallbackChildId) && d.children) {
+                    currentChain.add(fallbackChildId)
+                    loadGraph(d.children, graph, fallbackChildId, currentChain)
+                }
+                graph.setEdge(parentId, fallbackChildId)
+                return
+            }
             moduleArtifacts.each { a ->
-                def childName = "${d.moduleGroup}:${d.moduleName}"
                 def childId = "${childName}:${a.type}"
                 if (a.classifier) childId += ":${a.classifier}"
                 childId += "@${d.moduleVersion}"
@@ -160,8 +175,22 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
                 debugLog("failed to get artifacts for dep: `$d`")
                 return
             }
+            def childName = "${d.moduleGroup}:${d.moduleName}"
+            if (!moduleArtifacts || moduleArtifacts.isEmpty()) {
+                def childId = "${childName}:jar@${d.moduleVersion}"
+                def sha1Hash = hashString(childId)
+                sha1Map.setCoordinate(sha1Hash, childId)
+                if (!graph.nodes.get(sha1Hash)) {
+                    graph.setNode(sha1Hash, ['name': childName, 'version': d.moduleVersion])
+                }
+                if (!currentChain.contains(sha1Hash) && d.children) {
+                    currentChain.add(sha1Hash)
+                    loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                }
+                graph.setEdge(parentId, sha1Hash)
+                return
+            }
             moduleArtifacts.each { a ->
-                def childName = "${d.moduleGroup}:${d.moduleName}"
                 def childId = "${childName}:${a.type}"
                 if (a.classifier) childId += ":${a.classifier}"
                 childId += "@${d.moduleVersion}"
