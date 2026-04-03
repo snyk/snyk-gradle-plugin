@@ -121,6 +121,17 @@ def hashString(String str) {
     return md.digest(str.bytes).encodeHex().toString()
 }
 
+// Empty getModuleArtifacts(): after PR #299 the walker only iterated moduleArtifacts. An empty list
+// skipped creating a node and walking d.children (optional deps, variant quirks, BOM-style nodes under
+// merged configurations), dropping transitives — e.g. OSM-3549 / lz4-java. The fallback branch uses one
+// jar-shaped id and still recurses d.children.
+
+// currentChain must reflect the active DFS path for cycle detection only. Merged configurations can
+// surface different ResolvedDependency instances for the same GAV with different d.children (e.g.
+// mockito-core with or without org.objenesis). currentChain keys are graph node ids, not JVM object
+// identity. Remove the id in finally after each recursive return so a later path with a fuller branch is
+// not blocked from recursing into children.
+
 def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
     deps.each { dep ->
         dep.each { d ->
@@ -172,6 +183,8 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
         }
     }
 }
+
+// loadSha1MapGraph applies the same currentChain discipline after each recursive descent.
 
 def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, sha1Map) {
     deps.each { dep ->
