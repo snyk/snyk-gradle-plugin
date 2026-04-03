@@ -142,7 +142,11 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
                 }
                 if (!currentChain.contains(fallbackChildId) && d.children) {
                     currentChain.add(fallbackChildId)
-                    loadGraph(d.children, graph, fallbackChildId, currentChain)
+                    try {
+                        loadGraph(d.children, graph, fallbackChildId, currentChain)
+                    } finally {
+                        currentChain.remove(fallbackChildId)
+                    }
                 }
                 graph.setEdge(parentId, fallbackChildId)
                 return
@@ -157,7 +161,11 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
                 }
                 if (!currentChain.contains(childId) && d.children) {
                     currentChain.add(childId)
-                    loadGraph(d.children, graph, childId, currentChain)
+                    try {
+                        loadGraph(d.children, graph, childId, currentChain)
+                    } finally {
+                        currentChain.remove(childId)
+                    }
                 }
                 graph.setEdge(parentId, childId)
             }
@@ -185,7 +193,11 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
                 }
                 if (!currentChain.contains(sha1Hash) && d.children) {
                     currentChain.add(sha1Hash)
-                    loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                    try {
+                        loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                    } finally {
+                        currentChain.remove(sha1Hash)
+                    }
                 }
                 graph.setEdge(parentId, sha1Hash)
                 return
@@ -213,7 +225,11 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
                 }
                 if (!currentChain.contains(sha1Hash) && d.children) {
                     currentChain.add(sha1Hash)
-                    loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                    try {
+                        loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
+                    } finally {
+                        currentChain.remove(sha1Hash)
+                    }
                 }
                 graph.setEdge(parentId, sha1Hash)
             }
