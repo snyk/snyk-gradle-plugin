@@ -22,12 +22,15 @@ describe('Gradle 9 / Spring Boot 4 — mockito-core / objenesis merged-config re
         path.join(reproRoot, 'build.gradle.kts'),
       );
       const depPkgs = result.dependencyGraph.getDepPkgs();
-      const objenesis = depPkgs.filter((p) => p.name === 'org.objenesis:objenesis');
+      const objenesis = depPkgs.filter(
+        (p) => p.name === 'org.objenesis:objenesis',
+      );
       expect(objenesis.length).toBeGreaterThan(0);
       expect(objenesis.some((p) => p.version === '3.3')).toBe(true);
       expect(
         depPkgs.some(
-          (p) => p.name === 'org.mockito:mockito-core' && p.version === '5.23.0',
+          (p) =>
+            p.name === 'org.mockito:mockito-core' && p.version === '5.23.0',
         ),
       ).toBe(true);
       expect(result.dependencyGraph.rootPkg.name).toBe(
