@@ -1,0 +1,35 @@
+// Subproject that provides a testFixtures variant with a direct
+// tomcat-embed-core:10.1.26 dependency (no upgrade, no BOM).
+//
+// In the root project's testRuntimeClasspath, this subproject appears as:
+//   sub:jar@0.0.1-SNAPSHOT  (testFixturesRuntimeElements)
+// with tomcat-embed-core:10.1.26 as a direct child.
+//
+// The bug (v5.1.1): sub:jar@0.0.1-SNAPSHOT is a different currentChain key
+// from the sub:java-classes-directory@0.0.1-SNAPSHOT already seen via
+// compileClasspath, so the jar variant is traversed again and 10.1.26 leaks
+// into the merged graph.
+//
+// The fix (chainKey strips type/classifier): both variants share chainKey
+// sub@0.0.1-SNAPSHOT, so the jar traversal is correctly skipped.
+plugins {
+    id 'java'
+    id 'java-test-fixtures'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // testFixtures directly declares the lower tomcat version.
+    // testFixturesImplementation is NOT exported to consumers via API, so
+    // tomcat:10.1.26 only appears when the testFixtures RUNTIME variant
+    // (sub:jar@0.0.1-SNAPSHOT) is traversed – exactly the buggy path.
+    testFixturesImplementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.26'
+}

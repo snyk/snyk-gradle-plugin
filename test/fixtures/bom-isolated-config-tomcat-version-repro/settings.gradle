@@ -1,0 +1,2 @@
+rootProject.name = 'bom-isolated-config-tomcat-version-repro'
+include ':sub'

@@ -141,11 +141,7 @@
       {
         "nodeId": "init-gradle:utilities:jar@unspecified",
         "pkgId": "init-gradle:utilities@unspecified",
-        "deps": [
-          {
-            "nodeId": "init-gradle:list:jar@unspecified"
-          }
-        ]
+        "deps": []
       },
       {
         "nodeId": "org.junit.jupiter:junit-jupiter:jar@5.11.3",
@@ -175,11 +171,6 @@
       },
       {
         "nodeId": "init-gradle:list:java-classes-directory@unspecified",
-        "pkgId": "init-gradle:list@unspecified",
-        "deps": []
-      },
-      {
-        "nodeId": "init-gradle:list:jar@unspecified",
         "pkgId": "init-gradle:list@unspecified",
         "deps": []
       },

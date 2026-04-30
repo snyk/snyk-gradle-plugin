@@ -136,12 +136,18 @@ def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
                 def childId = "${childName}:${a.type}"
                 if (a.classifier) childId += ":${a.classifier}"
                 childId += "@${d.moduleVersion}"
+                // Use a type-free key for cycle/deduplication checks so that the same
+                // GAV arriving from two configurations with different artifact types
+                // (e.g. jar vs java-classes-directory for a local project dep) is not
+                // traversed twice. The full type-qualified childId is still used as the
+                // graph node id, preserving classifier support introduced in PR #299.
+                def chainKey = "${childName}@${d.moduleVersion}"
                 if (!graph.nodes.get(childId)) {
                     def childDependency = ['name': childName, 'version': d.moduleVersion]
                     graph.setNode(childId, childDependency)
                 }
-                if (!currentChain.contains(childId) && d.children) {
-                    currentChain.add(childId)
+                if (!currentChain.contains(chainKey) && d.children) {
+                    currentChain.add(chainKey)
                     loadGraph(d.children, graph, childId, currentChain)
                 }
                 graph.setEdge(parentId, childId)
@@ -182,8 +188,12 @@ def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, s
                     def childDependency = ['name': childName, 'version': d.moduleVersion]
                     graph.setNode(sha1Hash, childDependency)
                 }
-                if (!currentChain.contains(sha1Hash) && d.children) {
-                    currentChain.add(sha1Hash)
+                // Use a type-free key for cycle/deduplication checks (same rationale
+                // as loadGraph: prevents double-traversal when the same GAV appears
+                // under different artifact types across merged configurations).
+                def chainKey = "${childName}@${d.moduleVersion}"
+                if (!currentChain.contains(chainKey) && d.children) {
+                    currentChain.add(chainKey)
                     loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
                 }
                 graph.setEdge(parentId, sha1Hash)

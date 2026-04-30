@@ -1,0 +1,53 @@
+// Reproduces the false-positive tomcat-embed-core@10.1.26 seen in CLI v1.1302.0
+// (plugin v5.1.1) vs v1.1297.03 (plugin v4.9.2).
+//
+// Root cause (PR #299): node IDs changed from `group:module@version` to
+// `group:module:type[:classifier]@version`.  Snyk merges first-level deps
+// from ALL resolved configurations into one list and calls getGradleGraph()
+// with a single shared currentChain.
+//
+// :sub appears THREE times in that merged list with different artifact types:
+//
+//   compileClasspath       → sub:java-classes-directory@0.0.1-SNAPSHOT
+//                            (children = empty; impl not exported via API)
+//
+//   testCompileClasspath   → sub:jar:test-fixtures@0.0.1-SNAPSHOT
+//                            (children = empty; testFixturesImplementation
+//                             not exported via testFixturesApi)
+//
+//   testRuntimeClasspath   → sub:jar@0.0.1-SNAPSHOT
+//                            (children include tomcat-embed-core:10.1.26
+//                             from testFixturesImplementation at runtime)
+//
+// In v5.1.1 (bug): all three have distinct currentChain keys, so sub:jar is
+// traversed even though :sub was already visited. tomcat-embed-core:10.1.26
+// leaks into the merged graph as a false positive.
+//
+// With the fix (chainKey = group:module@version, stripping type/classifier):
+// all three appearances share chainKey "...:sub@0.0.1-SNAPSHOT". The first
+// encounter (java-classes-directory) adds it; the jar variant is skipped;
+// tomcat-embed-core:10.1.26 never enters the graph.
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // compileOnly: :sub resolves to sub:java-classes-directory@0.0.1-SNAPSHOT.
+    // No tomcat in children (sub has no api-exported deps).
+    compileOnly project(':sub')
+
+    // testFixtures: :sub resolves to sub:jar:test-fixtures@0.0.1-SNAPSHOT
+    // for compile and sub:jar@0.0.1-SNAPSHOT for runtime.  The runtime
+    // variant's children include tomcat-embed-core:10.1.26 (from
+    // testFixturesImplementation), which the bug allows to bleed through.
+    testImplementation testFixtures(project(':sub'))
+}
