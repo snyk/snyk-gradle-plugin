@@ -3,7 +3,7 @@ import type { PomCoords } from './types';
 export function parseCoordinate(coordinate: string): Partial<PomCoords> {
   if (!coordinate) return {};
   const [name, version] = coordinate.split('@');
-  const [groupId, artifactId, type, classifier] = name?.split(':');
+  const [groupId, artifactId, type, classifier] = (name ?? '').split(':');
   return {
     groupId: groupId || undefined,
     artifactId: artifactId || undefined,

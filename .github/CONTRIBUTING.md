@@ -31,7 +31,7 @@ To release a major you need to add `BREAKING CHANGE: ` to the start of the body 
 
 ## Code standards
 
-Ensure that your code adheres to the included `.eslintrc` config by running `npm run lint`.
+Ensure that your code adheres to the included `eslint.config.cjs` by running `npm run lint`.
 
 ## Sending pull requests
 

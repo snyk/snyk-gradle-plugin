@@ -4,16 +4,25 @@ import { fixtureDir } from '../common';
 import * as subProcess from '../../lib/sub-process';
 import { inspect } from '../../lib';
 
+jest.mock('os', () => {
+  const actual = jest.requireActual<typeof import('os')>('os');
+  return {
+    ...actual,
+    platform: jest.fn(() => 'win32' as NodeJS.Platform),
+  };
+});
+
 const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
-let subProcessExecSpy;
-let platformMock;
-const isWinLocal = /^win/.test(os.platform());
+let subProcessExecSpy: jest.SpiedFunction<typeof subProcess.execute>;
+/** Use the real host so Windows-only assertions stay gated to Windows machines. */
+const isWinLocal = /^win/.test(process.platform);
 
 beforeAll(() => {
-  platformMock = jest.spyOn(os, 'platform');
-  platformMock.mockReturnValue('win');
+  (os.platform as jest.MockedFunction<() => NodeJS.Platform>).mockReturnValue(
+    'win32',
+  );
   subProcessExecSpy = jest.spyOn(subProcess, 'execute');
   subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
 });

@@ -18,7 +18,7 @@ describe.skip('android multi-variant build', () => {
         path.join(fixtureDir('android-cannot-auto-resolve'), 'build.gradle'),
         { allSubProjects: true },
       ),
-    ).rejects.toThrowError(/Cannot choose between the following variants/);
+    ).rejects.toThrow(/Cannot choose between the following variants/);
   }, 90000);
 
   test('we can inspect with configuration attribute selector', async () => {

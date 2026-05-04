@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as subProcess from './sub-process';
 import * as tmp from 'tmp';
-import * as pMap from 'p-map';
-import * as chalk from 'chalk';
+import pMap from 'p-map';
+import chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 
@@ -310,7 +310,7 @@ async function injectedPlugin(scriptName: string): Promise<{
   injectedPluginFilePath: string;
   cleanupCallback?: () => void;
 }> {
-  let initGradleAsset: string | null = null;
+  let initGradleAsset: string;
 
   if (/index.js$/.test(__filename)) {
     // running from ./dist
@@ -402,7 +402,7 @@ export async function getGradleVersion(
     gradleVersionOutput = await subProcess.execute(command, completeArgs, {
       cwd: root,
     });
-  } catch (_) {
+  } catch {
     // intentionally empty
   }
   return gradleVersionOutput;
@@ -415,9 +415,8 @@ async function getAllDepsWithPlugin(
   gradleVersion: string,
 ): Promise<JsonDepsScriptResult> {
   const command = getCommand(root, targetFile);
-  const { injectedPluginFilePath, cleanupCallback } = await injectedPlugin(
-    'init.gradle',
-  );
+  const { injectedPluginFilePath, cleanupCallback } =
+    await injectedPlugin('init.gradle');
   const args = buildArgs(
     root,
     targetFile,

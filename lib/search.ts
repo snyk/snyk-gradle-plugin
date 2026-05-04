@@ -17,13 +17,11 @@ export async function getMavenPackageInfo(
     path: `/packages`,
     qs: {
       version: PACKAGE_SEARCH_VERSION,
-      /* eslint-disable @typescript-eslint/camelcase */
       package_type: PACKAGE_SEARCH_TYPE,
       package_sha1: sha1,
       package_namespace: depCoords.groupId,
       package_name: depCoords.artifactId,
       package_version: depCoords.version,
-      /* eslint-enable @typescript-eslint/camelcase */
     },
   });
 
@@ -42,7 +40,7 @@ export async function getMavenPackageInfo(
     depCoords.groupId = namespace;
     depCoords.artifactId = name;
     depCoords.version = version;
-  } catch (_error) {
+  } catch {
     debugLog(
       `Failed to parse purl components for ${JSON.stringify(
         depCoords,
