@@ -1,5 +1,5 @@
 import * as childProcess from 'child_process';
-import { escapeAll, quoteAll } from 'shescape/stateless';
+import { escapeAll } from 'shescape/stateless';
 import * as os from 'os';
 import debugModule = require('debug');
 
@@ -35,7 +35,7 @@ export function execute(
   if (/^win/.test(os.platform())) {
     spawnOptions.windowsVerbatimArguments = true; // makes windows process " correctly
 
-    const updated = updateCommandAndArgsForWindows(command, args, spawnOptions);
+    const updated = updateCommandAndArgsForWindows(command, args);
     command = updated.command;
     args = updated.args;
   }
@@ -96,17 +96,24 @@ ${stderr}
   });
 }
 
+/**
+ * Wraps an argument in double quotes for cmd.exe. Inside double quotes,
+ * cmd.exe treats ^, $, &, <, >, | as literal characters. Only internal
+ * double quotes need escaping (doubled). This matches the quoting behaviour
+ * of shescape 1.x and avoids shescape 2.x's "break-out-of-quotes" technique
+ * which corrupts regex metacharacters like ^ when passed through cmd.exe /c.
+ */
+function quoteForCmd(arg: string): string {
+  return `"${arg.replace(/"/g, '""')}"`;
+}
+
 function updateCommandAndArgsForWindows(
   command: string,
   args: string[],
-  spawnOptions: SpawnOptionsWithShescape,
 ): { command: string; args: string[] } {
-  // default flagProtection is true, which would strip Gradle `-` flags — keep in sync with spawnOptions.
-  args = quoteAll(args, { flagProtection: spawnOptions.flagProtection });
+  args = args.map(quoteForCmd);
 
   if (command !== 'gradle') {
-    // when command is not gradle we need to wrap the command in "
-    // then wrap the combined string of all args to enable windows to interpret the command correctly
     args = [`"${command}"`, ...args];
     args = ['/c', `"${args.join(' ')}"`];
   } else {
