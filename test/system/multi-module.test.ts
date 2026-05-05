@@ -287,7 +287,7 @@ describe('multi-project', () => {
         allSubProjects: true,
         subProject: true,
       } as api.MultiSubprojectInspectOptions),
-    ).rejects.toThrowError();
+    ).rejects.toThrow();
   });
 
   test('multi-project: parallel with allSubProjects produces multiple results with different names', async () => {

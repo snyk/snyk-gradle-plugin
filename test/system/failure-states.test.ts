@@ -10,7 +10,7 @@ test('malformed build.gradle', async () => {
       path.join(fixtureDir('malformed-build-gradle'), 'build.gradle'),
       { args: ['--configuration', 'compileClasspath'] },
     ),
-  ).rejects.toThrowError(/unexpected token|Could not get unknown property/);
+  ).rejects.toThrow(/unexpected token|Could not get unknown property/);
 });
 
 test('incorrect argument passed to inspect', async () => {
@@ -18,7 +18,7 @@ test('incorrect argument passed to inspect', async () => {
     inspect('.', path.join(rootNoWrapper, 'build.gradle'), {
       args: ['--dearGradlePleaseCrash'],
     }),
-  ).rejects.toThrowError(
+  ).rejects.toThrow(
     'Please ensure you are calling the `snyk` command with correct arguments',
   );
 });
@@ -33,7 +33,7 @@ test('multi-project: error on missing sub-project', async () => {
       path.join(fixtureDir('multi-project'), 'build.gradle'),
       options,
     ),
-  ).rejects.toThrowError(
+  ).rejects.toThrow(
     /Specified sub-project not found: "non-existent". Found these projects: subproj/,
   );
 });

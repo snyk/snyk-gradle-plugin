@@ -1,4 +1,4 @@
-import * as chalk from 'chalk';
+import chalk from 'chalk';
 
 export function getGradleAttributesPretty(output: string): string | undefined {
   try {
@@ -31,7 +31,7 @@ export function getGradleAttributesPretty(output: string): string | undefined {
       )
       .join('\n');
     return jsonAttrsPretty;
-  } catch (e) {
+  } catch {
     return undefined;
   }
 }

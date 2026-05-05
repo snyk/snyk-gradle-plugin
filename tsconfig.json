@@ -5,12 +5,14 @@
     "target": "es2019",
     "lib": ["es2019", "dom"],
     "module": "commonjs",
+    "esModuleInterop": true,
     "allowJs": false,
     "sourceMap": true,
     "strict": false,
     "declaration": true,
     "importHelpers": true,
-    "typeRoots": ["./node_modules/@types"]
+    "typeRoots": ["./node_modules/@types"],
+    "rootDir": "./lib"
   },
   "include": ["./lib/**/*"]
 }
