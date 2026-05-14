@@ -121,94 +121,224 @@ def hashString(String str) {
     return md.digest(str.bytes).encodeHex().toString()
 }
 
-def loadGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
-    deps.each { dep ->
-        dep.each { d ->
-            def moduleArtifacts
-            try {
-                moduleArtifacts = d.getModuleArtifacts()
-            } catch (Exception ex) {
-                debugLog("failed to get artifacts for dep: `$d`")
-                return
-            }
-            moduleArtifacts.each { a ->
-                def childName = "${d.moduleGroup}:${d.moduleName}"
-                def childId = "${childName}:${a.type}"
-                if (a.classifier) childId += ":${a.classifier}"
-                childId += "@${d.moduleVersion}"
-                if (!graph.nodes.get(childId)) {
-                    def childDependency = ['name': childName, 'version': d.moduleVersion]
-                    graph.setNode(childId, childDependency)
-                }
-                if (!currentChain.contains(childId) && d.children) {
-                    currentChain.add(childId)
-                    loadGraph(d.children, graph, childId, currentChain)
-                }
-                graph.setEdge(parentId, childId)
-            }
-        }
-    }
-}
-
-def loadSha1MapGraph(Iterable deps, GradleGraph graph, parentId, currentChain, sha1Map) {
-    deps.each { dep ->
-        dep.each { d ->
-            def moduleArtifacts
-            try {
-                moduleArtifacts = d.getModuleArtifacts()
-            } catch (Exception ex) {
-                debugLog("failed to get artifacts for dep: `$d`")
-                return
-            }
-            moduleArtifacts.each { a ->
-                def childName = "${d.moduleGroup}:${d.moduleName}"
-                def childId = "${childName}:${a.type}"
-                if (a.classifier) childId += ":${a.classifier}"
-                childId += "@${d.moduleVersion}"
-                def sha1Hash = ""
-                try {
-                    sha1Hash = hash(a.getFile())
-                    sha1Map.setCoordinate(sha1Hash, childId);
-                } catch (Exception e) {
-                    // sometimes artifacts have no file to hash
-                    // for example, a reference to another project
-                    // implementation project(':utilities')
-                    // in this case hash the childId
-                    debugLog("Failed to hash artifact ${a.id}, error=${e}")
-                    sha1Hash = hashString(childId)
-                    sha1Map.setCoordinate(sha1Hash, childId);
-                }
-                if (sha1Hash && !graph.nodes.get(sha1Hash)) {
-                    def childDependency = ['name': childName, 'version': d.moduleVersion]
-                    graph.setNode(sha1Hash, childDependency)
-                }
-                if (!currentChain.contains(sha1Hash) && d.children) {
-                    currentChain.add(sha1Hash)
-                    loadSha1MapGraph(d.children, graph, sha1Hash, currentChain, sha1Map)
-                }
-                graph.setEdge(parentId, sha1Hash)
-            }
-        }
-    }
-}
-
-def getGradleGraph(Iterable deps) {
-    def rootId = 'root-node'
-    def graph = new GradleGraph(rootId)
-    def currentChain = new HashSet()
-    loadGraph(deps, graph, rootId, currentChain)
-
+// Build a merged dep graph for one project, walking each resolvable
+// configuration via Gradle's modern resolution APIs:
+//
+//   - configuration.incoming.resolutionResult walks the post-conflict-
+//     resolution dep graph (correctly applies conflict resolution across
+//     project boundaries — which the v5 ResolvedConfiguration API did
+//     not). https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/result/ResolutionResult.html
+//
+//   - configuration.incoming.artifactView { lenient = true } gives the
+//     resolved artifacts (with file/type/classifier metadata), tolerating
+//     partially-failed resolution.
+//     https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/ArtifactView.html
+//
+// The pair is the documented modern replacement for the v5
+// ResolvedConfiguration.getFirstLevelModuleDependencies() walk:
+// https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/ResolvedConfiguration.html
+// ("This is a legacy API. Avoid this class for new code.")
+def getGradleGraph(Iterable resolvableConfigs) {
+    def graph = new GradleGraph('root-node')
+    walkResolvableConfigs(resolvableConfigs, graph, null, false)
     return graph.nodes
 }
 
-def getGradleGraphWithSha1Map(Iterable deps, Sha1Map sha1Map) {
+def getGradleGraphWithSha1Map(Iterable resolvableConfigs, Sha1Map sha1Map) {
     if (!sha1Map) sha1Map = new Sha1Map()
-    def rootId = 'root-node'
-    def graph = new GradleGraph(rootId)
-    def currentChain = new HashSet()
-    loadSha1MapGraph(deps, graph, rootId, currentChain, sha1Map)
-
+    def graph = new GradleGraph('root-node')
+    walkResolvableConfigs(resolvableConfigs, graph, sha1Map, true)
     return [graph: graph.nodes, sha1Map: sha1Map]
+}
+
+def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map, boolean withSha1Map) {
+    resolvableConfigs.each { conf ->
+        // Per-config visited set keyed by ComponentIdentifier (which has
+        // stable equals/hashCode across Gradle versions). Not shared across
+        // configs: different configs can legitimately resolve the same dep
+        // to different versions.
+        def visited = new HashSet()
+        try {
+            def artifactsByComponent = collectArtifactsByComponent(conf)
+            def root = conf.incoming.resolutionResult.root
+            walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, withSha1Map, true)
+            debugLog("conf ${conf.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
+        } catch (Exception e) {
+            debugLog("traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+        }
+    }
+}
+
+def collectArtifactsByComponent(conf) {
+    def grouped = [:].withDefault { [] }
+    def artifacts
+    try {
+        // lenient=true mirrors how the v5 plugin used LenientConfiguration:
+        // partially-failed resolution still returns whatever did resolve.
+        artifacts = conf.incoming.artifactView { it.lenient = true }.artifacts
+        // ArtifactCollection implements both Iterable<ResolvedArtifactResult>
+        // AND FileCollection; Groovy's groupBy resolves to the wrong iteration,
+        // so use an explicit .each to force the ResolvedArtifactResult view.
+        artifacts.each { grouped[it.id.componentIdentifier] << it }
+    } catch (Exception e) {
+        debugLog("artifactView failed for conf ${conf.name}: ${e.message}")
+        return grouped
+    }
+    // Surface unresolved deps for diagnostic visibility — modern API equivalent
+    // of V1's lenientConf.getUnresolvedModuleDependencies(). The .failures
+    // property is on ArtifactCollection but its exact name/access pattern
+    // varies across Gradle versions, so this is best-effort.
+    try {
+        def failures = artifacts.failures
+        if (failures && !failures.isEmpty()) {
+            debugLog("conf ${conf.name}: ${failures.size()} unresolved artifact(s):")
+            failures.each { f ->
+                def msg = f.message ? f.message.replaceAll('\\s+', ' ').take(200) : '<no message>'
+                debugLog("  unresolved: ${f.class.simpleName}: ${msg}")
+            }
+        }
+    } catch (Exception failuresErr) {
+        // .failures not available on this Gradle version's ArtifactCollection.
+        // We swallow this — it's not a real resolution failure, just a feature
+        // gap — but trace it so support has visibility if it ever fires
+        // unexpectedly on a Gradle we DO expect to support.
+        debugLog("conf ${conf.name}: artifactCollection.failures access failed (${failuresErr.class.simpleName}: ${failuresErr.message}); continuing without unresolved-dep enumeration")
+    }
+    return grouped
+}
+
+// Recurse over ResolvedComponentResult.dependencies. component.moduleVersion
+// returns the SELECTED (post-conflict-resolution) version, applied
+// consistently across project boundaries — which is the correctness
+// improvement over the v5 walker.
+def walkComponent(component, GradleGraph graph, String parentId, Set visited,
+                  Map artifactsByComponent, Sha1Map sha1Map, boolean withSha1Map, boolean isRoot) {
+    def cid = component.id
+    def mv = component.moduleVersion
+    // Root has a null moduleVersion by design and never emits a node (the
+    // isRoot branch below skips emission). For non-root components, a null
+    // moduleVersion means the ComponentIdentifier has no coordinate-shaped
+    // metadata we can serialise — fall back to displayName would produce
+    // pkgIds like "project ':app'" that downstream parsers (which expect
+    // group:module@version) reject as malformed. Skip entirely.
+    if (mv == null && !isRoot) {
+        debugLog("walkComponent: skipping ${cid} (non-root, null moduleVersion)")
+        return
+    }
+    String name = mv != null ? "${mv.group}:${mv.name}" : null
+    String version = mv != null ? (mv.version ?: 'unspecified') : null
+
+    List<String> nodeIdsForThisComponent = []
+    if (!isRoot) {
+        def artifacts = artifactsByComponent[cid] ?: []
+        if (artifacts.isEmpty()) {
+            // Platform/BOM dep, project with no published artifacts, or
+            // unresolved component — emit a logical node.
+            String coordinate = "${name}@${version}"
+            String nodeId = withSha1Map ? hashString(coordinate) : coordinate
+            if (withSha1Map) sha1Map.setCoordinate(nodeId, coordinate)
+            graph.setNode(nodeId, ['name': name, 'version': version])
+            graph.setEdge(parentId, nodeId)
+            nodeIdsForThisComponent.add(nodeId)
+        } else {
+            artifacts.each { a ->
+                def tc = extractTypeAndClassifier(a, name, version)
+                String coordinate = "${name}:${tc.type}"
+                if (tc.classifier) coordinate += ":${tc.classifier}"
+                coordinate += "@${version}"
+                String nodeId
+                if (withSha1Map) {
+                    try {
+                        nodeId = hash(a.file)
+                    } catch (Exception e) {
+                        debugLog("failed to hash ${a.id}: ${e.message}; falling back to coordinate hash")
+                        nodeId = hashString(coordinate)
+                    }
+                    sha1Map.setCoordinate(nodeId, coordinate)
+                } else {
+                    nodeId = coordinate
+                }
+                graph.setNode(nodeId, ['name': name, 'version': version])
+                graph.setEdge(parentId, nodeId)
+                nodeIdsForThisComponent.add(nodeId)
+            }
+        }
+    }
+
+    if (visited.contains(cid)) return
+    visited.add(cid)
+
+    // Children attach to the first node we emitted for this component, OR
+    // to our own parent if we emitted nothing (BOM / no-artifact component,
+    // or the root). The `isRoot` case is implicitly covered: when isRoot is
+    // true, the node-creation block above is skipped and nodeIdsForThisComponent
+    // stays empty.
+    String nextParent = nodeIdsForThisComponent.isEmpty() ? parentId : nodeIdsForThisComponent.first()
+    // If THIS component had no artifacts (BOM, Gradle platform), we already
+    // skipped emitting nodes for it. Its "dependencies" are all constraint
+    // edges that don't represent classpath contributions — skip walking them
+    // entirely, otherwise a BOM's constrained libraries leak in as phantom
+    // children of the BOM's own parent. (We must do this here rather than
+    // filtering on dep.isConstraint() down in the loop, because under strict
+    // lock mode REAL direct deps also have isConstraint=true — the lock is
+    // implemented as a constraint, so filtering by that flag alone would
+    // drop genuine classpath entries.)
+    boolean currentIsBomOrPlatform = !isRoot && nodeIdsForThisComponent.isEmpty()
+    if (currentIsBomOrPlatform) return
+    component.dependencies.each { dep ->
+        if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) {
+            // UnresolvedDependencyResult — skip (the artifactView path
+            // handles failure reporting separately).
+            return
+        }
+        walkComponent(dep.selected, graph, nextParent, visited, artifactsByComponent, sha1Map, withSha1Map, false)
+    }
+}
+
+// Extract artifact type and classifier from a ResolvedArtifactResult.
+//
+// The modern ArtifactView API does not expose getType()/getClassifier()
+// directly — those fields live on the internal IvyArtifactName inside
+// DefaultModuleComponentArtifactIdentifier, which is in an internal
+// package with no stability guarantee across Gradle versions. Parsing
+// the artifact filename against the Maven layout
+//
+//     <moduleName>-<version>[-<classifier>].<extension>
+//
+// is the public-API-stable equivalent — and what Gradle's own display
+// logic ultimately does (artifact.id.displayName formats as
+// "<filename> (<componentId>)").
+//
+// Returns [type: <file extension, or 'jar' if no extension>, classifier: <classifier or null>].
+def extractTypeAndClassifier(artifact, String name, String version) {
+    def fileName = artifact.file?.name
+    if (!fileName) return [type: 'jar', classifier: null]
+
+    // Split filename into stem + extension. dotAt == -1 means no dot,
+    // == 0 means dotfile-style (".hidden"), == len-1 means trailing dot;
+    // any of these gives no usable extension and we fall back to 'jar'.
+    int dotAt = fileName.lastIndexOf('.')
+    String stem, type
+    if (dotAt > 0 && dotAt < fileName.length() - 1) {
+        stem = fileName.substring(0, dotAt)
+        type = fileName.substring(dotAt + 1)
+    } else {
+        stem = fileName
+        type = 'jar'
+    }
+
+    // Strip "<moduleName>-<version>" from the stem; anything after the
+    // leading dash is the classifier, if any.
+    String moduleName = name.contains(':') ? name.substring(name.lastIndexOf(':') + 1) : name
+    String prefix = "${moduleName}-${version}"
+    String classifier = null
+    if (stem.startsWith(prefix)) {
+        String suffix = stem.substring(prefix.length())
+        if (suffix.startsWith('-') && suffix.length() > 1) {
+            classifier = suffix.substring(1)
+        }
+    }
+    return [type: type, classifier: classifier]
 }
 
 def debugLog(msg) {
@@ -248,47 +378,29 @@ def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
 
 def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-    if (GradleVersion.current() < GradleVersion.version('3.0')) {
-        proj.configurations.each({ debugLog("conf.name=$it.name") })
-        return matching
-    }
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
-    // We are looking for a configuration that `canBeResolved`, because it's a configuration for which
-    // we can compute a dependency graph and that contains all the necessary information for resolution to happen.
-    // See Gradle docs: https://docs.gradle.org/current/userguide/declaring_dependencies.html#sec:resolvable-consumable-configs
-    def resolvable = []
-    matching.each({ it ->
-        if (!it.canBeResolved) { return }
-        try {
-            // Try accessing resolvedConfiguration to filter out configs that may cause issues in strict lock mode
-            it.resolvedConfiguration
-            resolvable.add(it)
-            debugLog("Added resolvedConfiguration for conf.name=$it.name")
-        } catch (Exception ex) {
-            // Swallow the error
-            debugLog("Skipping config ${it.name} due to resolvedConfiguration error.")
-        }
-    })
+    // Skip Gradle's auto-created "publication" configs (default, archives) —
+    // they're both resolvable AND consumable and exist to expose this project
+    // to downstream project-dep consumers, not to describe its own classpaths.
+    // V6's transitive ResolutionResult walk would pull in unlocked
+    // extends-from transitives (lockfiles typically cover compile/runtime
+    // classpaths, not default), which doesn't reflect any real classpath the
+    // project actually builds against. The v5 walker walked them via
+    // getFirstLevelModuleDependencies() — empty since nothing is directly
+    // declared on them — so it never saw their transitives and the issue
+    // was masked.
+    //
+    // We can't filter purely on `canBeConsumed`: user-defined custom configs
+    // declared without explicit flags (e.g. `configurations { extraLibs }`)
+    // also default to both flags = true, and those ARE meant to be walked.
+    // The signal that distinguishes them: auto-created publication configs
+    // have no directly-declared dependencies (they aggregate via
+    // extendsFrom), while user-intent custom configs have their own.
+    def resolvable = matching.findAll {
+        it.canBeResolved && (!it.canBeConsumed || !it.dependencies.isEmpty())
+    }
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
-}
-List getResolvedConfigs(resolvableConfigs){
-    List resolvedConfigs = []
-    resolvableConfigs.each({ config ->
-        ResolvedConfiguration resConf = config.getResolvedConfiguration()
-        debugLog("config `$config.name' resolution has errors: ${resConf.hasError()}")
-        if (!resConf.hasError()) {
-            resolvedConfigs.add(resConf)
-            debugLog("Fully resolved config `$config.name' with deps: $resConf.firstLevelModuleDependencies")
-        } else {
-            // even if some dependencies fail to resolve, we prefer a partial result to none
-            LenientConfiguration lenientConf = resConf.getLenientConfiguration()
-            debugLog("Partially resolved config `$config.name' with: $lenientConf.firstLevelModuleDependencies")
-            debugLog("Couldn't resolve: ${lenientConf.getUnresolvedModuleDependencies()}")
-            resolvedConfigs.add(lenientConf)
-        }
-    })
-    return resolvedConfigs
 }
 
 String formatPath(path) {
@@ -299,9 +411,75 @@ Boolean isRootPath(path){
     return path == rootProject.path
 }
 
-// We are attaching this task to every project, as this is the only reliable way to run it
-// when we start with a subproject build.gradle. As a consequence, we need to make sure we
-// only ever run it once, for the "starting" project.
+// Shared implementation for both snykResolvedDepsJson and
+// snykNormalizedResolvedDepsJson. They differ only in whether nodeIds in
+// the gradleGraph are sha1 hashes (the "normalized" mode) and whether the
+// top-level result includes a sha1Map; everything else — attribute scan,
+// project enumeration, per-project walk — is identical.
+def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolean withSha1Map) {
+    // Collect attribute values across all matching configs (used as a hint
+    // to the user when variant resolution fails ambiguously).
+    def attributesAsStrings = [:].withDefault { new HashSet() }
+    rootProject.allprojects.each { proj ->
+        findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec).each { conf ->
+            conf.attributes.keySet().each { attr ->
+                attributesAsStrings[attr.name].add(conf.attributes.getAttribute(attr).toString())
+            }
+        }
+    }
+    println("JSONATTRS " + JsonOutput.toJson(attributesAsStrings))
+
+    String defaultProjectName = currProj.name
+    String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
+    // currProj.allprojects (not rootProject.allprojects) — when the task fires
+    // on a subproject, "sibling" projects shouldn't appear here. Matches V1's
+    // `allprojects.findAll(...)` semantics (which resolved against currProj).
+    List allSubProjectNames = currProj.allprojects
+        .findAll { it.path != currProj.path }
+        .collect { formatPath(it.path) }
+    def shouldScanProject = {
+        onlyProj == null ||
+        (onlyProj == '.' && it.path == currProj.path) ||
+        it.name == onlyProj ||
+        formatPath(it.path) == onlyProj
+    }
+    debugLog("defaultProjectName=$defaultProjectName; defaultProjectKey=$defaultProjectKey; allSubProjectNames=$allSubProjectNames")
+
+    def sha1Map = withSha1Map ? new Sha1Map() : null
+    def projectsDict = [:]
+
+    rootProject.allprojects.findAll(shouldScanProject).each { proj ->
+        debugLog("processing project: name=$proj.name; path=$proj.path")
+        def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
+        debugLog("converting gradle graph to snyk-graph format")
+        def projGraph = withSha1Map
+            ? getGradleGraphWithSha1Map(resolvableConfigs, sha1Map).graph
+            : getGradleGraph(resolvableConfigs)
+        String projKey = formatPath(proj.path)
+        if (projKey == "") {
+            debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
+            projKey = defaultProjectKey
+        }
+        projectsDict[projKey] = [
+            'targetFile': rootProject.findProject(proj.path).buildFile.toString(),
+            'gradleGraph': projGraph,
+            'projectVersion': proj.version.toString()
+        ]
+    }
+
+    def result = [
+        'defaultProject': defaultProjectName,
+        'defaultProjectKey': defaultProjectKey,
+        'projects': projectsDict,
+        'allSubProjectNames': allSubProjectNames
+    ]
+    if (withSha1Map) result['sha1Map'] = sha1Map.coordinates
+    return result
+}
+
+// We attach the tasks to every project — this is the only reliable way to run them
+// when a subproject build.gradle is the entry point. The snykDepsConfExecuted flag
+// ensures only the first task body to execute actually does the work.
 def snykDepsConfExecuted = false
 allprojects { Project currProj ->
     debugLog("Current project: $currProj.name")
@@ -317,206 +495,21 @@ allprojects { Project currProj ->
 
     task snykResolvedDepsJson {
         doLast { task ->
-            if (snykDepsConfExecuted) {
-                return
-            }
-
+            if (snykDepsConfExecuted) return
             snykDepsConfExecuted = true
             debugLog('snykResolvedDepsJson task is executing via doLast')
-            // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
-            // First pass: scan all configurations that match the attribute filter and collect all attributes
-            // from them, to use unambiguous values of the attributes on the merged configuration.
-            //
-            // Why we need to scan all sub-projects: if a project A depends on B, and only B has some
-            // configurations with attribute C, we still might need attribute C in our configuration
-            // when resolving the project A, so that it selects a concrete variant of dependency B.
-            def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
-            def attributesAsStrings = [:] // Map<String, Set<string>>
-            rootProject.allprojects.each { proj ->
-                findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-                    .each { conf ->
-                        def attrs = conf.attributes
-                        attrs.keySet().toList().each({ attr ->
-                            def value = attrs.getAttribute(attr)
-                            if (!allConfigurationAttributes.containsKey(attr)) {
-                                allConfigurationAttributes[attr] = new HashSet()
-                                attributesAsStrings[attr.name] = new HashSet()
-                            }
-                            allConfigurationAttributes[attr].add(value)
-                            attributesAsStrings[attr.name].add(value.toString())
-                        })
-                    }
-            }
-            // name of target project - either specified by --file or the root of a multi-module build
-            String defaultProjectName = currProj.name
-            // the path of the above, preferred over name because path is unique
-            String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
-            // collect all subprojects names that are not target
-            List allSubProjectNames = []
-            allprojects
-                .findAll({ it.path != currProj.path })
-                .each({
-                    String projKey = formatPath(it.path)
-                    allSubProjectNames.add(projKey)
-                })
-            def shouldScanProject = {
-                onlyProj == null ||
-                (onlyProj == '.' && it.path == currProj.path) ||
-                it.name == onlyProj ||
-                formatPath(it.path) == onlyProj
-            }
-            def projectsDict = [:]
-
-            debugLog("defaultProjectName=$defaultProjectName; defaultProjectKey=$defaultProjectKey; allSubProjectNames=$allSubProjectNames")
-
-            // These will be used to suggest attribute filtering to the user if the scan fails
-            // due to ambiguous resolution of dependency variants
-            def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
-            println("JSONATTRS $jsonAttrs")
-
-            rootProject.allprojects.findAll(shouldScanProject).each { proj ->
-                debugLog("processing project: name=$proj.name; path=$proj.path")
-
-                def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
-                List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
-
-                if (resolvedConfigs.isEmpty() && !resolvableConfigs.isEmpty()) {
-                    throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
-                            ' for project ' + proj + ' could not be resolved.')
-                }
-                List nonemptyFirstLevelDeps = []
-                resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
-
-                debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
-                debugLog('converting gradle graph to snyk-graph format')
-
-                def projGraph = getGradleGraph(nonemptyFirstLevelDeps)
-                String projKey = formatPath(proj.path)
-                // if project is root ":", it's formatted to "" - we can't have an empty string as a key so use default name
-                if (projKey == "") {
-                    debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
-                    projKey = defaultProjectKey
-                }
-
-                projectsDict[projKey] = [
-                    'targetFile': findProject(proj.path).buildFile.toString(),
-                    'gradleGraph': projGraph,
-                    'projectVersion': proj.version.toString()
-                ]
-            }
-
-            def result = [
-                'defaultProject': defaultProjectName,
-                'defaultProjectKey': defaultProjectKey,
-                'projects': projectsDict,
-                'allSubProjectNames': allSubProjectNames
-            ]
-            def jsonDeps = JsonOutput.toJson(result)
-            println("JSONDEPS $jsonDeps")
+            def result = buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, false)
+            println("JSONDEPS " + JsonOutput.toJson(result))
         }
     }
 
     task snykNormalizedResolvedDepsJson {
-
         doLast { task ->
-            if (snykDepsConfExecuted) {
-                return
-            }
-
+            if (snykDepsConfExecuted) return
             snykDepsConfExecuted = true
             debugLog('snykNormalizedResolvedDepsJson task is executing via doLast')
-            // debugLog("onlyProj=$onlyProj; confNameFilter=$confNameFilter; confAttrSpec=$confAttrSpec")
-            // First pass: scan all configurations that match the attribute filter and collect all attributes
-            // from them, to use unambiguous values of the attributes on the merged configuration.
-            //
-            // Why we need to scan all sub-projects: if a project A depends on B, and only B has some
-            // configurations with attribute C, we still might need attribute C in our configuration
-            // when resolving the project A, so that it selects a concrete variant of dependency B.
-            def allConfigurationAttributes = [:] // Map<Attribute<?>, Set<?>>
-            def attributesAsStrings = [:] // Map<String, Set<string>>
-            rootProject.allprojects.each { proj ->
-                findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
-                    .each { Configuration conf ->
-                        def attrs = conf.attributes
-                        attrs.keySet().each({ attr ->
-                            def value = attrs.getAttribute(attr)
-                            if (!allConfigurationAttributes.containsKey(attr)) {
-                                allConfigurationAttributes[attr] = new HashSet()
-                                attributesAsStrings[attr.name] = new HashSet()
-                            }
-                            allConfigurationAttributes[attr].add(value)
-                            attributesAsStrings[attr.name].add(value.toString())
-                        })
-                    }
-            }
-
-            String defaultProjectName = currProj.name
-            String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
-            List allSubProjectNames = []
-            allprojects
-                .findAll({ it.path != currProj.path })
-                .each({
-                    String projKey = formatPath(it.path)
-                    allSubProjectNames.add(projKey)
-                })
-            def shouldScanProject = {
-                onlyProj == null ||
-                (onlyProj == '.' && it.path == currProj.path) ||
-                it.name == onlyProj ||
-                formatPath(it.path) == onlyProj
-            }
-            def projectsDict = [:]
-
-            debugLog("defaultProjectName=$defaultProjectName; allSubProjectNames=$allSubProjectNames")
-
-            // These will be used to suggest attribute filtering to the user if the scan fails
-            // due to ambiguous resolution of dependency variants
-            def jsonAttrs = JsonOutput.toJson(attributesAsStrings)
-            println("JSONATTRS $jsonAttrs")
-
-            def sha1Map = new Sha1Map()
-
-            rootProject.allprojects.findAll(shouldScanProject).each { proj ->
-                debugLog("processing project: name=$proj.name; path=$proj.path")
-
-                def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
-                List resolvedConfigs = getResolvedConfigs(resolvableConfigs)
-                if (!resolvableConfigs.isEmpty() && resolvedConfigs.isEmpty()) {
-                    throw new RuntimeException('Configurations: ' + resolvableConfigs.collect { it.name } +
-                            ' for project ' + proj + ' could not be resolved.')
-                }
-
-                List nonemptyFirstLevelDeps = []
-                resolvedConfigs.each { nonemptyFirstLevelDeps.addAll(it.getFirstLevelModuleDependencies()) }
-
-                debugLog("non-empty first level deps for project `$proj.name': $nonemptyFirstLevelDeps")
-                debugLog('converting gradle graph to snyk-graph format')
-
-                def projGraph = getGradleGraphWithSha1Map(nonemptyFirstLevelDeps, sha1Map)
-                String projKey = formatPath(proj.path)
-
-                if (projKey == "") {
-                    debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
-                    projKey = defaultProjectKey
-                }
-
-                projectsDict[projKey] = [
-                    'targetFile': findProject(proj.path).buildFile.toString(),
-                    'gradleGraph': projGraph.graph,
-                    'projectVersion': proj.version.toString()
-                ]
-            }
-
-            def result = [
-                'defaultProject': defaultProjectName,
-                'defaultProjectKey': defaultProjectKey,
-                'projects': projectsDict,
-                'allSubProjectNames': allSubProjectNames,
-                'sha1Map': sha1Map.coordinates
-            ]
-
-            def jsonDeps = JsonOutput.toJson(result)
-            println("JSONDEPS $jsonDeps")
+            def result = buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, true)
+            println("JSONDEPS " + JsonOutput.toJson(result))
         }
     }
 }

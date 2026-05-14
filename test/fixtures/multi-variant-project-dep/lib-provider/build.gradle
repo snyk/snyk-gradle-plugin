@@ -1,0 +1,39 @@
+// lib-provider: a local subproject exposed as multiple artifact variants
+// (main jar + test-fixtures jar). The two variants disagree on the
+// resolved version of tomcat-embed-core:
+//
+//   - main jar variant            → tomcat-embed-core:10.1.40
+//     (override in `implementation` scope wins for lib-provider's own
+//      compile/runtime classpath, overriding the BOM-managed 10.1.26)
+//
+//   - test-fixtures jar variant   → tomcat-embed-core:10.1.26
+//     (the `implementation` override is NOT visible to the
+//      testFixturesImplementation scope — only the BOM is — so the
+//      BOM's default version wins)
+//
+// Both variants are exposed to consumers, so a consuming build that
+// depends on both (see ../app/build.gradle) ends up with classpaths
+// that legitimately contain different resolved versions.
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // BOM brings spring-boot-starter-web (with tomcat-embed-core managed
+    // at 10.1.26 by Spring Boot 3.2.8). `api` scope exposes the BOM to
+    // both main and testFixtures.
+    api platform('org.springframework.boot:spring-boot-dependencies:3.2.8')
+    api 'org.springframework.boot:spring-boot-starter-web'
+
+    // Override: visible to main scope only — NOT to testFixturesImplementation.
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.40'
+}
