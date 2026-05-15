@@ -232,14 +232,19 @@ def walkComponent(component, GradleGraph graph, String parentId, Set visited,
     if (!isRoot) {
         def artifacts = artifactsByComponent[cid] ?: []
         if (artifacts.isEmpty()) {
-            // Platform/BOM dep, project with no published artifacts, or
-            // unresolved component — emit a logical node.
-            String coordinate = "${name}@${version}"
-            String nodeId = withSha1Map ? hashString(coordinate) : coordinate
-            if (withSha1Map) sha1Map.setCoordinate(nodeId, coordinate)
-            graph.setNode(nodeId, ['name': name, 'version': version])
-            graph.setEdge(parentId, nodeId)
-            nodeIdsForThisComponent.add(nodeId)
+            // No artifacts: platform/BOM constraint, project component
+            // with no published jar, or unresolved component. Skip node
+            // emission entirely (matches the legacy V1 behaviour of
+            // silently dropping deps whose getModuleArtifacts() returned
+            // an empty list — see lib/init.gradle pre-V6 loadGraph). This
+            // also avoids a coordinate-format inconsistency where the
+            // no-artifact branch would emit "name@version" while the
+            // artifact branch emits "name:type@version" — downstream
+            // parsers expect the latter shape.
+            //
+            // Children are still walked (below) using the parent's nodeId,
+            // so transitive contributions of a BOM are not lost — they
+            // appear directly under whatever brought the BOM in.
         } else {
             artifacts.each { a ->
                 def tc = extractTypeAndClassifier(a, name, version)
