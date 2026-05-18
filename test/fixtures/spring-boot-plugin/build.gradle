@@ -1,0 +1,30 @@
+// Real Spring Boot project. Brings in:
+//   - the org.springframework.boot plugin (registers custom configurations
+//     such as bootArchives, productionRuntimeClasspath, developmentOnly)
+//   - the io.spring.dependency-management plugin (which is a managed-version
+//     plugin built on top of constraints)
+//   - spring-boot-starter-web, which transitively pulls in tens of artifacts
+//     including tomcat-embed-core, jackson-databind, spring-core, etc.
+//
+// V6's findProjectConfigs filters by `canBeResolved`. Several configurations
+// added by the boot plugin (bootArchives in particular) are not resolvable
+// — V6 should skip them and not crash. This fixture is mostly a smoke test:
+// produce a sane graph, presence of key Spring Boot transitives, no
+// malformedness.
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.10'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+}
