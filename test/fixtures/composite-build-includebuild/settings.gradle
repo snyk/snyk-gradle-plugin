@@ -1,0 +1,7 @@
+// Composite build (Gradle includeBuild) — root build pulls a module from
+// `included-lib`, an entirely separate Gradle build living next door.
+// The substitution is automatic: a declared dep on
+// `com.example.included:included-lib:0.0.0` is rewritten by Gradle to the
+// included build's project.
+rootProject.name = 'composite-build-root'
+includeBuild('included-lib')
