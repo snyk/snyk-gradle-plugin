@@ -41,12 +41,14 @@ if (gradleVersionInUse < 5) {
     const graphObject: any = JSON.parse(JSON.stringify(result.dependencyGraph));
     const classifier = classifierMap[gradleVersionInUse] || '';
     const { deps: directDependencies } = graphObject.graph.nodes[0];
-    const expectedDirectDependencies = [
+    // v6's per-config walk attaches transitives under their actual parent
+    // rather than flattening every reachable artifact to the root.
+    // kotlin-compiler-embeddable is a transitive of
+    // kotlin-scripting-compiler-embeddable (still a direct child here), so
+    // it's no longer a direct dep of root.
+    const expectedDirectDependencies: { nodeId: string }[] = [
       {
         nodeId: `org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar@${kotlinVersion}`,
-      },
-      {
-        nodeId: `org.jetbrains.kotlin:kotlin-compiler-embeddable:jar@${kotlinVersion}`,
       },
       { nodeId: `org.jetbrains.kotlin:kotlin-reflect:jar@${kotlinVersion}` },
       {
@@ -59,6 +61,14 @@ if (gradleVersionInUse < 5) {
         nodeId: `org.jetbrains.kotlin:kotlin-noarg:jar${classifier}@${kotlinVersion}`,
       },
     ];
+    // kotlin-klib-commonizer-embeddable is first-level on its own Kotlin-plugin
+    // classpath in Kotlin 1.4+; the 1.3.21 plugin (used on Gradle < 7) doesn't
+    // ship a commonizer classpath, so this entry only applies to Kotlin 1.8.10+.
+    if (kotlinVersion !== '1.3.21') {
+      expectedDirectDependencies.push({
+        nodeId: `org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable:jar@${kotlinVersion}`,
+      });
+    }
     expectedDirectDependencies.forEach((expectedDependency) => {
       expect(directDependencies).toContainEqual(expectedDependency);
     });

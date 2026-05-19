@@ -27,6 +27,14 @@ import { inspect } from '../../lib';
 // merged dep graph for :app should include both. This test asserts the
 // walker surfaces both.
 
+// Requires Gradle 5.6+ (java-test-fixtures plugin) AND JDK 17 (Spring Boot
+// 3.x BOM declares org.gradle.jvm.version: 17). Gate by Gradle major to
+// match the JDK 17 matrix in CI.
+const gradleVersionFromProcess = process.env.GRADLE_VERSION || '';
+const gradleVersionInUse: number =
+  parseInt(gradleVersionFromProcess.split('.')[0]) || 0;
+const isSupported = gradleVersionInUse > 7;
+
 const reproRoot = fixtureDir('multi-variant-project-dep');
 
 function tomcatVersionsForApp(scannedProjects: any[]): string[] {
@@ -42,12 +50,17 @@ function tomcatVersionsForApp(scannedProjects: any[]): string[] {
     .sort();
 }
 
-describe('multi-variant project dependency', () => {
-  it('surfaces both real classpath versions of tomcat-embed-core for :app', async () => {
-    const result = await inspect('.', path.join(reproRoot, 'build.gradle'), {
-      allSubProjects: true,
-    });
-    const versions = tomcatVersionsForApp(result.scannedProjects ?? []);
-    expect(versions).toEqual(['10.1.26', '10.1.40']);
-  }, 120_000);
-});
+if (isSupported) {
+  describe('multi-variant project dependency', () => {
+    it('surfaces both real classpath versions of tomcat-embed-core for :app', async () => {
+      const result = await inspect('.', path.join(reproRoot, 'build.gradle'), {
+        allSubProjects: true,
+      });
+      const versions = tomcatVersionsForApp(result.scannedProjects ?? []);
+      expect(versions).toEqual(['10.1.26', '10.1.40']);
+    }, 120_000);
+  });
+} else {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  test('multi-variant project-dep fixture requires Gradle >= 8 (java-test-fixtures + Spring Boot 3.x BOM)', () => {});
+}
