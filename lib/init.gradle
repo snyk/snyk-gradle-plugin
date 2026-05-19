@@ -121,23 +121,12 @@ def hashString(String str) {
     return md.digest(str.bytes).encodeHex().toString()
 }
 
-// Build a merged dep graph for one project, walking each resolvable
-// configuration via Gradle's modern resolution APIs:
-//
-//   - configuration.incoming.resolutionResult walks the post-conflict-
-//     resolution dep graph (correctly applies conflict resolution across
-//     project boundaries — which the v5 ResolvedConfiguration API did
-//     not). https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/result/ResolutionResult.html
-//
-//   - configuration.incoming.artifactView { lenient = true } gives the
-//     resolved artifacts (with file/type/classifier metadata), tolerating
-//     partially-failed resolution.
-//     https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/ArtifactView.html
-//
-// The pair is the documented modern replacement for the v5
-// ResolvedConfiguration.getFirstLevelModuleDependencies() walk:
-// https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/ResolvedConfiguration.html
-// ("This is a legacy API. Avoid this class for new code.")
+// Walks each resolvable configuration via Gradle's modern resolution APIs:
+// resolutionResult for the post-conflict-resolution graph (which v5's
+// ResolvedConfiguration didn't apply across project boundaries), and
+// artifactView { lenient = true } for resolved artifacts with file metadata.
+// Replaces v5's ResolvedConfiguration.getFirstLevelModuleDependencies() walk,
+// which Gradle's own Javadoc calls "legacy API. Avoid this class for new code."
 def getGradleGraph(Iterable resolvableConfigs) {
     def graph = new GradleGraph('root-node')
     walkResolvableConfigs(resolvableConfigs, graph, null, false)
@@ -152,16 +141,30 @@ def getGradleGraphWithSha1Map(Iterable resolvableConfigs, Sha1Map sha1Map) {
 }
 
 def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map, boolean withSha1Map) {
+    // coordToNodeId is shared across configs: lib/graph.ts dedupes by coord,
+    // so the same coord must not surface under two nodeIds (e.g. hash(file)
+    // here, hashString(coord) in emitUnresolvedNode) — that produces phantom
+    // real+pruned pairs. resolvedNames below is per-config on purpose; see
+    // its declaration site.
+    def coordToNodeId = [:]
     resolvableConfigs.each { conf ->
-        // Per-config visited set keyed by ComponentIdentifier (which has
-        // stable equals/hashCode across Gradle versions). Not shared across
-        // configs: different configs can legitimately resolve the same dep
-        // to different versions.
-        def visited = new HashSet()
+        Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited = new HashSet<>()
         try {
             def artifactsByComponent = collectArtifactsByComponent(conf)
+            // Per-config so a module resolved in compileClasspath but failed
+            // (e.g. repo content filtering) in testRuntimeClasspath still
+            // surfaces as unresolved where it failed. See emitUnresolvedNode
+            // for what this suppresses.
+            def resolvedNames = new HashSet<String>()
+            artifactsByComponent.each { cid, _arts ->
+                // Use group/module directly: getModuleIdentifier() is Gradle 4.9+.
+                // .toString() is load-bearing — GStrings hash != Strings.
+                if (cid instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier) {
+                    resolvedNames.add("${cid.group}:${cid.module}".toString())
+                }
+            }
             def root = conf.incoming.resolutionResult.root
-            walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, withSha1Map, true)
+            walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, withSha1Map, true, coordToNodeId, resolvedNames)
             debugLog("conf ${conf.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
         } catch (Exception e) {
             debugLog("traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
@@ -173,21 +176,20 @@ def collectArtifactsByComponent(conf) {
     def grouped = [:].withDefault { [] }
     def artifacts
     try {
-        // lenient=true mirrors how the v5 plugin used LenientConfiguration:
-        // partially-failed resolution still returns whatever did resolve.
+        // lenient=true: partially-failed resolution still returns what did resolve.
         artifacts = conf.incoming.artifactView { it.lenient = true }.artifacts
         // ArtifactCollection implements both Iterable<ResolvedArtifactResult>
-        // AND FileCollection; Groovy's groupBy resolves to the wrong iteration,
-        // so use an explicit .each to force the ResolvedArtifactResult view.
+        // AND FileCollection; Groovy's groupBy picks the wrong iteration, so
+        // use explicit .each to force the ResolvedArtifactResult view.
         artifacts.each { grouped[it.id.componentIdentifier] << it }
     } catch (Exception e) {
         debugLog("artifactView failed for conf ${conf.name}: ${e.message}")
         return grouped
     }
-    // Surface unresolved deps for diagnostic visibility — modern API equivalent
-    // of V1's lenientConf.getUnresolvedModuleDependencies(). The .failures
-    // property is on ArtifactCollection but its exact name/access pattern
-    // varies across Gradle versions, so this is best-effort.
+    // Best-effort: .failures access varies across Gradle versions. If it works
+    // we log unresolved artifacts for diagnostic visibility; if it doesn't,
+    // we trace the failure so it's visible when it occurs on a version we
+    // expected to support it.
     try {
         def failures = artifacts.failures
         if (failures && !failures.isEmpty()) {
@@ -198,29 +200,23 @@ def collectArtifactsByComponent(conf) {
             }
         }
     } catch (Exception failuresErr) {
-        // .failures not available on this Gradle version's ArtifactCollection.
-        // We swallow this — it's not a real resolution failure, just a feature
-        // gap — but trace it so support has visibility if it ever fires
-        // unexpectedly on a Gradle we DO expect to support.
         debugLog("conf ${conf.name}: artifactCollection.failures access failed (${failuresErr.class.simpleName}: ${failuresErr.message}); continuing without unresolved-dep enumeration")
     }
     return grouped
 }
 
 // Recurse over ResolvedComponentResult.dependencies. component.moduleVersion
-// returns the SELECTED (post-conflict-resolution) version, applied
-// consistently across project boundaries — which is the correctness
+// is the SELECTED (post-conflict-resolution) version — the correctness
 // improvement over the v5 walker.
-def walkComponent(component, GradleGraph graph, String parentId, Set visited,
-                  Map artifactsByComponent, Sha1Map sha1Map, boolean withSha1Map, boolean isRoot) {
+def walkComponent(component, GradleGraph graph, String parentId,
+                  Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
+                  Map artifactsByComponent, Sha1Map sha1Map, boolean withSha1Map, boolean isRoot,
+                  Map<String, String> coordToNodeId, Set<String> resolvedNames) {
     def cid = component.id
     def mv = component.moduleVersion
-    // Root has a null moduleVersion by design and never emits a node (the
-    // isRoot branch below skips emission). For non-root components, a null
-    // moduleVersion means the ComponentIdentifier has no coordinate-shaped
-    // metadata we can serialise — fall back to displayName would produce
-    // pkgIds like "project ':app'" that downstream parsers (which expect
-    // group:module@version) reject as malformed. Skip entirely.
+    // Root legitimately has null moduleVersion (isRoot branch below skips
+    // emission). For non-root, no coordinate means a malformed pkgId
+    // downstream — skip rather than fall back to displayName.
     if (mv == null && !isRoot) {
         debugLog("walkComponent: skipping ${cid} (non-root, null moduleVersion)")
         return
@@ -232,27 +228,20 @@ def walkComponent(component, GradleGraph graph, String parentId, Set visited,
     if (!isRoot) {
         def artifacts = artifactsByComponent[cid] ?: []
         if (artifacts.isEmpty()) {
-            // No artifacts: platform/BOM constraint, project component
-            // with no published jar, or unresolved component. Skip node
-            // emission entirely (matches the legacy V1 behaviour of
-            // silently dropping deps whose getModuleArtifacts() returned
-            // an empty list — see lib/init.gradle pre-V6 loadGraph). This
-            // also avoids a coordinate-format inconsistency where the
-            // no-artifact branch would emit "name@version" while the
-            // artifact branch emits "name:type@version" — downstream
-            // parsers expect the latter shape.
-            //
-            // Children are still walked (below) using the parent's nodeId,
-            // so transitive contributions of a BOM are not lost — they
-            // appear directly under whatever brought the BOM in.
+            // BOMs, platforms, project deps with no jar: skip emission AND
+            // skip walking children (see the early-return below).
         } else {
             artifacts.each { a ->
                 def tc = extractTypeAndClassifier(a, name, version)
                 String coordinate = "${name}:${tc.type}"
                 if (tc.classifier) coordinate += ":${tc.classifier}"
                 coordinate += "@${version}"
+                // Reuse if already emitted in this walk. See walkResolvableConfigs.
+                String existingNodeId = coordToNodeId[coordinate]
                 String nodeId
-                if (withSha1Map) {
+                if (existingNodeId) {
+                    nodeId = existingNodeId
+                } else if (withSha1Map) {
                     try {
                         nodeId = hash(a.file)
                     } catch (Exception e) {
@@ -260,8 +249,10 @@ def walkComponent(component, GradleGraph graph, String parentId, Set visited,
                         nodeId = hashString(coordinate)
                     }
                     sha1Map.setCoordinate(nodeId, coordinate)
+                    coordToNodeId[coordinate] = nodeId
                 } else {
                     nodeId = coordinate
+                    coordToNodeId[coordinate] = nodeId
                 }
                 graph.setNode(nodeId, ['name': name, 'version': version])
                 graph.setEdge(parentId, nodeId)
@@ -273,55 +264,84 @@ def walkComponent(component, GradleGraph graph, String parentId, Set visited,
     if (visited.contains(cid)) return
     visited.add(cid)
 
-    // Children attach to the first node we emitted for this component, OR
-    // to our own parent if we emitted nothing (BOM / no-artifact component,
-    // or the root). The `isRoot` case is implicitly covered: when isRoot is
-    // true, the node-creation block above is skipped and nodeIdsForThisComponent
-    // stays empty.
-    String nextParent = nodeIdsForThisComponent.isEmpty() ? parentId : nodeIdsForThisComponent.first()
-    // If THIS component had no artifacts (BOM, Gradle platform), we already
-    // skipped emitting nodes for it. Its "dependencies" are all constraint
-    // edges that don't represent classpath contributions — skip walking them
-    // entirely, otherwise a BOM's constrained libraries leak in as phantom
-    // children of the BOM's own parent. (We must do this here rather than
-    // filtering on dep.isConstraint() down in the loop, because under strict
-    // lock mode REAL direct deps also have isConstraint=true — the lock is
-    // implemented as a constraint, so filtering by that flag alone would
-    // drop genuine classpath entries.)
-    boolean currentIsBomOrPlatform = !isRoot && nodeIdsForThisComponent.isEmpty()
-    if (currentIsBomOrPlatform) return
-    component.dependencies.each { dep ->
-        if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) {
-            // UnresolvedDependencyResult — skip (the artifactView path
-            // handles failure reporting separately).
-            return
+    // Skip children of components we emitted nothing for: their dependencies
+    // are constraint edges, not classpath contributions, and would leak in as
+    // phantom children of our parent. Can't filter dep.isConstraint() — strict
+    // lock mode marks real direct deps as constraints too (lock IS a constraint).
+    boolean currentEmittedNothing = !isRoot && nodeIdsForThisComponent.isEmpty()
+    if (currentEmittedNothing) return
+    // ResolutionResult.dependencies is an unordered Set; sort for determinism.
+    def sortedDeps = component.dependencies.toList().sort { a, b ->
+        def aKey = (a instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) ? a.selected.id.displayName : a.requested.displayName
+        def bKey = (b instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) ? b.selected.id.displayName : b.requested.displayName
+        aKey <=> bKey
+    }
+    // Attach children under EVERY emitted node, not just the first: a component
+    // with multiple artifacts (e.g. classifier variants) should show its
+    // transitives under each artifact. The visited check inside walkComponent
+    // blocks recursion explosion — subsequent calls only re-add parent edges.
+    def parents = nodeIdsForThisComponent.isEmpty() ? [parentId] : nodeIdsForThisComponent
+    parents.each { p ->
+        sortedDeps.each { dep ->
+            if (dep instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult) {
+                emitUnresolvedNode(dep, graph, p, sha1Map, withSha1Map, coordToNodeId, resolvedNames)
+                return
+            }
+            if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) return
+            walkComponent(dep.selected, graph, p, visited, artifactsByComponent, sha1Map, withSha1Map, false, coordToNodeId, resolvedNames)
         }
-        walkComponent(dep.selected, graph, nextParent, visited, artifactsByComponent, sha1Map, withSha1Map, false)
     }
 }
 
-// Extract artifact type and classifier from a ResolvedArtifactResult.
-//
-// The modern ArtifactView API does not expose getType()/getClassifier()
-// directly — those fields live on the internal IvyArtifactName inside
-// DefaultModuleComponentArtifactIdentifier, which is in an internal
-// package with no stability guarantee across Gradle versions. Parsing
-// the artifact filename against the Maven layout
-//
-//     <moduleName>-<version>[-<classifier>].<extension>
-//
-// is the public-API-stable equivalent — and what Gradle's own display
-// logic ultimately does (artifact.id.displayName formats as
-// "<filename> (<componentId>)").
-//
-// Returns [type: <file extension, or 'jar' if no extension>, classifier: <classifier or null>].
+// Emit a leaf node for an UnresolvedDependencyResult. Type is always 'jar'
+// and classifier is dropped: ModuleComponentSelector's public API exposes
+// neither (they live on the original Dependency's artifact filter, not the
+// selector). 'foo:bar:1.0:linux-x86_64' that fails shows up as 'foo:bar:jar@1.0'.
+def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map, boolean withSha1Map, Map<String, String> coordToNodeId, Set<String> resolvedNames) {
+    // Prefer attempted (the version Gradle actually tried) so dynamic-selector
+    // failures show what Gradle saw; fall back to requested when null.
+    def selector = dep.attempted ?: dep.requested
+    // Project/library selectors don't have a coordinate worth emitting as a leaf.
+    if (!(selector instanceof org.gradle.api.artifacts.component.ModuleComponentSelector)) return
+    String name = "${selector.group}:${selector.module}"
+    // Lock-rejection noise: strict locks emit a rejected UnresolvedDep next to
+    // the resolved one for the locked version. If the name resolved at any
+    // version in this config, the unresolved emission is noise — skip it.
+    if (resolvedNames.contains(name)) return
+    String version
+    try {
+        // VersionConstraint is Gradle 4.4+; older versions only have selector.version.
+        def vc = selector.versionConstraint
+        version = vc?.requiredVersion ?: vc?.preferredVersion ?: selector.version
+    } catch (Exception ignored) {
+        version = selector.version
+    }
+    version = version ?: 'unspecified'
+    String coordinate = "${name}:jar@${version}"
+    // Reuse if already in the graph (mirror of the lookup in walkComponent).
+    String existingNodeId = coordToNodeId[coordinate]
+    String nodeId
+    if (existingNodeId) {
+        nodeId = existingNodeId
+    } else {
+        nodeId = withSha1Map ? hashString(coordinate) : coordinate
+        if (withSha1Map) sha1Map.setCoordinate(nodeId, coordinate)
+        coordToNodeId[coordinate] = nodeId
+    }
+    graph.setNode(nodeId, ['name': name, 'version': version])
+    graph.setEdge(parentId, nodeId)
+}
+
+// Parse artifact type and classifier from the filename: ArtifactView doesn't
+// expose getType()/getClassifier() (they live on internal-package types with
+// no cross-version stability guarantee), but the Maven layout
+// `<moduleName>-<version>[-<classifier>].<extension>` is a stable surface.
+// Returns [type: <extension, or 'jar'>, classifier: <classifier or null>].
 def extractTypeAndClassifier(artifact, String name, String version) {
     def fileName = artifact.file?.name
     if (!fileName) return [type: 'jar', classifier: null]
 
-    // Split filename into stem + extension. dotAt == -1 means no dot,
-    // == 0 means dotfile-style (".hidden"), == len-1 means trailing dot;
-    // any of these gives no usable extension and we fall back to 'jar'.
+    // dotAt <= 0 or at the end means no usable extension; fall back to 'jar'.
     int dotAt = fileName.lastIndexOf('.')
     String stem, type
     if (dotAt > 0 && dotAt < fileName.length() - 1) {
@@ -332,8 +352,8 @@ def extractTypeAndClassifier(artifact, String name, String version) {
         type = 'jar'
     }
 
-    // Strip "<moduleName>-<version>" from the stem; anything after the
-    // leading dash is the classifier, if any.
+    // After stripping "<moduleName>-<version>" the rest (post leading dash) is
+    // the classifier. Assumes moduleName has no colon — true for ModuleComponentIdentifier.
     String moduleName = name.contains(':') ? name.substring(name.lastIndexOf(':') + 1) : name
     String prefix = "${moduleName}-${version}"
     String classifier = null
@@ -416,14 +436,12 @@ Boolean isRootPath(path){
     return path == rootProject.path
 }
 
-// Shared implementation for both snykResolvedDepsJson and
-// snykNormalizedResolvedDepsJson. They differ only in whether nodeIds in
-// the gradleGraph are sha1 hashes (the "normalized" mode) and whether the
-// top-level result includes a sha1Map; everything else — attribute scan,
-// project enumeration, per-project walk — is identical.
+// Shared body for both snykResolvedDepsJson and snykNormalizedResolvedDepsJson;
+// they differ only in whether gradleGraph nodeIds are sha1 hashes ("normalized"
+// mode) and whether the result includes a sha1Map.
 def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolean withSha1Map) {
-    // Collect attribute values across all matching configs (used as a hint
-    // to the user when variant resolution fails ambiguously).
+    // Attribute values across matching configs — used as a user-facing hint
+    // when variant resolution fails ambiguously.
     def attributesAsStrings = [:].withDefault { new HashSet() }
     rootProject.allprojects.each { proj ->
         findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec).each { conf ->
@@ -437,8 +455,7 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
     String defaultProjectName = currProj.name
     String defaultProjectKey = isRootPath(currProj.path) ? defaultProjectName : formatPath(currProj.path)
     // currProj.allprojects (not rootProject.allprojects) — when the task fires
-    // on a subproject, "sibling" projects shouldn't appear here. Matches V1's
-    // `allprojects.findAll(...)` semantics (which resolved against currProj).
+    // on a subproject, sibling projects shouldn't appear here.
     List allSubProjectNames = currProj.allprojects
         .findAll { it.path != currProj.path }
         .collect { formatPath(it.path) }
@@ -482,9 +499,8 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
     return result
 }
 
-// We attach the tasks to every project — this is the only reliable way to run them
-// when a subproject build.gradle is the entry point. The snykDepsConfExecuted flag
-// ensures only the first task body to execute actually does the work.
+// Attach to every project so the task is runnable when a subproject build.gradle
+// is the entry point; the flag ensures only the first body actually runs.
 def snykDepsConfExecuted = false
 allprojects { Project currProj ->
     debugLog("Current project: $currProj.name")

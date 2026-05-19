@@ -40,17 +40,17 @@
       }
     },
     {
-      "id": "net.sf.ezmorph:ezmorph@1.0.6",
-      "info": {
-        "name": "net.sf.ezmorph:ezmorph",
-        "version": "1.0.6"
-      }
-    },
-    {
       "id": "commons-lang:commons-lang@2.5",
       "info": {
         "name": "commons-lang:commons-lang",
         "version": "2.5"
+      }
+    },
+    {
+      "id": "net.sf.ezmorph:ezmorph@1.0.6",
+      "info": {
+        "name": "net.sf.ezmorph:ezmorph",
+        "version": "1.0.6"
       }
     }
   ],
@@ -83,10 +83,10 @@
             "nodeId": "commons-collections:commons-collections:jar@3.2.1"
           },
           {
-            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6"
+            "nodeId": "commons-lang:commons-lang:jar@2.5"
           },
           {
-            "nodeId": "commons-lang:commons-lang:jar@2.5"
+            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6"
           }
         ]
       },
@@ -104,10 +104,10 @@
             "nodeId": "commons-collections:commons-collections:jar@3.2.1:pruned"
           },
           {
-            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned"
+            "nodeId": "commons-lang:commons-lang:jar@2.5:pruned"
           },
           {
-            "nodeId": "commons-lang:commons-lang:jar@2.5:pruned"
+            "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned"
           }
         ]
       },
@@ -131,6 +131,11 @@
         "deps": []
       },
       {
+        "nodeId": "commons-lang:commons-lang:jar@2.5",
+        "pkgId": "commons-lang:commons-lang@2.5",
+        "deps": []
+      },
+      {
         "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6",
         "pkgId": "net.sf.ezmorph:ezmorph@1.0.6",
         "deps": [
@@ -138,11 +143,6 @@
             "nodeId": "commons-lang:commons-lang:jar@2.5:pruned"
           }
         ]
-      },
-      {
-        "nodeId": "commons-lang:commons-lang:jar@2.5",
-        "pkgId": "commons-lang:commons-lang@2.5",
-        "deps": []
       },
       {
         "nodeId": "commons-beanutils:commons-beanutils:jar@1.8.0:pruned",
@@ -175,8 +175,8 @@
         }
       },
       {
-        "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned",
-        "pkgId": "net.sf.ezmorph:ezmorph@1.0.6",
+        "nodeId": "commons-lang:commons-lang:jar@2.5:pruned",
+        "pkgId": "commons-lang:commons-lang@2.5",
         "deps": [],
         "info": {
           "labels": {
@@ -185,8 +185,8 @@
         }
       },
       {
-        "nodeId": "commons-lang:commons-lang:jar@2.5:pruned",
-        "pkgId": "commons-lang:commons-lang@2.5",
+        "nodeId": "net.sf.ezmorph:ezmorph:jar@1.0.6:pruned",
+        "pkgId": "net.sf.ezmorph:ezmorph@1.0.6",
         "deps": [],
         "info": {
           "labels": {
