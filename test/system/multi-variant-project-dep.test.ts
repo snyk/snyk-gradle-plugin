@@ -32,26 +32,21 @@ const reproRoot = fixtureDir('multi-variant-project-dep');
 function tomcatVersionsForApp(scannedProjects: any[]): string[] {
   const app = scannedProjects.find(
     (sp) =>
-      sp.meta.projectName.endsWith('/app') ||
-      sp.meta.projectName === 'app',
+      sp.meta.projectName.endsWith('/app') || sp.meta.projectName === 'app',
   );
   if (!app || !app.depGraph) return [];
   return app.depGraph
     .getDepPkgs()
-    .filter(
-      (p: any) => p.name === 'org.apache.tomcat.embed:tomcat-embed-core',
-    )
+    .filter((p: any) => p.name === 'org.apache.tomcat.embed:tomcat-embed-core')
     .map((p: any) => p.version)
     .sort();
 }
 
 describe('multi-variant project dependency', () => {
   it('surfaces both real classpath versions of tomcat-embed-core for :app', async () => {
-    const result = await inspect(
-      '.',
-      path.join(reproRoot, 'build.gradle'),
-      { allSubProjects: true },
-    );
+    const result = await inspect('.', path.join(reproRoot, 'build.gradle'), {
+      allSubProjects: true,
+    });
     const versions = tomcatVersionsForApp(result.scannedProjects ?? []);
     expect(versions).toEqual(['10.1.26', '10.1.40']);
   }, 120_000);

@@ -59,8 +59,12 @@ describe('Spring Boot plugin — modern ResolutionResult walker', () => {
     // Spring-managed versions must agree across modules: e.g. spring-core
     // and spring-web must be at the same version (the BOM pins them
     // together).
-    const springCore = pkgs.find((p) => p.name === 'org.springframework:spring-core');
-    const springWeb = pkgs.find((p) => p.name === 'org.springframework:spring-web');
+    const springCore = pkgs.find(
+      (p) => p.name === 'org.springframework:spring-core',
+    );
+    const springWeb = pkgs.find(
+      (p) => p.name === 'org.springframework:spring-web',
+    );
     expect(springCore).toBeDefined();
     expect(springWeb).toBeDefined();
     expect(springCore!.version).toBe(springWeb!.version);
