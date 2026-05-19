@@ -315,7 +315,7 @@ workflows:
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '20.9'
+          node_version: '20.19'
           <<: *filters_branches_ignore_main
 
       - test-unix:
@@ -353,5 +353,5 @@ workflows:
       - release:
           name: Release
           context: nodejs-app-release
-          node_version: '20.9'
+          node_version: '20.19'
           <<: *filters_branches_only_main
