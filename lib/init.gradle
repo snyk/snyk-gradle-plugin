@@ -129,18 +129,20 @@ def hashString(String str) {
 // which Gradle's own Javadoc calls "legacy API. Avoid this class for new code."
 def getGradleGraph(Iterable resolvableConfigs) {
     def graph = new GradleGraph('root-node')
-    walkResolvableConfigs(resolvableConfigs, graph, null, false)
+    walkResolvableConfigs(resolvableConfigs, graph, null)
     return graph.nodes
 }
 
 def getGradleGraphWithSha1Map(Iterable resolvableConfigs, Sha1Map sha1Map) {
     if (!sha1Map) sha1Map = new Sha1Map()
     def graph = new GradleGraph('root-node')
-    walkResolvableConfigs(resolvableConfigs, graph, sha1Map, true)
+    walkResolvableConfigs(resolvableConfigs, graph, sha1Map)
     return [graph: graph.nodes, sha1Map: sha1Map]
 }
 
-def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map, boolean withSha1Map) {
+// sha1Map != null switches the walker to normalized mode (nodeIds are sha1
+// hashes of artifact contents); null = regular mode (nodeIds are coordinates).
+def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map) {
     // coordToNodeId is shared across configs: lib/graph.ts dedupes by coord,
     // so the same coord must not surface under two nodeIds (e.g. hash(file)
     // here, hashString(coord) in emitUnresolvedNode) — that produces phantom
@@ -164,7 +166,7 @@ def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map
                 }
             }
             def root = conf.incoming.resolutionResult.root
-            walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, withSha1Map, true, coordToNodeId, resolvedNames)
+            walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, true, coordToNodeId, resolvedNames)
             debugLog("conf ${conf.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
         } catch (Exception e) {
             debugLog("traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
@@ -210,7 +212,7 @@ def collectArtifactsByComponent(conf) {
 // improvement over the v5 walker.
 def walkComponent(component, GradleGraph graph, String parentId,
                   Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
-                  Map artifactsByComponent, Sha1Map sha1Map, boolean withSha1Map, boolean isRoot,
+                  Map artifactsByComponent, Sha1Map sha1Map, boolean isRoot,
                   Map<String, String> coordToNodeId, Set<String> resolvedNames) {
     def cid = component.id
     def mv = component.moduleVersion
@@ -241,7 +243,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
                 String nodeId
                 if (existingNodeId) {
                     nodeId = existingNodeId
-                } else if (withSha1Map) {
+                } else if (sha1Map) {
                     try {
                         nodeId = hash(a.file)
                     } catch (Exception e) {
@@ -284,11 +286,11 @@ def walkComponent(component, GradleGraph graph, String parentId,
     parents.each { p ->
         sortedDeps.each { dep ->
             if (dep instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult) {
-                emitUnresolvedNode(dep, graph, p, sha1Map, withSha1Map, coordToNodeId, resolvedNames)
+                emitUnresolvedNode(dep, graph, p, sha1Map, coordToNodeId, resolvedNames)
                 return
             }
             if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) return
-            walkComponent(dep.selected, graph, p, visited, artifactsByComponent, sha1Map, withSha1Map, false, coordToNodeId, resolvedNames)
+            walkComponent(dep.selected, graph, p, visited, artifactsByComponent, sha1Map, false, coordToNodeId, resolvedNames)
         }
     }
 }
@@ -297,7 +299,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
 // and classifier is dropped: ModuleComponentSelector's public API exposes
 // neither (they live on the original Dependency's artifact filter, not the
 // selector). 'foo:bar:1.0:linux-x86_64' that fails shows up as 'foo:bar:jar@1.0'.
-def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map, boolean withSha1Map, Map<String, String> coordToNodeId, Set<String> resolvedNames) {
+def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map, Map<String, String> coordToNodeId, Set<String> resolvedNames) {
     // Prefer attempted (the version Gradle actually tried) so dynamic-selector
     // failures show what Gradle saw; fall back to requested when null.
     def selector = dep.attempted ?: dep.requested
@@ -324,8 +326,8 @@ def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map,
     if (existingNodeId) {
         nodeId = existingNodeId
     } else {
-        nodeId = withSha1Map ? hashString(coordinate) : coordinate
-        if (withSha1Map) sha1Map.setCoordinate(nodeId, coordinate)
+        nodeId = sha1Map ? hashString(coordinate) : coordinate
+        if (sha1Map) sha1Map.setCoordinate(nodeId, coordinate)
         coordToNodeId[coordinate] = nodeId
     }
     graph.setNode(nodeId, ['name': name, 'version': version])
