@@ -114,6 +114,9 @@
             "nodeId": "org.apache.commons:commons-text:jar@1.12.0"
           },
           {
+            "nodeId": "init-gradle:utilities:java-classes-directory@unspecified"
+          },
+          {
             "nodeId": "init-gradle:utilities:jar@unspecified"
           },
           {
@@ -130,6 +133,15 @@
         "deps": [
           {
             "nodeId": "org.apache.commons:commons-lang3:jar@3.14.0"
+          }
+        ]
+      },
+      {
+        "nodeId": "init-gradle:utilities:java-classes-directory@unspecified",
+        "pkgId": "init-gradle:utilities@unspecified",
+        "deps": [
+          {
+            "nodeId": "init-gradle:list:java-classes-directory@unspecified"
           }
         ]
       },
@@ -172,6 +184,11 @@
       {
         "nodeId": "org.apache.commons:commons-lang3:jar@3.14.0",
         "pkgId": "org.apache.commons:commons-lang3@3.14.0",
+        "deps": []
+      },
+      {
+        "nodeId": "init-gradle:list:java-classes-directory@unspecified",
+        "pkgId": "init-gradle:list@unspecified",
         "deps": []
       },
       {

@@ -334,38 +334,56 @@ def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map,
     graph.setEdge(parentId, nodeId)
 }
 
-// Parse artifact type and classifier from the filename: ArtifactView doesn't
-// expose getType()/getClassifier() (they live on internal-package types with
-// no cross-version stability guarantee), but the Maven layout
-// `<moduleName>-<version>[-<classifier>].<extension>` is a stable surface.
-// Returns [type: <extension, or 'jar'>, classifier: <classifier or null>].
+// Get artifact type and classifier. Type comes from Gradle's own variant
+// attributes when available (Gradle 5.1+, ResolvedArtifactResult.getVariant());
+// this matches what v5's a.type returned, including non-jar types like
+// java-classes-directory and java-resources-directory. Falls back to filename
+// extension parsing for older Gradle. Classifier always comes from the
+// filename — no public-API alternative.
 def extractTypeAndClassifier(artifact, String name, String version) {
-    def fileName = artifact.file?.name
-    if (!fileName) return [type: 'jar', classifier: null]
+    def file = artifact.file
+    def fileName = file?.name
+    String classifier = extractClassifierFromFilename(fileName, name, version)
 
-    // dotAt <= 0 or at the end means no usable extension; fall back to 'jar'.
+    // 1. Gradle 5.1+ — authoritative artifact-type attribute.
+    try {
+        def attr = artifact.variant?.attributes?.getAttribute(
+            org.gradle.api.attributes.Attribute.of('artifactType', String))
+        if (attr) return [type: attr, classifier: classifier]
+    } catch (Exception ignored) { /* pre-5.1: fall through */ }
+
+    // 2. Gradle 4.x fallback. Detect directories explicitly (plain Java —
+    //    works on every Gradle version) so we don't mislabel them as 'jar'.
+    //    Less specific than Gradle 5.1+'s artifactType attribute, but accurate.
+    if (file?.isDirectory()) return [type: 'directory', classifier: null]
+    return [type: fileExtensionOr(fileName, 'jar'), classifier: classifier]
+}
+
+// Returns the file extension (chars after the last dot), or `fallback` if
+// there's no usable extension. A leading dot (e.g. `.gitignore`) or trailing
+// dot (e.g. `file.`) both count as "no usable extension".
+def fileExtensionOr(String fileName, String fallback) {
+    if (!fileName) return fallback
     int dotAt = fileName.lastIndexOf('.')
-    String stem, type
-    if (dotAt > 0 && dotAt < fileName.length() - 1) {
-        stem = fileName.substring(0, dotAt)
-        type = fileName.substring(dotAt + 1)
-    } else {
-        stem = fileName
-        type = 'jar'
-    }
+    if (dotAt <= 0 || dotAt == fileName.length() - 1) return fallback
+    return fileName.substring(dotAt + 1)
+}
 
-    // After stripping "<moduleName>-<version>" the rest (post leading dash) is
-    // the classifier. Assumes moduleName has no colon — true for ModuleComponentIdentifier.
+// After stripping "<moduleName>-<version>" the rest (post leading dash) is
+// the classifier. Assumes moduleName has no colon — true for ModuleComponentIdentifier.
+def extractClassifierFromFilename(String fileName, String name, String version) {
+    if (!fileName) return null
+    int dotAt = fileName.lastIndexOf('.')
+    String stem = (dotAt > 0 && dotAt < fileName.length() - 1) ? fileName.substring(0, dotAt) : fileName
     String moduleName = name.contains(':') ? name.substring(name.lastIndexOf(':') + 1) : name
     String prefix = "${moduleName}-${version}"
-    String classifier = null
     if (stem.startsWith(prefix)) {
         String suffix = stem.substring(prefix.length())
         if (suffix.startsWith('-') && suffix.length() > 1) {
-            classifier = suffix.substring(1)
+            return suffix.substring(1)
         }
     }
-    return [type: type, classifier: classifier]
+    return null
 }
 
 def debugLog(msg) {
