@@ -286,13 +286,15 @@ jobs:
       - image: cimg/node:<< parameters.node_version >>
     steps:
       - checkout
-      - run: sudo npm i -g semantic-release@22 @semantic-release/exec pkg
+      - run: sudo npm i -g semantic-release@25 @semantic-release/exec pkg
       - run:
           name: Install NPM packages
           command: npm i
       - run:
           name: Publish to GitHub
-          command: semantic-release
+          command: |
+            export NPM_ID_TOKEN=$(circleci run oidc get --claims '{"aud": "npm:registry.npmjs.org"}')
+            semantic-release
 
 workflows:
   version: 2
@@ -307,7 +309,7 @@ workflows:
 
       - security-scans:
           name: Security Scans
-          node_version: "20.9"
+          node_version: "22.22"
           context:
             - open_source-managed
             - nodejs-install
@@ -315,7 +317,7 @@ workflows:
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '20.19'
+          node_version: '22.22'
           <<: *filters_branches_ignore_main
 
       - test-unix:
@@ -352,6 +354,8 @@ workflows:
 
       - release:
           name: Release
-          context: nodejs-app-release
-          node_version: '20.19'
+          context:
+            - nodejs-install
+            - github-release
+          node_version: '22.22'
           <<: *filters_branches_only_main
