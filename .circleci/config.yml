@@ -161,6 +161,13 @@ commands:
       - run:
           name: Installing JDK
           command: sdk install java << parameters.jdk_version >>
+      - run:
+          name: Install Java 21 for Gradle toolchain support
+          command: |
+            if [[ "<< parameters.jdk_version >>" == "8.0.292.j9-adpt" ]]; then
+              sdk install java 21.0.5-tem || true
+              sdk default java << parameters.jdk_version >>
+            fi
       - save_cache:
           key: java-cli-{{ arch }}-v1
           paths:
@@ -184,6 +191,12 @@ commands:
               choco install -y openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
             else
               choco install --force -y openjdk --version=<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+            fi
+      - run:
+          name: Install Java 21 for Gradle toolchain support
+          command: |
+            if [[ << parameters.jdk_version >> == "8" ]]; then
+              choco install -y temurin21 --cache ~\AppData\Local\Temp\jdk
             fi
       - run:
           name: Set JAVA_HOME
