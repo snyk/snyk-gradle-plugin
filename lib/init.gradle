@@ -166,17 +166,23 @@ def computeHashes(File file) {
     return result
 }
 
-// Strip any userinfo (basic-auth credentials) from a URL before labelling, so
-// private-registry credentials never leak into the dep-graph. Mirrors
-// nodejs-lockfile-parser's component-metadata credential stripping.
-def stripCredentials(String url) {
+// Reduce a resource URL to its canonical, credential-free location —
+// scheme://host[:port]/path — by parsing it as a URI and dropping userInfo,
+// query and fragment. The query is where URL-borne auth lives (Azure Blob SAS
+// tokens, GCS/S3 signed-URL signatures); it is request-scoped and never part
+// of the artifact's durable location, so it is dropped wholesale rather than
+// by enumerating credential parameter names. Basic-auth userInfo is dropped
+// for the same reason. Operating on the parsed URI (not string surgery) keeps
+// the rule single and robust.
+def canonicalUrl(String url) {
     try {
         def u = new URI(url)
-        if (u.userInfo != null) {
-            return new URI(u.scheme, null, u.host, u.port, u.path, u.query, u.fragment).toString()
-        }
-    } catch (Exception ignored) { /* not a parseable URI — return as-is */ }
-    return url
+        return new URI(u.scheme, null, u.host, u.port, u.path, null, null).toString()
+    } catch (Exception ignored) {
+        // Unparseable — still make a best effort to drop query/fragment so a
+        // token in the query can never survive into a label.
+        return url.replaceAll(/[?#].*$/, '')
+    }
 }
 
 // Register an internal build-operation listener that records the URL of every
@@ -215,13 +221,18 @@ def recordResourceRead(buildOp) {
         if (loc == null) return
         def url = loc.toString()
         if (!(url.startsWith('http://') || url.startsWith('https://'))) return
-        def clean = url.replaceAll(/[?#].*$/, '')
-        int slash = clean.lastIndexOf('/')
-        if (slash < 0 || slash == clean.length() - 1) return
-        def filename = clean.substring(slash + 1)
+        def uri
+        try { uri = new URI(url) } catch (Exception ignored) { return }
+        // Derive the filename from the parsed path (already free of query and
+        // fragment), then store the canonicalised, credential-free URL.
+        def path = uri.path
+        if (!path) return
+        int slash = path.lastIndexOf('/')
+        if (slash < 0 || slash == path.length() - 1) return
+        def filename = path.substring(slash + 1)
         snykUrlsByFilename
             .computeIfAbsent(filename) { _ -> java.util.Collections.synchronizedSet(new LinkedHashSet()) }
-            .add(stripCredentials(url))
+            .add(canonicalUrl(url))
     } catch (Exception ignored) { /* one bad op must not break resolution */ }
 }
 
@@ -266,7 +277,13 @@ def lookupDistributionUrl(String name, String version, String fileName) {
         def group = name.contains(':') ? name.substring(0, name.indexOf(':')) : name
         def module = name.contains(':') ? name.substring(name.indexOf(':') + 1) : name
         def suffix = "/${group.replace('.', '/')}/${module}/${version}/${fileName}".toString()
-        def matches = candidates.findAll { it.replaceAll(/[?#].*$/, '').endsWith(suffix) }
+        def matches = candidates.findAll { candidate ->
+            try {
+                return new URI(candidate).path?.endsWith(suffix)
+            } catch (Exception ignored) {
+                return false
+            }
+        }
         if (matches.size() == 1) return matches[0]
     } catch (Exception ignored) { /* fall through to no-label */ }
     return null
