@@ -77,6 +77,18 @@ export interface GradleInspectOptions {
   daemon?: boolean;
   initScript?: string;
   gradleNormalizeDeps?: boolean;
+
+  // Emit component-metadata node labels (hash:<alg> and, when the real
+  // resolution was observed, distribution:url). Passed to init.gradle as
+  // -PsnykIncludeComponentMetadata. Off by default.
+  includeComponentMetadata?: boolean;
+
+  // Force `--refresh-dependencies` so metadata reads fire and distribution:url
+  // is populated even on a warm cache. Opt-in: forces network access and can
+  // re-resolve dynamic/SNAPSHOT versions. No-op under `--offline`. Only affects
+  // distribution:url coverage; hash:<alg> labels are unaffected. The same effect
+  // is available on the legacy path via `snyk test -- --refresh-dependencies`.
+  gradleRefreshDependencies?: boolean;
 }
 
 export interface CliOptions {

@@ -9,6 +9,9 @@ export interface GradleGraph {
     name: string;
     version: string;
     parentIds: string[];
+    // Populated by init.gradle only under -PsnykIncludeComponentMetadata.
+    hashes?: Record<string, string>;
+    distributionUrl?: string;
   };
 }
 
@@ -133,7 +136,10 @@ export async function buildGraph(
       depGraphBuilder.addPkgNode(
         { name, version },
         id,
-        createNodeInfo(pkgIdProvenance),
+        createNodeInfo(pkgIdProvenance, undefined, {
+          hashes: node.hashes,
+          distributionUrl: node.distributionUrl,
+        }),
       );
       depGraphBuilder.connectDep(parentId, id);
       visitedMap[id] = { name, version };
@@ -151,9 +157,25 @@ export async function buildGraph(
 function createNodeInfo(
   pkgIdProvenance?: string,
   pruned?: 'cyclic' | 'true',
+  componentMetadata?: {
+    hashes?: Record<string, string>;
+    distributionUrl?: string;
+  },
 ): { labels: Record<string, string> } | undefined {
   const labels: Record<string, string> = {};
   if (pruned) labels.pruned = pruned;
   if (pkgIdProvenance) labels.pkgIdProvenance = pkgIdProvenance;
+  // Component-metadata labels use the shared cross-ecosystem vocabulary
+  // (hash:<alg>, distribution:url) so SBOM generation can consume them
+  // identically to Maven/npm. Present only when init.gradle emitted them.
+  if (componentMetadata) {
+    const { hashes, distributionUrl } = componentMetadata;
+    if (hashes) {
+      for (const [alg, value] of Object.entries(hashes)) {
+        if (value) labels[`hash:${alg}`] = value;
+      }
+    }
+    if (distributionUrl) labels['distribution:url'] = distributionUrl;
+  }
   return Object.keys(labels).length ? { labels } : undefined;
 }

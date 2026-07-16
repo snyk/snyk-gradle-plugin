@@ -671,6 +671,17 @@ function buildArgs(
     args.push(`-PconfAttr=${options['configuration-attributes']}`);
   }
 
+  // Opt-in component-metadata labels (hash:<alg>, distribution:url). The init
+  // script only does the extra work when this property is present.
+  if (options.includeComponentMetadata) {
+    args.push('-PsnykIncludeComponentMetadata=true');
+    // Forces network re-validation of metadata so distribution:url can be
+    // captured on a warm cache. Only meaningful alongside the metadata flag.
+    if (options.gradleRefreshDependencies) {
+      args.push('--refresh-dependencies');
+    }
+  }
+
   if (options.initScript) {
     const formattedInitScript = path.resolve(options.initScript);
     args.push('--init-script', formattedInitScript);

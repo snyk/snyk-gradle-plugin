@@ -1,4 +1,5 @@
 import groovy.json.JsonOutput
+import groovy.transform.Field
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.gradle.util.GradleVersion
@@ -64,13 +65,20 @@ class GradleGraph {
         this.rootId = rootId
     }
 
-    Map setNode(String key, Map value) {
+    Map setNode(String key, Map value, Map metadata = null) {
         if (!key || !value) {
             return null
         }
 
         nodes.computeIfAbsent(key) { _ ->
-            ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
+            def node = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
+            // Component metadata (opt-in via -PsnykIncludeComponentMetadata). Only
+            // the first emission of a nodeId wins — consistent with name/version.
+            if (metadata) {
+                if (metadata.hashes) node.hashes = metadata.hashes
+                if (metadata.distributionUrl) node.distributionUrl = metadata.distributionUrl
+            }
+            node
         }
     }
 
@@ -119,6 +127,139 @@ def hash(File file) {
 def hashString(String str) {
     def md = java.security.MessageDigest.getInstance('SHA-1')
     return md.digest(str.bytes).encodeHex().toString()
+}
+
+// ── Component metadata (opt-in: -PsnykIncludeComponentMetadata) ──────────────
+// Emits the same node-label vocabulary as snyk-mvn-plugin / nodejs-lockfile-parser:
+//   hash:<alg>       lowercase-hex digests of the resolved artifact file
+//   distribution:url the real remote URL Gradle read the artifact from
+// distribution:url is TRUE provenance only — Gradle exposes no per-artifact
+// source repository in its public API, so we capture the actual resource-read
+// URLs via an internal build-operation listener (see registerResourceReadListener).
+// On a warm cache nothing is re-fetched, so a node simply carries no
+// distribution:url — graceful omission, never a reconstructed guess.
+
+// @Field so the standalone `def` helpers below (buildArtifactMetadata etc.)
+// can read this shared state — run()-scope locals aren't visible to methods,
+// and bare assignments in an init script route to the Gradle object.
+@Field boolean snykIncludeComponentMetadata = false
+// filename -> Set<url>. A Set because a shared cache can see the same filename
+// from more than one repo across a build; disambiguated at lookup by layout.
+@Field def snykUrlsByFilename = new java.util.concurrent.ConcurrentHashMap()
+
+// Compute md5/sha-1/sha-256/sha-512 in a single pass over the file bytes.
+// Keys match the CycloneDX-friendly label suffixes used across ecosystems.
+def computeHashes(File file) {
+    def algos = ['MD5': 'md5', 'SHA-1': 'sha-1', 'SHA-256': 'sha-256', 'SHA-512': 'sha-512']
+    def digests = algos.collectEntries { javaName, _label -> [(javaName): java.security.MessageDigest.getInstance(javaName)] }
+    file.eachByte(1024 * 8) { buffer, len ->
+        digests.each { _name, md -> md.update(buffer, 0, len) }
+    }
+    def result = [:]
+    digests.each { javaName, md -> result[algos[javaName]] = md.digest().encodeHex().toString() }
+    return result
+}
+
+// Strip any userinfo (basic-auth credentials) from a URL before labelling, so
+// private-registry credentials never leak into the dep-graph. Mirrors
+// nodejs-lockfile-parser's component-metadata credential stripping.
+def stripCredentials(String url) {
+    try {
+        def u = new URI(url)
+        if (u.userInfo != null) {
+            return new URI(u.scheme, null, u.host, u.port, u.path, u.query, u.fragment).toString()
+        }
+    } catch (Exception ignored) { /* not a parseable URI — return as-is */ }
+    return url
+}
+
+// Register an internal build-operation listener that records the URL of every
+// external resource Gradle reads during resolution. This is the ONLY signal
+// that carries true per-artifact provenance; the public resolution/artifact
+// API deliberately omits it. Internal + unstable across Gradle versions, so
+// the whole thing is best-effort: any failure degrades to "no distribution:url".
+def registerResourceReadListener() {
+    try {
+        def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
+        // Map-of-closures coerced to the interface: closures take untyped args,
+        // so this satisfies the interface's typed abstract methods on every
+        // Gradle version (the method set has changed — e.g. progress() was added
+        // later). Methods absent from the map become harmless no-ops.
+        def listener = [
+            started : { buildOp, startEvent -> },
+            progress: { operationId, progressEvent -> },
+            finished: { buildOp, finishEvent -> recordResourceRead(buildOp) },
+        ] as org.gradle.internal.operations.BuildOperationListener
+        manager.addListener(listener)
+        debugLog('component-metadata: resource-read listener registered')
+    } catch (Exception e) {
+        debugLog("component-metadata: listener registration failed (${e.class.simpleName}: ${e.message}); distribution:url unavailable")
+    }
+}
+
+// Record the URL of one finished build operation if it is an external-resource
+// read. Duck-typed on getLocation() to avoid importing the internal details
+// type (whose package has moved across Gradle versions).
+def recordResourceRead(buildOp) {
+    try {
+        def details = buildOp?.details
+        if (details == null) return
+        if (!details.metaClass.respondsTo(details, 'getLocation')) return
+        def loc = details.getLocation()
+        if (loc == null) return
+        def url = loc.toString()
+        if (!(url.startsWith('http://') || url.startsWith('https://'))) return
+        def clean = url.replaceAll(/[?#].*$/, '')
+        int slash = clean.lastIndexOf('/')
+        if (slash < 0 || slash == clean.length() - 1) return
+        def filename = clean.substring(slash + 1)
+        snykUrlsByFilename
+            .computeIfAbsent(filename) { _ -> java.util.Collections.synchronizedSet(new LinkedHashSet()) }
+            .add(stripCredentials(url))
+    } catch (Exception ignored) { /* one bad op must not break resolution */ }
+}
+
+// Read the requested -P property at init time; project properties surface on
+// the start parameter before any project is evaluated.
+snykIncludeComponentMetadata = gradle.startParameter.projectProperties.containsKey('snykIncludeComponentMetadata')
+if (snykIncludeComponentMetadata) {
+    registerResourceReadListener()
+}
+
+// Build the per-node metadata map for a resolved artifact: file hashes plus,
+// when we observed the real read, its distribution:url. Returns null when the
+// flag is off or nothing could be derived (e.g. no artifact file).
+def buildArtifactMetadata(artifact, String name, String version) {
+    if (!snykIncludeComponentMetadata) return null
+    try {
+        def file = artifact?.file
+        if (file == null || !file.isFile()) return null
+        def meta = ['hashes': computeHashes(file)]
+        def url = lookupDistributionUrl(name, version, file.name)
+        if (url) meta.distributionUrl = url
+        return meta
+    } catch (Exception e) {
+        debugLog("component-metadata: failed for ${name}@${version}: ${e.message}")
+        return null
+    }
+}
+
+// Resolve a filename to the URL it was actually read from. When a filename maps
+// to more than one captured URL (shared cache seeing multiple repos), pick the
+// one whose path matches this artifact's Maven layout; if still ambiguous,
+// emit nothing rather than guess.
+def lookupDistributionUrl(String name, String version, String fileName) {
+    def candidates = snykUrlsByFilename.get(fileName)
+    if (!candidates || candidates.isEmpty()) return null
+    if (candidates.size() == 1) return candidates.iterator().next()
+    try {
+        def group = name.contains(':') ? name.substring(0, name.indexOf(':')) : name
+        def module = name.contains(':') ? name.substring(name.indexOf(':') + 1) : name
+        def suffix = "/${group.replace('.', '/')}/${module}/${version}/${fileName}".toString()
+        def match = candidates.find { it.replaceAll(/[?#].*$/, '').endsWith(suffix) }
+        if (match) return match
+    } catch (Exception ignored) { /* fall through to no-label */ }
+    return null
 }
 
 // Walks each resolvable configuration via Gradle's modern resolution APIs:
@@ -256,7 +397,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
                     nodeId = coordinate
                     coordToNodeId[coordinate] = nodeId
                 }
-                graph.setNode(nodeId, ['name': name, 'version': version])
+                graph.setNode(nodeId, ['name': name, 'version': version], buildArtifactMetadata(a, name, version))
                 graph.setEdge(parentId, nodeId)
                 nodeIdsForThisComponent.add(nodeId)
             }
