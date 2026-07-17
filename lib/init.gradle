@@ -122,17 +122,30 @@ class Sha1Map {
     }
 }
 
-def hash(File file) {
-    def md = java.security.MessageDigest.getInstance('SHA-1')
-    file.eachByte(1024 * 4) { buffer, len ->
-        md.update(buffer, 0, len)
+// Stream a file once, feeding every requested digest from a single read.
+// `algorithms` maps the JDK algorithm name to its output label; returns
+// {label: lowercase-hex}. Shared by every file-hashing helper below.
+def digestFile(File file, Map<String, String> algorithms) {
+    def digests = algorithms.collectEntries { javaName, _label ->
+        [(javaName): java.security.MessageDigest.getInstance(javaName)]
     }
-    return md.digest().encodeHex().toString()
+    file.eachByte(1024 * 8) { buffer, len ->
+        digests.each { _name, md -> md.update(buffer, 0, len) }
+    }
+    return digests.collectEntries { javaName, md ->
+        [(algorithms[javaName]): md.digest().encodeHex().toString()]
+    }
 }
 
+// SHA-1 hex of a file's contents (normalized-mode node id).
+def hash(File file) {
+    return digestFile(file, ['SHA-1': 'sha-1'])['sha-1']
+}
+
+// SHA-1 hex of a string (fallback node id when a file hash is unavailable).
+// Hashes in-memory bytes one-shot, so it does not use digestFile.
 def hashString(String str) {
-    def md = java.security.MessageDigest.getInstance('SHA-1')
-    return md.digest(str.bytes).encodeHex().toString()
+    return java.security.MessageDigest.getInstance('SHA-1').digest(str.bytes).encodeHex().toString()
 }
 
 // ── Component metadata (opt-in: -PsnykIncludeComponentMetadata) ──────────────
@@ -156,14 +169,7 @@ def hashString(String str) {
 // Compute md5/sha-1/sha-256/sha-512 in a single pass over the file bytes.
 // Keys match the CycloneDX-friendly label suffixes used across ecosystems.
 def computeHashes(File file) {
-    def algos = ['MD5': 'md5', 'SHA-1': 'sha-1', 'SHA-256': 'sha-256', 'SHA-512': 'sha-512']
-    def digests = algos.collectEntries { javaName, _label -> [(javaName): java.security.MessageDigest.getInstance(javaName)] }
-    file.eachByte(1024 * 8) { buffer, len ->
-        digests.each { _name, md -> md.update(buffer, 0, len) }
-    }
-    def result = [:]
-    digests.each { javaName, md -> result[algos[javaName]] = md.digest().encodeHex().toString() }
-    return result
+    return digestFile(file, ['MD5': 'md5', 'SHA-1': 'sha-1', 'SHA-256': 'sha-256', 'SHA-512': 'sha-512'])
 }
 
 // Reduce a resource URL to its canonical, credential-free location —
