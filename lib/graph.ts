@@ -166,8 +166,7 @@ function createNodeInfo(
   if (pruned) labels.pruned = pruned;
   if (pkgIdProvenance) labels.pkgIdProvenance = pkgIdProvenance;
   // Component-metadata labels use the shared cross-ecosystem vocabulary
-  // (hash:<alg>, distribution:url) so SBOM generation can consume them
-  // identically to Maven/npm. Present only when init.gradle emitted them.
+  // (hash:<alg>, distribution:url). Present only when init.gradle emitted them.
   if (componentMetadata) {
     const { hashes, distributionUrl } = componentMetadata;
     if (hashes) {
