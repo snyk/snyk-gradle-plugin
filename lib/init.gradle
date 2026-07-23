@@ -185,9 +185,11 @@ def canonicalUrl(String url) {
         def u = new URI(url)
         return new URI(u.scheme, null, u.host, u.port, u.path, null, null).toString()
     } catch (Exception ignored) {
-        // Unparseable — still make a best effort to drop query/fragment so a
-        // token in the query can never survive into a label.
-        return url.replaceAll(/[?#].*$/, '')
+        // Fail closed: if the URL can't be parsed and rebuilt from its
+        // components we cannot guarantee userinfo/query/fragment were stripped,
+        // so drop it entirely rather than risk a credential surviving into a
+        // label. The caller records nothing when this returns null.
+        return null
     }
 }
 
@@ -236,9 +238,11 @@ def recordResourceRead(buildOp) {
         int slash = path.lastIndexOf('/')
         if (slash < 0 || slash == path.length() - 1) return
         def filename = path.substring(slash + 1)
+        def clean = canonicalUrl(url)
+        if (clean == null) return
         snykUrlsByFilename
             .computeIfAbsent(filename) { _ -> java.util.Collections.synchronizedSet(new LinkedHashSet()) }
-            .add(canonicalUrl(url))
+            .add(clean)
     } catch (Exception ignored) { /* one bad op must not break resolution */ }
 }
 
