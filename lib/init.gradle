@@ -236,6 +236,18 @@ def registerResourceReadListener() {
             finished: { buildOp, finishEvent -> recordResourceRead(buildOp) },
         ] as org.gradle.internal.operations.BuildOperationListener
         manager.addListener(listener)
+        // BuildOperationListenerManager is a daemon-scoped service, so a listener
+        // added here otherwise survives into later builds on a reused daemon —
+        // accumulating one per build, each pinning its build's captured state.
+        // Remove it when this build finishes. buildFinished is deprecated on newer
+        // Gradle but remains the most portable cleanup hook across 4.x–9.x;
+        // guarded so an unavailable hook never breaks resolution.
+        try {
+            gradle.buildFinished { manager.removeListener(listener) }
+        } catch (Exception ignored) {
+            // No usable build-finished hook: the listener is reclaimed when the
+            // daemon exits, so the worst case is a bounded per-build leak.
+        }
         debugLog('component-metadata: resource-read listener registered')
     } catch (Exception e) {
         debugLog("component-metadata: listener registration failed (${e.class.simpleName}: ${e.message}); distribution:url unavailable")
