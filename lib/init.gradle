@@ -126,15 +126,28 @@ class Sha1Map {
 // `algorithms` maps the JDK algorithm name to its output label; returns
 // {label: lowercase-hex}. Shared by every file-hashing helper below.
 def digestFile(File file, Map<String, String> algorithms) {
-    def digests = algorithms.collectEntries { javaName, _label ->
-        [(javaName): java.security.MessageDigest.getInstance(javaName)]
+    def javaNames = algorithms.keySet().toList()
+    def mds = javaNames.collect { java.security.MessageDigest.getInstance(it) }
+    // Reuse a single 64 KB buffer for the whole file. Groovy's
+    // File.eachByte(int, Closure) allocates a fresh byte[] copy per chunk, so
+    // hashing large artifacts churns enough short-lived garbage to inflate the
+    // Gradle daemon's peak heap; a manual read loop keeps allocation ~constant.
+    // Digests are identical either way — MessageDigest is chunking-invariant.
+    // All state is local, so this stays safe under parallel per-project tasks.
+    byte[] buffer = new byte[64 * 1024]
+    file.withInputStream { input ->
+        int read
+        while ((read = input.read(buffer)) != -1) {
+            for (md in mds) {
+                md.update(buffer, 0, read)
+            }
+        }
     }
-    file.eachByte(1024 * 8) { buffer, len ->
-        digests.each { _name, md -> md.update(buffer, 0, len) }
+    def result = [:]
+    javaNames.eachWithIndex { javaName, i ->
+        result[algorithms[javaName]] = mds[i].digest().encodeHex().toString()
     }
-    return digests.collectEntries { javaName, md ->
-        [(algorithms[javaName]): md.digest().encodeHex().toString()]
-    }
+    return result
 }
 
 // SHA-1 hex of a file's contents (normalized-mode node id).
