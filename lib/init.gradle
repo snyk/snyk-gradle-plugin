@@ -172,8 +172,8 @@ def computeHashes(File file) {
     return digestFile(file, ['MD5': 'md5', 'SHA-1': 'sha-1', 'SHA-256': 'sha-256', 'SHA-512': 'sha-512'])
 }
 
-// Reduce a resource URL to its canonical location — scheme://host[:port]/path —
-// by parsing it as a URI and dropping userInfo, query and fragment.
+// Reduce an already-parsed resource URI to its canonical location —
+// scheme://host[:port]/path — by dropping userInfo, query and fragment.
 // Standard Maven/Gradle repos authenticate via headers and serve artifacts at
 // plain path-based URLs, but a repo configured with credentials embedded in the
 // URL (https://user:pass@host/repo) carries that userInfo on every artifact
@@ -182,12 +182,22 @@ def computeHashes(File file) {
 // location (at most a request-scoped redirect artefact), so the bare path is
 // the correct, reproducible provenance value. Operating on the parsed URI keeps
 // the rule single and robust.
-def canonicalUrl(String url) {
+def canonicalUrl(URI u) {
     try {
-        def u = new URI(url)
-        return new URI(u.scheme, null, u.host, u.port, u.path, null, null).toString()
+        // Reduce to the authority minus any embedded userInfo. We can't use
+        // u.host/u.port here: Java leaves getHost() null for any authority it
+        // deems registry-based rather than server-based — notably hosts
+        // containing an underscore, common on internal Maven mirrors — which
+        // would silently drop the host from the label. getAuthority() preserves
+        // it, so we strip the "user:pass@" prefix ourselves to keep credentials
+        // out of the dep-graph/SBOM.
+        def authority = u.authority
+        if (authority == null) return null
+        int at = authority.lastIndexOf('@')
+        if (at >= 0) authority = authority.substring(at + 1)
+        return new URI(u.scheme, authority, u.path, null, null).toString()
     } catch (Exception ignored) {
-        // Fail closed: if the URL can't be parsed and rebuilt from its
+        // Fail closed: if the URI can't be rebuilt from its
         // components we cannot guarantee userinfo/query/fragment were stripped,
         // so drop it entirely rather than risk a credential surviving into a
         // label. The caller records nothing when this returns null.
@@ -240,7 +250,7 @@ def recordResourceRead(buildOp) {
         int slash = path.lastIndexOf('/')
         if (slash < 0 || slash == path.length() - 1) return
         def filename = path.substring(slash + 1)
-        def clean = canonicalUrl(url)
+        def clean = canonicalUrl(uri)
         if (clean == null) return
         snykUrlsByFilename
             .computeIfAbsent(filename) { _ -> java.util.Collections.synchronizedSet(new LinkedHashSet()) }

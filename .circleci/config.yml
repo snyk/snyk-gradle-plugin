@@ -164,8 +164,15 @@ commands:
       - run:
           name: Install Java 21 for Gradle toolchain support
           command: |
-            if [[ "<< parameters.jdk_version >>" == "8.0.292.j9-adpt" ]]; then
-              sdk install java 21.0.5-tem || true
+            JDK_MAJOR=$(echo "<< parameters.jdk_version >>" | cut -d. -f1)
+            if [[ "$JDK_MAJOR" == "8" ]]; then
+              # Tolerate a non-zero exit when 21 is already present from cache,
+              # but hard-fail if the toolchain genuinely isn't installed rather
+              # than letting Gradle fail later with an opaque provisioning error.
+              if ! sdk install java 21.0.5-tem && [ ! -d "$HOME/.sdkman/candidates/java/21.0.5-tem" ]; then
+                echo "Failed to install Java 21 toolchain for Gradle" >&2
+                exit 1
+              fi
               sdk default java << parameters.jdk_version >>
             fi
       - save_cache:
