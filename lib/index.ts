@@ -687,8 +687,13 @@ function buildArgs(
     args.push('--init-script', formattedInitScript);
   }
 
-  const isWin = /^win/.test(os.platform());
-  if (isWin && !options.daemon) {
+  // Default to a fresh, one-shot JVM unless a daemon is explicitly requested.
+  // On Windows a daemon otherwise leaves the process hanging from Node's
+  // standpoint; on Unix a reused daemon accumulates heap across repeated
+  // invocations (e.g. a full test suite run), which under a memory-constrained
+  // runner tips it into an OOM kill. A single one-shot scan gains nothing from
+  // the daemon, so opt out on every platform.
+  if (!options.daemon) {
     args.push('--no-daemon');
   }
 
