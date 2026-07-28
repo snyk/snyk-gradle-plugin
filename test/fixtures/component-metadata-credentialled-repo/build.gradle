@@ -1,0 +1,17 @@
+apply plugin: 'java'
+
+// Maven Central, but reached through a repository URL carrying embedded
+// credentials. Central ignores auth it doesn't need, so resolution succeeds
+// while Gradle still reports the userInfo-bearing URL to the resource-read
+// listener in init.gradle — which is what makes the credential stripping in
+// canonicalUrl observable from a test. The credentials are deliberate
+// throwaway placeholders, not redacted real ones.
+repositories {
+  maven {
+    url = 'https://dummy-user:dummy-pass@repo1.maven.org/maven2'
+  }
+}
+
+dependencies {
+  implementation 'batik:batik-dom:1.6'
+}
