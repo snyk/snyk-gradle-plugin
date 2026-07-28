@@ -197,18 +197,28 @@ def computeHashes(File file) {
 // the rule single and robust.
 def canonicalUrl(URI u) {
     try {
-        // Reduce to the authority minus any embedded userInfo. We can't use
-        // u.host/u.port here: Java leaves getHost() null for any authority it
-        // deems registry-based rather than server-based — notably hosts
-        // containing an underscore, common on internal Maven mirrors — which
-        // would silently drop the host from the label. getAuthority() preserves
-        // it, so we strip the "user:pass@" prefix ourselves to keep credentials
-        // out of the dep-graph/SBOM.
-        def authority = u.authority
-        if (authority == null) return null
-        int at = authority.lastIndexOf('@')
-        if (at >= 0) authority = authority.substring(at + 1)
-        return new URI(u.scheme, authority, u.path, null, null).toString()
+        // Server-based authority: host and port are parsed out, so rebuild from
+        // components with an explicit null userInfo.
+        if (u.host != null) {
+            return new URI(u.scheme, null, u.host, u.port, u.path, null, null).toString()
+        }
+        // Registry-based authority: java.net.URI implements RFC 2396, whose
+        // hostname grammar allows only alphanumerics and "-", so an authority it
+        // can't parse as host[:port] — one underscore is enough, common on
+        // internal Maven mirrors — falls back to an opaque registry name with
+        // host, port and userInfo all left null. The authority is then the only
+        // component that survives, so strip the "user:pass@" prefix by hand.
+        //
+        // Split the *raw* authority: it keeps percent-escapes intact, so the only
+        // unencoded "@" is the userInfo delimiter. On the decoded authority a
+        // host containing %40 would arrive as a second "@" and get mistaken for
+        // one. Split on the last "@" because an unencoded "@" in a password is
+        // malformed but survivable, and the last one is still the delimiter.
+        def raw = u.rawAuthority
+        if (raw == null) return null
+        int at = raw.lastIndexOf('@')
+        if (at >= 0) raw = raw.substring(at + 1)
+        return new URI(u.scheme + '://' + raw + (u.rawPath ?: '')).toString()
     } catch (Exception ignored) {
         // Fail closed: if the URI can't be rebuilt from its
         // components we cannot guarantee userinfo/query/fragment were stripped,

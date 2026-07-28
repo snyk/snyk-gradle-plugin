@@ -13,9 +13,10 @@ const credentialledRepoBuildGradle = path.join(
   'build.gradle',
 );
 
-// The throwaway credentials embedded in that fixture's repository URL.
+// The throwaway credentials embedded in that fixture's repository URL. The
+// password contains an "@" on purpose — see the fixture's build.gradle.
 const dummyUser = 'dummy-user';
-const dummyPass = 'dummy-pass';
+const dummyPass = 'dummy-p@ss';
 
 // Expected lowercase-hex length of each digest label the init script emits.
 const hashLabelLengths: Record<string, number> = {
