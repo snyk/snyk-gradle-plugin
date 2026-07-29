@@ -671,13 +671,29 @@ function buildArgs(
     args.push(`-PconfAttr=${options['configuration-attributes']}`);
   }
 
+  // Opt-in component-metadata labels (hash:<alg>, distribution:url). The init
+  // script only does the extra work when this property is present.
+  if (options.includeComponentMetadata) {
+    args.push('-PsnykIncludeComponentMetadata=true');
+    // Forces network re-validation of metadata so distribution:url can be
+    // captured on a warm cache. Only meaningful alongside the metadata flag.
+    if (options.gradleRefreshDependencies) {
+      args.push('--refresh-dependencies');
+    }
+  }
+
   if (options.initScript) {
     const formattedInitScript = path.resolve(options.initScript);
     args.push('--init-script', formattedInitScript);
   }
 
-  const isWin = /^win/.test(os.platform());
-  if (isWin && !options.daemon) {
+  // Default to a fresh, one-shot JVM unless a daemon is explicitly requested.
+  // On Windows a daemon otherwise leaves the process hanging from Node's
+  // standpoint; on Unix a reused daemon accumulates heap across repeated
+  // invocations (e.g. a full test suite run), which under a memory-constrained
+  // runner tips it into an OOM kill. A single one-shot scan gains nothing from
+  // the daemon, so opt out on every platform.
+  if (!options.daemon) {
     args.push('--no-daemon');
   }
 

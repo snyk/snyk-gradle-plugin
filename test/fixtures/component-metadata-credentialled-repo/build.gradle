@@ -1,0 +1,24 @@
+apply plugin: 'java'
+
+// Maven Central, but reached through a repository URL carrying embedded
+// credentials. Central ignores auth it doesn't need, so resolution succeeds
+// while Gradle still reports the userInfo-bearing URL to the resource-read
+// listener in init.gradle — which is what makes the credential stripping in
+// canonicalUrl observable from a test. The credentials are deliberate
+// throwaway placeholders, not redacted real ones.
+//
+// The password deliberately contains an "@" (percent-encoded as %40, as a valid
+// URL requires). URI.getAuthority() returns userInfo *decoded*, so this arrives
+// at canonicalUrl as "dummy-user:dummy-p@ss@repo1.maven.org" — two "@" in one
+// authority. That is what forces the split on the *last* "@": splitting on the
+// first would emit "ss@repo1.maven.org" and leak the password tail into the
+// label.
+repositories {
+  maven {
+    url = 'https://dummy-user:dummy-p%40ss@repo1.maven.org/maven2'
+  }
+}
+
+dependencies {
+  implementation 'batik:batik-dom:1.6'
+}

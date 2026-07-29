@@ -253,6 +253,71 @@ describe('buildGraph', () => {
     expected.connectDep('com.private:a@1', 'com.public:b@1');
     expect(received.equals(expected.build())).toBe(true);
   });
+  it('labels nodes with component metadata (hash:* and distribution:url)', async () => {
+    const received = await buildGraph(
+      {
+        'com.google.guava:guava:jar@30.1.1-jre': {
+          name: 'com.google.guava:guava',
+          version: '30.1.1-jre',
+          parentIds: ['root-node'],
+          hashes: {
+            'sha-1': '87e0fd1df874ea3cbe577702fe6f17068b790fd8',
+            'sha-256':
+              '44ce229ce26d880bf3afc362bbfcec34d7e6903d195bbb1db9f3b6e0d9834f06',
+          },
+          distributionUrl:
+            'https://repo.maven.apache.org/maven2/com/google/guava/guava/30.1.1-jre/guava-30.1.1-jre.jar',
+        },
+      },
+      'project',
+      '1.2.3',
+    );
+    const nodes = received.getPkgNodes({
+      name: 'com.google.guava:guava',
+      version: '30.1.1-jre',
+    });
+    expect(nodes).toContainEqual({
+      info: {
+        labels: {
+          'hash:sha-1': '87e0fd1df874ea3cbe577702fe6f17068b790fd8',
+          'hash:sha-256':
+            '44ce229ce26d880bf3afc362bbfcec34d7e6903d195bbb1db9f3b6e0d9834f06',
+          'distribution:url':
+            'https://repo.maven.apache.org/maven2/com/google/guava/guava/30.1.1-jre/guava-30.1.1-jre.jar',
+        },
+      },
+    });
+  });
+
+  it('emits hash labels without distribution:url when the URL is absent (warm cache)', async () => {
+    const received = await buildGraph(
+      {
+        'a:b:jar@1': {
+          name: 'a:b',
+          version: '1',
+          parentIds: ['root-node'],
+          hashes: { 'sha-1': 'deadbeef' },
+        },
+      },
+      'project',
+      '1.2.3',
+    );
+    const nodes = received.getPkgNodes({ name: 'a:b', version: '1' });
+    expect(nodes).toContainEqual({
+      info: { labels: { 'hash:sha-1': 'deadbeef' } },
+    });
+  });
+
+  it('adds no component-metadata labels when the node carries none', async () => {
+    const received = await buildGraph(
+      { 'a:b:jar@1': { name: 'a:b', version: '1', parentIds: ['root-node'] } },
+      'project',
+      '1.2.3',
+    );
+    const nodes = received.getPkgNodes({ name: 'a:b', version: '1' });
+    expect(nodes).toContainEqual({ info: {} });
+  });
+
   it('labels nodes with pkgIdProvenance when the co-ordinate is changed', async () => {
     const received = await buildGraph(
       {
