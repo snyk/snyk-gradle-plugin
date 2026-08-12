@@ -625,7 +625,10 @@ def matchesAttributeFilter(conf, confAttrSpec) {
     }
     def matches = true
     def attrs = conf.attributes
-    attrs.keySet().each({ attr ->
+    // Snapshot the key set with toList() before iterating: getAttribute() below can realize a
+    // lazy (provider-based) attribute, which on Gradle 7.4-8.2 mutates the live keySet() union
+    // view mid-iteration and throws ConcurrentModificationException (OSM-3867).
+    attrs.keySet().toList().each({ attr ->
         def attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
         confAttrSpec.each({ keyValueFilter ->
             // attr.name is a class name, e.g. com.android.build.api.attributes.BuildTypeAttr
@@ -690,7 +693,11 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
     def attributesAsStrings = [:].withDefault { new HashSet() }
     rootProject.allprojects.each { proj ->
         findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec).each { conf ->
-            conf.attributes.keySet().each { attr ->
+            // Snapshot the key set with toList() before iterating: getAttribute() below can
+            // realize a lazy (provider-based) attribute, which on Gradle 7.4-8.2 mutates the
+            // live keySet() union view mid-iteration and throws ConcurrentModificationException.
+            // This restores the pre-7.0.0 behaviour and fixes OSM-3867.
+            conf.attributes.keySet().toList().each { attr ->
                 attributesAsStrings[attr.name].add(conf.attributes.getAttribute(attr).toString())
             }
         }
