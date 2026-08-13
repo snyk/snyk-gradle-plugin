@@ -28,14 +28,14 @@ test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
       node_version: [ '20.20', '22.22', '24.16' ]
-      jdk_version: [ '8.0.292.j9-adpt' ]
+      jdk_version: [ '8.0.502-tem' ]
       gradle_version: [ '4.10', '5.5', '6.2.1']
 
 test_matrix_unix_new_versions: &test_matrix_unix_new_versions
   matrix:
     parameters:
       node_version: [ '20.20', '22.22', '24.16' ]
-      jdk_version: [ '17.0.9-jbr' ]
+      jdk_version: [ '17.0.14-jbr' ]
       gradle_version: [ '7.3', '8.4', '9.0.0', '9.2.0' ]
 
 test_matrix_win: &test_matrix_win
