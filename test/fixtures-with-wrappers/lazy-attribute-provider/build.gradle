@@ -1,0 +1,53 @@
+// Regression fixture for OSM-3867 / OSM-3844.
+//
+// The snyk-gradle-plugin 7.0.0 init.gradle rewrite (#337) iterates a configuration's
+// attribute keySet() while calling getAttribute() *inside* the loop (buildSnykDepsResult).
+//
+// On Gradle 7.4-8.2, DefaultMutableAttributeContainer.keySet() is a live
+// `Sets.union(state.keySet(), lazyAttributes.keySet())` view, where the lazy side is a view
+// of a LinkedHashMap of not-yet-realized provider attributes. getAttribute() on a lazy
+// attribute realizes it via lazyAttributes.remove(key), mutating that map mid-iteration.
+// LinkedHashMap's iterator only checks modCount in next() (not hasNext()), so it takes TWO
+// unrealized lazy attributes to trip it: realizing the first invalidates the iterator, and
+// advancing to the second throws java.util.ConcurrentModificationException, killing the scan.
+//
+// `attributeProvider` was added in Gradle 7.4 and Gradle fixed the mid-iteration mutation in
+// 8.3, so this reproduces only on the affected 7.4-8.2 range — hence the wrapper is pinned to
+// 7.4.2.
+//
+// The two lazy attributes are attached to a NON-resolvable "bucket" configuration on purpose:
+// Snyk never resolves it, so the providers are still unrealized when buildSnykDepsResult
+// iterates every name-matched configuration's attributes. (On a resolved configuration like
+// compileClasspath the providers are realized during dependency resolution, before the hint
+// loop, so it would not reproduce.)
+//
+// The fix restores the pre-7.0.0 snapshot (`keySet().toList().each`); with it, this scan
+// resolves cleanly and produces the committed dep-graph.json.
+
+import org.gradle.api.attributes.Attribute
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:30.1.1-jre'
+}
+
+def snykLazyAttr1 = Attribute.of('com.snyk.regression.osm3867.lazy1', String)
+def snykLazyAttr2 = Attribute.of('com.snyk.regression.osm3867.lazy2', String)
+
+// A bucket configuration Snyk never resolves. Two unrealized lazy attributes are enough to
+// trip the union-view iterator when buildSnykDepsResult calls getAttribute() during iteration.
+configurations.create('snykRegressionBucket') {
+    canBeResolved = false
+    canBeConsumed = false
+    attributes {
+        attributeProvider(snykLazyAttr1, provider { 'lazy-value-1' })
+        attributeProvider(snykLazyAttr2, provider { 'lazy-value-2' })
+    }
+}
