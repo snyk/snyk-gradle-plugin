@@ -4,16 +4,24 @@ import { fixtureDir } from '../common';
 import { inspect } from '../../lib';
 import * as subProcess from '../../lib/sub-process';
 
+jest.mock('os', () => {
+  const actual = jest.requireActual<typeof import('os')>('os');
+  return {
+    ...actual,
+    platform: jest.fn(() => 'darwin' as NodeJS.Platform),
+  };
+});
+
 const rootNoWrapper = fixtureDir('no wrapper');
 const rootWithWrapper = fixtureDir('with-wrapper');
 const subWithWrapper = fixtureDir('with-wrapper-in-root');
 
-let subProcessExecSpy;
-let platformMock;
+let subProcessExecSpy: jest.SpiedFunction<typeof subProcess.execute>;
 
 beforeAll(() => {
-  platformMock = jest.spyOn(os, 'platform');
-  platformMock.mockReturnValue('darwin');
+  (os.platform as jest.MockedFunction<() => NodeJS.Platform>).mockReturnValue(
+    'darwin',
+  );
   subProcessExecSpy = jest.spyOn(subProcess, 'execute');
   subProcessExecSpy.mockRejectedValue(new Error('fake process aborted'));
 });

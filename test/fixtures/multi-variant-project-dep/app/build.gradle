@@ -1,0 +1,34 @@
+// app: consumes :lib-provider via two artifact variants —
+//
+//   - implementation project(':lib-provider')             → main jar variant
+//   - testImplementation testFixtures(project(':lib-provider'))
+//                                                         → test-fixtures jar variant
+//
+// Because lib-provider's two variants resolve tomcat-embed-core
+// differently (see ../lib-provider/build.gradle), app's classpaths
+// legitimately contain BOTH versions on different scopes:
+//
+//   compileClasspath        → tomcat-embed-core:10.1.26
+//     (api leaks BOM via lib-provider main, override isn't api-exposed)
+//   runtimeClasspath        → tomcat-embed-core:10.1.40
+//     (override is implementation-scoped, visible at runtime)
+//   testCompileClasspath    → tomcat-embed-core:10.1.26
+//   testRuntimeClasspath    → tomcat-embed-core:10.1.40
+//
+// A correct merged dep graph for :app should include both versions.
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':lib-provider')
+    testImplementation testFixtures(project(':lib-provider'))
+}

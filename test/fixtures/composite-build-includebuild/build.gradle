@@ -1,0 +1,17 @@
+// Root build of a composite. Depends on `included-lib`, which is an
+// entirely separate Gradle build wired in via includeBuild() in
+// settings.gradle. `included-lib` itself depends on commons-lang3 from
+// Maven Central, so the test asserts the V6 walker descends INTO the
+// included build and surfaces its transitives in the merged graph.
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Resolved by Gradle to project ':included-lib' from the included build.
+    implementation 'com.example.included:included-lib:0.0.0'
+}

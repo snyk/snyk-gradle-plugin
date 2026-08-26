@@ -19,38 +19,10 @@
       }
     },
     {
-      "id": "com.google.guava:guava@33.3.1-jre",
-      "info": {
-        "name": "com.google.guava:guava",
-        "version": "33.3.1-jre"
-      }
-    },
-    {
-      "id": "com.google.guava:failureaccess@1.0.2",
-      "info": {
-        "name": "com.google.guava:failureaccess",
-        "version": "1.0.2"
-      }
-    },
-    {
-      "id": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
-      "info": {
-        "name": "com.google.guava:listenablefuture",
-        "version": "9999.0-empty-to-avoid-conflict-with-guava"
-      }
-    },
-    {
       "id": "com.google.code.findbugs:jsr305@3.0.2",
       "info": {
         "name": "com.google.code.findbugs:jsr305",
         "version": "3.0.2"
-      }
-    },
-    {
-      "id": "org.checkerframework:checker-qual@3.43.0",
-      "info": {
-        "name": "org.checkerframework:checker-qual",
-        "version": "3.43.0"
       }
     },
     {
@@ -61,10 +33,38 @@
       }
     },
     {
+      "id": "com.google.guava:failureaccess@1.0.2",
+      "info": {
+        "name": "com.google.guava:failureaccess",
+        "version": "1.0.2"
+      }
+    },
+    {
+      "id": "com.google.guava:guava@33.3.1-jre",
+      "info": {
+        "name": "com.google.guava:guava",
+        "version": "33.3.1-jre"
+      }
+    },
+    {
+      "id": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
+      "info": {
+        "name": "com.google.guava:listenablefuture",
+        "version": "9999.0-empty-to-avoid-conflict-with-guava"
+      }
+    },
+    {
       "id": "com.google.j2objc:j2objc-annotations@3.0.0",
       "info": {
         "name": "com.google.j2objc:j2objc-annotations",
         "version": "3.0.0"
+      }
+    },
+    {
+      "id": "org.checkerframework:checker-qual@3.43.0",
+      "info": {
+        "name": "org.checkerframework:checker-qual",
+        "version": "3.43.0"
       }
     }
   ],
@@ -76,71 +76,149 @@
         "pkgId": "with-lock-file@unspecified",
         "deps": [
           {
-            "nodeId": "org.codehaus.groovy:groovy@3.0.3"
+            "nodeId": "org.codehaus.groovy:groovy:jar@3.0.3"
           },
           {
-            "nodeId": "com.google.guava:guava@33.3.1-jre"
+            "nodeId": "com.google.code.findbugs:jsr305:jar@3.0.2"
+          },
+          {
+            "nodeId": "com.google.errorprone:error_prone_annotations:jar@2.28.0"
+          },
+          {
+            "nodeId": "com.google.guava:failureaccess:jar@1.0.2"
+          },
+          {
+            "nodeId": "com.google.guava:guava:jar@33.3.1-jre"
+          },
+          {
+            "nodeId": "com.google.guava:listenablefuture:jar@9999.0-empty-to-avoid-conflict-with-guava"
+          },
+          {
+            "nodeId": "com.google.j2objc:j2objc-annotations:jar@3.0.0"
+          },
+          {
+            "nodeId": "org.checkerframework:checker-qual:jar@3.43.0"
           }
         ]
       },
       {
-        "nodeId": "org.codehaus.groovy:groovy@3.0.3",
+        "nodeId": "org.codehaus.groovy:groovy:jar@3.0.3",
         "pkgId": "org.codehaus.groovy:groovy@3.0.3",
         "deps": []
       },
       {
-        "nodeId": "com.google.guava:guava@33.3.1-jre",
-        "pkgId": "com.google.guava:guava@33.3.1-jre",
-        "deps": [
-          {
-            "nodeId": "com.google.guava:failureaccess@1.0.2"
-          },
-          {
-            "nodeId": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava"
-          },
-          {
-            "nodeId": "com.google.code.findbugs:jsr305@3.0.2"
-          },
-          {
-            "nodeId": "org.checkerframework:checker-qual@3.43.0"
-          },
-          {
-            "nodeId": "com.google.errorprone:error_prone_annotations@2.28.0"
-          },
-          {
-            "nodeId": "com.google.j2objc:j2objc-annotations@3.0.0"
-          }
-        ]
-      },
-      {
-        "nodeId": "com.google.guava:failureaccess@1.0.2",
-        "pkgId": "com.google.guava:failureaccess@1.0.2",
-        "deps": []
-      },
-      {
-        "nodeId": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
-        "pkgId": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
-        "deps": []
-      },
-      {
-        "nodeId": "com.google.code.findbugs:jsr305@3.0.2",
+        "nodeId": "com.google.code.findbugs:jsr305:jar@3.0.2",
         "pkgId": "com.google.code.findbugs:jsr305@3.0.2",
         "deps": []
       },
       {
-        "nodeId": "org.checkerframework:checker-qual@3.43.0",
-        "pkgId": "org.checkerframework:checker-qual@3.43.0",
-        "deps": []
-      },
-      {
-        "nodeId": "com.google.errorprone:error_prone_annotations@2.28.0",
+        "nodeId": "com.google.errorprone:error_prone_annotations:jar@2.28.0",
         "pkgId": "com.google.errorprone:error_prone_annotations@2.28.0",
         "deps": []
       },
       {
-        "nodeId": "com.google.j2objc:j2objc-annotations@3.0.0",
+        "nodeId": "com.google.guava:failureaccess:jar@1.0.2",
+        "pkgId": "com.google.guava:failureaccess@1.0.2",
+        "deps": []
+      },
+      {
+        "nodeId": "com.google.guava:guava:jar@33.3.1-jre",
+        "pkgId": "com.google.guava:guava@33.3.1-jre",
+        "deps": [
+          {
+            "nodeId": "com.google.code.findbugs:jsr305:jar@3.0.2:pruned"
+          },
+          {
+            "nodeId": "com.google.errorprone:error_prone_annotations:jar@2.28.0:pruned"
+          },
+          {
+            "nodeId": "com.google.guava:failureaccess:jar@1.0.2:pruned"
+          },
+          {
+            "nodeId": "com.google.guava:listenablefuture:jar@9999.0-empty-to-avoid-conflict-with-guava:pruned"
+          },
+          {
+            "nodeId": "com.google.j2objc:j2objc-annotations:jar@3.0.0:pruned"
+          },
+          {
+            "nodeId": "org.checkerframework:checker-qual:jar@3.43.0:pruned"
+          }
+        ]
+      },
+      {
+        "nodeId": "com.google.guava:listenablefuture:jar@9999.0-empty-to-avoid-conflict-with-guava",
+        "pkgId": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
+        "deps": []
+      },
+      {
+        "nodeId": "com.google.j2objc:j2objc-annotations:jar@3.0.0",
         "pkgId": "com.google.j2objc:j2objc-annotations@3.0.0",
         "deps": []
+      },
+      {
+        "nodeId": "org.checkerframework:checker-qual:jar@3.43.0",
+        "pkgId": "org.checkerframework:checker-qual@3.43.0",
+        "deps": []
+      },
+      {
+        "nodeId": "com.google.code.findbugs:jsr305:jar@3.0.2:pruned",
+        "pkgId": "com.google.code.findbugs:jsr305@3.0.2",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "com.google.errorprone:error_prone_annotations:jar@2.28.0:pruned",
+        "pkgId": "com.google.errorprone:error_prone_annotations@2.28.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "com.google.guava:failureaccess:jar@1.0.2:pruned",
+        "pkgId": "com.google.guava:failureaccess@1.0.2",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "com.google.guava:listenablefuture:jar@9999.0-empty-to-avoid-conflict-with-guava:pruned",
+        "pkgId": "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "com.google.j2objc:j2objc-annotations:jar@3.0.0:pruned",
+        "pkgId": "com.google.j2objc:j2objc-annotations@3.0.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
+      },
+      {
+        "nodeId": "org.checkerframework:checker-qual:jar@3.43.0:pruned",
+        "pkgId": "org.checkerframework:checker-qual@3.43.0",
+        "deps": [],
+        "info": {
+          "labels": {
+            "pruned": "true"
+          }
+        }
       }
     ]
   }

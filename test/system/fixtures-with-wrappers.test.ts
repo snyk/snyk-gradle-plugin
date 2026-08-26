@@ -23,7 +23,9 @@ if (!fixtures.length) {
     // handled by a separate test
     .filter((dir) => dir !== 'init-gradle')
     // handled by a separate test due to platform-specific dependencies
-    .filter((dir) => dir !== 'kts-basic-gradle9');
+    .filter((dir) => dir !== 'kts-basic-gradle9')
+    // handled by a separate test: OSM-3867 ConcurrentModificationException guard
+    .filter((dir) => dir !== 'lazy-attribute-provider');
 }
 
 describe('inspect() fixtures', () => {
@@ -51,20 +53,21 @@ describe('inspect() fixtures', () => {
     const isKotlin = fixtureName.startsWith('kts');
     const dsl = isKotlin ? 'Kotlin' : 'Groovy';
     test(`${dsl} fixture: ${fixtureName} - gradleNormalizeDeps`, async () => {
-      jest.spyOn(search, 'getMavenPackageInfo').mockImplementation(
-        async (
-          _sha1: string,
-          depCoords: Partial<PomCoords>,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          _snykHttpClient: SnykHttpClient,
-        ) => {
-          const type = depCoords.type ?? '';
-          const classifier = depCoords.classifier
-            ? `:${depCoords.classifier}`
-            : '';
-          return `${depCoords.groupId}:${depCoords.artifactId}:${type}${classifier}@${depCoords.version}`;
-        },
-      );
+      jest
+        .spyOn(search, 'getMavenPackageInfo')
+        .mockImplementation(
+          async (
+            _sha1: string,
+            depCoords: Partial<PomCoords>,
+            _snykHttpClient: SnykHttpClient,
+          ) => {
+            const type = depCoords.type ?? '';
+            const classifier = depCoords.classifier
+              ? `:${depCoords.classifier}`
+              : '';
+            return `${depCoords.groupId}:${depCoords.artifactId}:${type}${classifier}@${depCoords.version}`;
+          },
+        );
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
@@ -91,16 +94,17 @@ describe('inspect() fixtures', () => {
         body: null,
       });
       const original = search.getMavenPackageInfo;
-      jest.spyOn(search, 'getMavenPackageInfo').mockImplementation(
-        async (
-          sha1: string,
-          depCoords: Partial<PomCoords>,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          _snykHttpClient: SnykHttpClient,
-        ) => {
-          return original(sha1, depCoords, snykHttpClientMock);
-        },
-      );
+      jest
+        .spyOn(search, 'getMavenPackageInfo')
+        .mockImplementation(
+          async (
+            sha1: string,
+            depCoords: Partial<PomCoords>,
+            _snykHttpClient: SnykHttpClient,
+          ) => {
+            return original(sha1, depCoords, snykHttpClientMock);
+          },
+        );
       const fixturePath = getPathToFixture(fixtureName);
       const buildFileName = isKotlin ? 'build.gradle.kts' : 'build.gradle';
       const pathToBuildConfig = path.join(fixturePath, buildFileName);
@@ -115,19 +119,20 @@ describe('inspect() fixtures', () => {
   });
 
   test(`fixture: init-gradle/app with gradleNormalizeDeps`, async () => {
-    jest.spyOn(search, 'getMavenPackageInfo').mockImplementation(
-      async (
-        _sha1: string,
-        depCoords: Partial<PomCoords>,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _snykHttpClient: SnykHttpClient,
-      ) => {
-        const classifier = depCoords.classifier
-          ? `:${depCoords.classifier}`
-          : '';
-        return `${depCoords.groupId}:${depCoords.artifactId}:${depCoords.type}${classifier}@${depCoords.version}`;
-      },
-    );
+    jest
+      .spyOn(search, 'getMavenPackageInfo')
+      .mockImplementation(
+        async (
+          _sha1: string,
+          depCoords: Partial<PomCoords>,
+          _snykHttpClient: SnykHttpClient,
+        ) => {
+          const classifier = depCoords.classifier
+            ? `:${depCoords.classifier}`
+            : '';
+          return `${depCoords.groupId}:${depCoords.artifactId}:${depCoords.type}${classifier}@${depCoords.version}`;
+        },
+      );
     const fixturePath = getPathToFixture('init-gradle');
     const expectedDepGraphJson = require(`${fixturePath}/app/dep-graph.json`);
 

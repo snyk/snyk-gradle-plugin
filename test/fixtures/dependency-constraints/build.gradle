@@ -1,0 +1,30 @@
+// Constraints: the modern alternative to `force` for pinning a transitive
+// version. `commons-codec` is pulled in transitively by httpclient 4.5.13
+// at version 1.11; the implementation constraint pushes it to 1.17.1
+// at resolution time.
+//
+// Constraints are how Spring Boot's BOM works under the hood (the
+// dependency-management plugin generates a constraint per managed
+// version). Verifying V6 honours them is a load-bearing check for any
+// real-world Spring/Micronaut project.
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Pulls commons-codec 1.11 transitively.
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+
+    constraints {
+        // Push commons-codec to 1.17.1 — the constraint is participates
+        // in version conflict resolution as a peer of the transitive
+        // request, not a hard override like `force`.
+        implementation('commons-codec:commons-codec:1.17.1') {
+            because 'pin to maintained release'
+        }
+    }
+}

@@ -1,0 +1,18 @@
+// Tiny library produced by the included build. Group/version match what
+// the root build asks for so Gradle can substitute the external coordinate
+// with this project automatically.
+plugins {
+    id 'java-library'
+}
+
+group = 'com.example.included'
+version = '0.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Real transitive that should bubble up to the consuming root build.
+    api 'org.apache.commons:commons-lang3:3.14.0'
+}

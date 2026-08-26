@@ -1,0 +1,27 @@
+// Substitution rules: rewrite a declared dep coordinate at resolution
+// time. Common in vendored/forked dep scenarios. Here we declare
+// commons-collections (the legacy Apache Commons Collections) and ask
+// Gradle to substitute it for commons-collections4 — a real-world swap
+// that organisations sometimes apply when pinning to the maintained
+// successor.
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module('commons-collections:commons-collections'))
+            .using(module('org.apache.commons:commons-collections4:4.4'))
+            .because('migrated to commons-collections4')
+    }
+}
+
+dependencies {
+    // Will be rewritten by the substitution rule above to
+    // org.apache.commons:commons-collections4:4.4 before resolution.
+    implementation 'commons-collections:commons-collections:3.2.2'
+}

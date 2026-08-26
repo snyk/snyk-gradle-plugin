@@ -71,12 +71,24 @@ export interface GradleInspectOptions {
   // https://developer.android.com/studio/build/dependencies#variant_aware )
   'configuration-attributes'?: string;
 
-  // For some reason, `--no-daemon` is not required for Unix, but on Windows, without this flag, apparently,
-  // Gradle process just never exits, from the Node's standpoint.
-  // Leaving default usage `--no-daemon`, because of backwards compatibility
+  // When false/undefined the plugin passes `--no-daemon` on every platform so
+  // each invocation is a fresh, one-shot JVM. Set true to reuse a daemon (faster
+  // for repeated builds, but the daemon accumulates heap across invocations).
   daemon?: boolean;
   initScript?: string;
   gradleNormalizeDeps?: boolean;
+
+  // Emit component-metadata node labels (hash:<alg> and, when the real
+  // resolution was observed, distribution:url). Passed to init.gradle as
+  // -PsnykIncludeComponentMetadata. Off by default.
+  includeComponentMetadata?: boolean;
+
+  // Force `--refresh-dependencies` so metadata reads fire and distribution:url
+  // is populated even on a warm cache. Opt-in: forces network access and can
+  // re-resolve dynamic/SNAPSHOT versions. No-op under `--offline`. Only affects
+  // distribution:url coverage; hash:<alg> labels are unaffected. The same effect
+  // is available on the legacy path via `snyk test -- --refresh-dependencies`.
+  gradleRefreshDependencies?: boolean;
 }
 
 export interface CliOptions {

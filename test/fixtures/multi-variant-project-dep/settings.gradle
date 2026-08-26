@@ -1,0 +1,2 @@
+include ':lib-provider'
+include ':app'

@@ -12,16 +12,16 @@
       }
     },
     {
-      "id": "org.codehaus.groovy:groovy@3.0.5",
+      "id": "org.codehaus.groovy:groovy-json@3.0.5",
       "info": {
-        "name": "org.codehaus.groovy:groovy",
+        "name": "org.codehaus.groovy:groovy-json",
         "version": "3.0.5"
       }
     },
     {
-      "id": "org.codehaus.groovy:groovy-json@3.0.5",
+      "id": "org.codehaus.groovy:groovy@3.0.5",
       "info": {
-        "name": "org.codehaus.groovy:groovy-json",
+        "name": "org.codehaus.groovy:groovy",
         "version": "3.0.5"
       }
     },
@@ -41,20 +41,15 @@
         "pkgId": "version-catalogues@unspecified",
         "deps": [
           {
-            "nodeId": "org.codehaus.groovy:groovy:jar@3.0.5"
+            "nodeId": "org.codehaus.groovy:groovy-json:jar@3.0.5"
           },
           {
-            "nodeId": "org.codehaus.groovy:groovy-json:jar@3.0.5"
+            "nodeId": "org.codehaus.groovy:groovy:jar@3.0.5"
           },
           {
             "nodeId": "org.codehaus.groovy:groovy-nio:jar@3.0.5"
           }
         ]
-      },
-      {
-        "nodeId": "org.codehaus.groovy:groovy:jar@3.0.5",
-        "pkgId": "org.codehaus.groovy:groovy@3.0.5",
-        "deps": []
       },
       {
         "nodeId": "org.codehaus.groovy:groovy-json:jar@3.0.5",
@@ -64,6 +59,11 @@
             "nodeId": "org.codehaus.groovy:groovy:jar@3.0.5:pruned"
           }
         ]
+      },
+      {
+        "nodeId": "org.codehaus.groovy:groovy:jar@3.0.5",
+        "pkgId": "org.codehaus.groovy:groovy@3.0.5",
+        "deps": []
       },
       {
         "nodeId": "org.codehaus.groovy:groovy-nio:jar@3.0.5",

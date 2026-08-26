@@ -1,14 +1,25 @@
 {
-  "graph": {
-    "nodes": [{ "deps": [], "nodeId": "root-node", "pkgId": "kts-version-catalog-module@1.0" }],
-    "rootNodeId": "root-node"
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "gradle"
   },
-  "pkgManager": { "name": "gradle" },
   "pkgs": [
     {
       "id": "kts-version-catalog-module@1.0",
-      "info": { "name": "kts-version-catalog-module", "version": "1.0" }
+      "info": {
+        "name": "kts-version-catalog-module",
+        "version": "1.0"
+      }
     }
   ],
-  "schemaVersion": "1.2.0"
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": "kts-version-catalog-module@1.0",
+        "deps": []
+      }
+    ]
+  }
 }

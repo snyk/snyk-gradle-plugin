@@ -1,9 +1,15 @@
 import * as childProcess from 'child_process';
-import { escapeAll, quoteAll } from 'shescape';
+import { escapeAll } from 'shescape/stateless';
 import * as os from 'os';
 import debugModule = require('debug');
 
 const debugLogging = debugModule('snyk-gradle-plugin');
+
+/** `child_process` options plus shescape-only fields read by `escapeAll` / `quoteAll` (not used by `spawn`). */
+type SpawnOptionsWithShescape = childProcess.SpawnOptions & {
+  /** When false, shescape must not strip leading `-` from argv (Gradle needs `-q`, `--project-dir`, etc.). */
+  flagProtection: boolean;
+};
 
 // Executes a subprocess. Resolves successfully with stdout contents if the exit code is 0.
 export function execute(
@@ -12,9 +18,10 @@ export function execute(
   options: { cwd?: string; env?: NodeJS.ProcessEnv },
   perLineCallback?: (s: string) => Promise<void>,
 ): Promise<string> {
-  const spawnOptions: childProcess.SpawnOptions = {
+  const spawnOptions: SpawnOptionsWithShescape = {
     shell: false,
     env: { ...process.env },
+    flagProtection: false,
   };
   if (options?.cwd) {
     spawnOptions.cwd = options.cwd;
@@ -89,15 +96,24 @@ ${stderr}
   });
 }
 
+/**
+ * Wraps an argument in double quotes for cmd.exe. Inside double quotes,
+ * cmd.exe treats ^, $, &, <, >, | as literal characters. Only internal
+ * double quotes need escaping (doubled). This matches the quoting behaviour
+ * of shescape 1.x and avoids shescape 2.x's "break-out-of-quotes" technique
+ * which corrupts regex metacharacters like ^ when passed through cmd.exe /c.
+ */
+function quoteForCmd(arg: string): string {
+  return `"${arg.replace(/"/g, '""')}"`;
+}
+
 function updateCommandAndArgsForWindows(
   command: string,
   args: string[],
 ): { command: string; args: string[] } {
-  args = quoteAll(args); // to handle any spaces in args relating to file path
+  args = args.map(quoteForCmd);
 
   if (command !== 'gradle') {
-    // when command is not gradle we need to wrap the command in "
-    // then wrap the combined string of all args to enable windows to interpret the command correctly
     args = [`"${command}"`, ...args];
     args = ['/c', `"${args.join(' ')}"`];
   } else {
