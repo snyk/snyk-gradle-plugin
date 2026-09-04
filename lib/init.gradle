@@ -432,13 +432,49 @@ def collectArtifactsByComponent(conf) {
     return grouped
 }
 
-// Recurse over ResolvedComponentResult.dependencies. component.moduleVersion
-// is the SELECTED (post-conflict-resolution) version — the correctness
-// improvement over the v5 walker.
+// Walk ResolvedComponentResult.dependencies with an explicit work stack.
+// component.moduleVersion is the SELECTED (post-conflict-resolution) version —
+// the correctness improvement over the v5 walker.
+//
+// This was a recursive walk until CMPA-770. It descends once per dependency
+// edge, and Groovy closure dispatch burns enough real JVM stack per level that
+// a few hundred chained modules overflow the thread stack whatever the heap is
+// set to — so deep multi-module builds died with a StackOverflowError that no
+// customer-side memory setting could fix.
+//
+// Frame order is load-bearing, not incidental. `visited` gates descent but not
+// emission, so which parent a component's subtree hangs off depends on the
+// order components are first reached. Frames are pushed in reverse so they pop
+// in exactly the order the recursive walker entered them, and unresolved
+// dependencies are queued as frames rather than emitted inline for the same
+// reason: their emission also has to stay behind the preceding sibling's
+// entire subtree.
 def walkComponent(component, GradleGraph graph, String parentId,
                   Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
                   Map artifactsByComponent, Sha1Map sha1Map, boolean isRoot,
                   Map<String, String> coordToNodeId, Set<String> resolvedNames) {
+    Deque<Map> stack = new ArrayDeque<Map>()
+    stack.push([unresolved: false, component: component, parentId: parentId, isRoot: isRoot])
+    while (!stack.isEmpty()) {
+        def frame = stack.pop()
+        if (frame.unresolved) {
+            emitUnresolvedNode(frame.dep, graph, frame.parentId, sha1Map, coordToNodeId, resolvedNames)
+            continue
+        }
+        def next = visitComponent(frame.component, graph, frame.parentId, visited,
+                                  artifactsByComponent, sha1Map, frame.isRoot, coordToNodeId, resolvedNames)
+        for (int i = next.size() - 1; i >= 0; i--) {
+            stack.push(next[i])
+        }
+    }
+}
+
+// Emit one component's nodes and edges, and return the frames the recursive
+// walker would have descended into, in the order it would have descended.
+def visitComponent(component, GradleGraph graph, String parentId,
+                   Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
+                   Map artifactsByComponent, Sha1Map sha1Map, boolean isRoot,
+                   Map<String, String> coordToNodeId, Set<String> resolvedNames) {
     def cid = component.id
     def mv = component.moduleVersion
     // Root legitimately has null moduleVersion (isRoot branch below skips
@@ -446,7 +482,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
     // downstream — skip rather than fall back to displayName.
     if (mv == null && !isRoot) {
         debugLog("walkComponent: skipping ${cid} (non-root, null moduleVersion)")
-        return
+        return []
     }
     String name = mv != null ? "${mv.group}:${mv.name}" : null
     String version = mv != null ? (mv.version ?: 'unspecified') : null
@@ -488,7 +524,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
         }
     }
 
-    if (visited.contains(cid)) return
+    if (visited.contains(cid)) return []
     visited.add(cid)
 
     // Skip children of components we emitted nothing for: their dependencies
@@ -496,7 +532,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
     // phantom children of our parent. Can't filter dep.isConstraint() — strict
     // lock mode marks real direct deps as constraints too (lock IS a constraint).
     boolean currentEmittedNothing = !isRoot && nodeIdsForThisComponent.isEmpty()
-    if (currentEmittedNothing) return
+    if (currentEmittedNothing) return []
     // ResolutionResult.dependencies is an unordered Set; sort for determinism.
     def sortedDeps = component.dependencies.toList().sort { a, b ->
         def aKey = (a instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) ? a.selected.id.displayName : a.requested.displayName
@@ -505,19 +541,21 @@ def walkComponent(component, GradleGraph graph, String parentId,
     }
     // Attach children under EVERY emitted node, not just the first: a component
     // with multiple artifacts (e.g. classifier variants) should show its
-    // transitives under each artifact. The visited check inside walkComponent
-    // blocks recursion explosion — subsequent calls only re-add parent edges.
+    // transitives under each artifact. The visited check at the top of this
+    // method blocks descent explosion — subsequent frames only re-add parent edges.
     def parents = nodeIdsForThisComponent.isEmpty() ? [parentId] : nodeIdsForThisComponent
+    def next = []
     parents.each { p ->
         sortedDeps.each { dep ->
             if (dep instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult) {
-                emitUnresolvedNode(dep, graph, p, sha1Map, coordToNodeId, resolvedNames)
+                next.add([unresolved: true, dep: dep, parentId: p])
                 return
             }
             if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) return
-            walkComponent(dep.selected, graph, p, visited, artifactsByComponent, sha1Map, false, coordToNodeId, resolvedNames)
+            next.add([unresolved: false, component: dep.selected, parentId: p, isRoot: false])
         }
     }
+    return next
 }
 
 // Emit a leaf node for an UnresolvedDependencyResult. Type is always 'jar'
