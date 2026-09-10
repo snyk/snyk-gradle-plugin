@@ -4,8 +4,8 @@ metadata:
   name: snyk-gradle-plugin
   annotations:
     github.com/project-slug: snyk/snyk-gradle-plugin
-    github.com/team-slug: snyk/os-managed
+    github.com/team-slug: snyk/engines_sca-scanners
 spec:
   type: snyk-cli-plugin
   lifecycle: "-"
-  owner: os-managed
+  owner: sca-scanners
