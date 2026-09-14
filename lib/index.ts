@@ -40,6 +40,14 @@ const cannotResolveVariantMarkers = [
   'Unable to find a matching variant of project',
 ];
 
+// Gradle's own wording when --no-configuration-cache (which this plugin passes on Gradle 7+)
+// meets a build with Isolated Projects enabled. Isolated Projects is built on the configuration
+// cache and cannot run without one, so the two are mutually exclusive and the build fails before
+// any dependency resolution happens.
+const isolatedProjectsMarkers = [
+  'Configuration Cache cannot be disabled when Isolated Projects is enabled',
+];
+
 type Options = api.InspectOptions & GradleInspectOptions & CliOptions;
 type VersionBuildInfo = api.VersionBuildInfo;
 
@@ -559,6 +567,35 @@ to
     ${chalk.whiteBright(
       "implementation project(path: ':mymodule', configuration: 'default')",
     )}`;
+    }
+
+    // Checked after the variant case: when Isolated Projects is what failed, nothing else in the
+    // build got far enough to be the real cause, so this message should win.
+    if (isolatedProjectsMarkers.find((m) => error.message.includes(m))) {
+      mainErrorMessage = `Error running Gradle dependency analysis.
+
+Your build has Gradle Isolated Projects enabled, which this plugin does not support yet.
+
+Isolated Projects is built on the configuration cache and cannot run without one, while this
+plugin passes ${chalk.whiteBright(
+        '--no-configuration-cache',
+      )} on Gradle 7 and above. Gradle rejects that
+combination before any dependency resolution happens, so the scan cannot start.
+
+Progress is tracked in ${chalk.whiteBright(
+        'https://github.com/snyk/snyk-gradle-plugin/issues/344',
+      )}.
+
+To scan in the meantime, turn Isolated Projects off for the scan. It is a Gradle property, so it
+can be overridden per invocation without editing your build:
+    ${chalk.whiteBright(
+      'snyk test -- -Dorg.gradle.unsafe.isolated-projects=false',
+    )}
+
+Use ${chalk.whiteBright(
+        '-Dorg.gradle.isolated-projects=false',
+      )} instead if your Gradle version has dropped the
+"unsafe" prefix from the property name.`;
     }
 
     error.message = `${chalk.red.bold(
