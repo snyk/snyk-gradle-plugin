@@ -1,0 +1,1176 @@
+import groovy.json.JsonOutput
+import org.gradle.api.DefaultTask
+import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.TaskAction
+import org.gradle.util.GradleVersion
+
+import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Pattern
+
+// Snyk dependency resolution script for Gradle: configuration-cache and
+// Isolated Projects compatible. Requires Gradle 8.1+; `init.gradle` serves older
+// versions and is selected by lib/index.ts based on `gradle -v`.
+//
+// WHY TWO SCRIPTS. Groovy resolves types at compile time, so naming a class that
+// is absent from the running Gradle fails the whole script at parse time, before
+// any version check can run. `BuildService` (Gradle 6.1) and the lazy
+// `ResolutionResult.getRootComponent()` (Gradle 7.4) cannot appear in a file that
+// must also parse on Gradle 4.10, which CI still covers. Splitting keeps the old
+// path exactly as it was rather than making it depend on a version gate.
+//
+// `IsolatedAction` (Gradle 8.8) is deliberately never named even here, for the
+// same reason: this file must parse on 8.1. See the bootstrap at the bottom.
+//
+// HOW IT DIFFERS FROM init.gradle. The old script has one task walk
+// `rootProject.allprojects` at execution time, reading every project's
+// configurations from whichever project's task happened to run first. That is
+// both a configuration-cache violation (`Task.project` at execution time) and an
+// Isolated Projects violation (cross-project model access). Here each project
+// reports only itself into a shared build service, and the service prints the
+// merged result exactly once when it is closed at the end of the build. No task
+// ordering is required, so no cross-project task references are required either.
+//
+// A side effect worth stating: because a single service does the printing,
+// emitting more than one JSONDEPS line is now impossible by construction rather
+// than guarded against after the fact.
+//
+// Output format is unchanged; see init.gradle for the interface definitions.
+// Lines prefixed `SNYKECHO ` are debug output, `JSONATTRS ` is the observed
+// attribute vocabulary, and `JSONDEPS ` is the dependency result.
+
+// ─── logging ────────────────────────────────────────────────────────────────
+
+class SnykLog {
+
+    // Read the environment on every call rather than caching: statics set while
+    // the init script runs are not restored on a configuration cache hit, so a
+    // cached flag would silently turn debug output off for those builds.
+    static void debug(String message) {
+        String debug = System.getenv('DEBUG') ?: ''
+        if (debug.length() > 0) {
+            println("SNYKECHO $message")
+        }
+    }
+}
+
+// ─── hashing ────────────────────────────────────────────────────────────────
+
+class SnykDigests {
+
+    // Stream a file once, feeding every requested digest from a single read.
+    // `algorithms` maps the JDK algorithm name to its output label; returns
+    // {label: lowercase-hex}.
+    static Map<String, String> digestFile(File file, Map<String, String> algorithms) {
+        List<String> javaNames = algorithms.keySet().toList()
+        List<MessageDigest> mds = javaNames.collect { MessageDigest.getInstance(it) }
+        // Reuse a single 64 KB buffer for the whole file. Groovy's
+        // File.eachByte(int, Closure) allocates a fresh byte[] copy per chunk, so
+        // hashing large artifacts churns enough short-lived garbage to inflate the
+        // Gradle daemon's peak heap; a manual read loop keeps allocation ~constant.
+        // Digests are identical either way, because MessageDigest is chunking-invariant.
+        // All state is local, so this stays safe under parallel per-project tasks.
+        byte[] buffer = new byte[64 * 1024]
+        file.withInputStream { input ->
+            int read
+            while ((read = input.read(buffer)) != -1) {
+                for (md in mds) {
+                    md.update(buffer, 0, read)
+                }
+            }
+        }
+        Map<String, String> result = [:]
+        javaNames.eachWithIndex { javaName, i ->
+            result[algorithms[javaName]] = mds[i].digest().encodeHex().toString()
+        }
+        return result
+    }
+
+    // SHA-1 hex of a file's contents (normalized-mode node id).
+    static String hashFile(File file) {
+        return digestFile(file, ['SHA-1': 'sha-1'])['sha-1']
+    }
+
+    // SHA-1 hex of a string (fallback node id when a file hash is unavailable).
+    // Hashes in-memory bytes one-shot, so it does not use digestFile.
+    static String hashString(String value) {
+        return MessageDigest.getInstance('SHA-1').digest(value.bytes).encodeHex().toString()
+    }
+
+    // Compute md5/sha-1/sha-256/sha-512 in a single pass over the file bytes.
+    // Keys match the CycloneDX-friendly label suffixes used across ecosystems.
+    static Map<String, String> computeHashes(File file) {
+        return digestFile(file, ['MD5': 'md5', 'SHA-1': 'sha-1', 'SHA-256': 'sha-256', 'SHA-512': 'sha-512'])
+    }
+}
+
+// ─── component metadata (opt-in: -PsnykIncludeComponentMetadata) ─────────────
+//
+// Emits the same node-label vocabulary as snyk-mvn-plugin /
+// nodejs-lockfile-parser:
+//   hash:<alg>       lowercase-hex digests of the resolved artifact file
+//   distribution:url the real remote URL Gradle read the artifact from
+// distribution:url is TRUE provenance only: Gradle exposes no per-artifact
+// source repository in its public API, so we capture the actual resource-read
+// URLs via an internal build-operation listener. On a warm cache nothing is
+// re-fetched, so a node simply carries no distribution:url: graceful omission,
+// never a reconstructed guess.
+
+class SnykResourceUrlIndex {
+
+    // filename -> Set<url>. A Set because a shared cache can see the same
+    // filename from more than one repo across a build; disambiguated at lookup
+    // by Maven layout.
+    private static final Map<String, Set<String>> URLS_BY_FILENAME = new ConcurrentHashMap<>()
+
+    // Held so the listener can be removed again. BuildOperationListenerManager
+    // is a daemon-scoped service, so a listener left registered survives into
+    // later builds on a reused daemon, accumulating one per build and pinning
+    // each build's captured state.
+    private static Object listenerManager = null
+    private static Object listener = null
+
+    // Registering the listener is only possible while the init script runs, and
+    // an init script is not re-executed on a configuration cache hit. Such a
+    // build therefore carries no distribution:url. That is close to a
+    // no-op in practice: a cache hit against a warm dependency cache performs no
+    // resource reads, so there would be no URLs to capture either way. Artifact
+    // hashes do not depend on this and are driven by a task input instead.
+    static void register(gradle) {
+        try {
+            def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
+            // Map-of-closures coerced to the interface: closures take untyped
+            // args, so this satisfies the interface's typed abstract methods on
+            // every Gradle version (the method set has changed, e.g. progress()
+            // was added later). Methods absent from the map become harmless
+            // no-ops.
+            def buildOperationListener = [
+                    started : { buildOp, startEvent -> },
+                    progress: { operationId, progressEvent -> },
+                    finished: { buildOp, finishEvent -> record(buildOp) },
+            ] as org.gradle.internal.operations.BuildOperationListener
+            manager.addListener(buildOperationListener)
+            listenerManager = manager
+            listener = buildOperationListener
+            SnykLog.debug('component-metadata: resource-read listener registered')
+        } catch (Exception e) {
+            SnykLog.debug("component-metadata: listener registration failed (${e.class.simpleName}: ${e.message}); distribution:url unavailable")
+        }
+    }
+
+    // Called from the collector service's close(), which is the last thing to
+    // run in the build. Replaces the `gradle.buildFinished` hook the old script
+    // used, which is itself a configuration cache problem.
+    static void unregister() {
+        try {
+            if (listenerManager != null && listener != null) {
+                listenerManager.removeListener(listener)
+            }
+        } catch (Exception ignored) {
+            // The listener is reclaimed when the daemon exits, so the worst case
+            // is a bounded per-build leak.
+        } finally {
+            listenerManager = null
+            listener = null
+        }
+    }
+
+    // Record the URL of one finished build operation if it is an external
+    // resource read. Duck-typed on getLocation() to avoid importing the internal
+    // details type, whose package has moved across Gradle versions.
+    private static void record(buildOp) {
+        try {
+            def details = buildOp?.details
+            if (details == null) return
+            if (!details.metaClass.respondsTo(details, 'getLocation')) return
+            def location = details.getLocation()
+            if (location == null) return
+            String url = location.toString()
+            if (!(url.startsWith('http://') || url.startsWith('https://'))) return
+            URI uri
+            try {
+                uri = new URI(url)
+            } catch (Exception ignored) {
+                return
+            }
+            // Derive the filename from the parsed path (already free of query and
+            // fragment), then store the canonicalised, credential-free URL.
+            String path = uri.path
+            if (!path) return
+            int slash = path.lastIndexOf('/')
+            if (slash < 0 || slash == path.length() - 1) return
+            String filename = path.substring(slash + 1)
+            String clean = canonicalUrl(uri)
+            if (clean == null) return
+            URLS_BY_FILENAME
+                    .computeIfAbsent(filename) { _ -> Collections.synchronizedSet(new LinkedHashSet<String>()) }
+                    .add(clean)
+        } catch (Exception ignored) {
+            // One bad operation must not break resolution.
+        }
+    }
+
+    // Reduce an already-parsed resource URI to its canonical location,
+    // scheme://host[:port]/path, by dropping userInfo, query and fragment.
+    // Standard Maven/Gradle repos authenticate via headers and serve artifacts at
+    // plain path-based URLs, but a repo configured with credentials embedded in
+    // the URL (https://user:pass@host/repo) carries that userInfo on every
+    // artifact URL, so we strip it to keep credentials out of the
+    // dep-graph/SBOM. Query and fragment are dropped too: they are not part of
+    // the artifact's durable location (at most a request-scoped redirect
+    // artefact), so the bare path is the correct, reproducible provenance value.
+    // Operating on the parsed URI keeps the rule single and robust.
+    static String canonicalUrl(URI uri) {
+        try {
+            // Server-based authority: host and port are parsed out, so rebuild
+            // from components with an explicit null userInfo.
+            if (uri.host != null) {
+                return new URI(uri.scheme, null, uri.host, uri.port, uri.path, null, null).toString()
+            }
+            // Registry-based authority: java.net.URI implements RFC 2396, whose
+            // hostname grammar allows only alphanumerics and "-", so an authority
+            // it can't parse as host[:port] (one underscore is enough, common on
+            // internal Maven mirrors) falls back to an opaque registry name with
+            // host, port and userInfo all left null. The authority is then the
+            // only component that survives, so strip the "user:pass@" prefix by
+            // hand.
+            //
+            // Split the *raw* authority: it keeps percent-escapes intact, so the
+            // only unencoded "@" is the userInfo delimiter. On the decoded
+            // authority a host containing %40 would arrive as a second "@" and get
+            // mistaken for one. Split on the last "@" because an unencoded "@" in
+            // a password is malformed but survivable, and the last one is still
+            // the delimiter.
+            String raw = uri.rawAuthority
+            if (raw == null) return null
+            int at = raw.lastIndexOf('@')
+            if (at >= 0) raw = raw.substring(at + 1)
+            return new URI(uri.scheme + '://' + raw + (uri.rawPath ?: '')).toString()
+        } catch (Exception ignored) {
+            // Fail closed: if the URI can't be rebuilt from its components we
+            // cannot guarantee userinfo/query/fragment were stripped, so drop it
+            // entirely rather than risk a credential surviving into a label. The
+            // caller records nothing when this returns null.
+            return null
+        }
+    }
+
+    // Resolve a filename to the URL it was actually read from. Always confirm the
+    // captured URL belongs to THIS artifact's Maven-layout path before labelling:
+    // a shared build can read the same filename from more than one repo, and even
+    // a lone captured URL may belong to a different GAV that happens to share a
+    // filename. If no candidate, or more than one, matches the layout, emit
+    // nothing rather than guess.
+    static String lookup(String name, String version, String fileName) {
+        Set<String> candidates = URLS_BY_FILENAME.get(fileName)
+        if (!candidates || candidates.isEmpty()) {
+            // Worth logging rather than silently omitting: the label going missing
+            // looks identical whether nothing was downloaded (expected, warm cache)
+            // or the listener never saw the read (a bug).
+            SnykLog.debug("component-metadata: no observed read for ${fileName} (${URLS_BY_FILENAME.size()} filename(s) captured)")
+            return null
+        }
+        try {
+            String group = name.contains(':') ? name.substring(0, name.indexOf(':')) : name
+            String module = name.contains(':') ? name.substring(name.indexOf(':') + 1) : name
+            String suffix = "/${group.replace('.', '/')}/${module}/${version}/${fileName}".toString()
+            // toList() is required, not cosmetic: candidates is a Set, so findAll
+            // returns a Set, and assigning that to a declared List is a
+            // GroovyCastException.
+            List<String> matches = candidates.findAll { candidate ->
+                try {
+                    return new URI(candidate).path?.endsWith(suffix)
+                } catch (Exception ignored) {
+                    return false
+                }
+            }.toList()
+            if (matches.size() == 1) return matches[0]
+            SnykLog.debug("component-metadata: ${matches.size()} layout match(es) for ${fileName} against ${suffix}; candidates=${candidates}")
+        } catch (Exception e) {
+            // Fall through to no-label, but say so. Swallowing this silently makes a
+            // missing label indistinguishable from a genuinely unobserved read.
+            SnykLog.debug("component-metadata: url lookup failed for ${fileName}: ${e.class.simpleName}: ${e.message}")
+        }
+        return null
+    }
+}
+
+// ─── graph model ────────────────────────────────────────────────────────────
+
+class SnykGradleGraph {
+
+    Map<String, Map> nodes = [:]
+    String rootId
+
+    SnykGradleGraph(String rootId) {
+        this.rootId = rootId
+    }
+
+    Map setNode(String key, Map value, Closure metadataProvider = null) {
+        if (!key || !value) {
+            return null
+        }
+
+        nodes.computeIfAbsent(key) { _ ->
+            def node = ['name': value.name, 'version': value.version, 'parentIds': [] as Set]
+            // Component metadata (opt-in via -PsnykIncludeComponentMetadata).
+            // Computed lazily and only when the nodeId is genuinely new: a
+            // shared component is re-walked once per incoming edge, but only the
+            // first emission wins, so hashing on every edge would be wasted disk
+            // I/O and CPU. Evaluating inside computeIfAbsent runs it exactly once.
+            if (metadataProvider) {
+                def metadata = metadataProvider()
+                if (metadata) {
+                    if (metadata.hashes) node.hashes = metadata.hashes
+                    if (metadata.distributionUrl) node.distributionUrl = metadata.distributionUrl
+                }
+            }
+            node
+        }
+    }
+
+    void setEdge(String parentId, String childId) {
+        if (isInvalidEdge(parentId, childId)) {
+            return
+        }
+
+        nodes.computeIfAbsent(parentId) { _ -> createEmptyNode() }
+        def childNode = nodes.computeIfAbsent(childId) { _ -> createEmptyNode() }
+
+        if (!childNode.parentIds.contains(parentId)) {
+            childNode.parentIds.add(parentId)
+        }
+    }
+
+    private boolean isInvalidEdge(String parentId, String childId) {
+        parentId == null || childId == null || parentId == childId || (parentId != rootId && !nodes.containsKey(parentId))
+    }
+
+    private Map createEmptyNode() {
+        ['name': null, 'version': null, 'parentIds': [] as Set]
+    }
+}
+
+// ─── per-configuration resolution handle ────────────────────────────────────
+
+// One resolvable configuration, reduced to what the walker needs and nothing
+// more. Both handles are LAZY: holding them resolves nothing, which is what lets
+// the filtering happen at configuration time (where the Configuration objects
+// live) while resolution still happens at execution time (where a Configuration
+// cannot be reached).
+//
+// Artifacts are held as `ArtifactCollection.getResolvedArtifacts()`, a
+// Provider<Set<...>>, and deliberately NOT as the ArtifactCollection itself: the
+// configuration cache serializes an ArtifactCollection by resolving it while
+// storing the entry, which drags every resolution failure in with it.
+//
+// Neither handle is ever stored on a task; both are consumed inside
+// SnykProjectConfigurer.fragmentProvider, which explains why that matters.
+class SnykConfigurationHandle {
+
+    String name
+    Provider<ResolvedComponentResult> rootComponent
+    Provider<Set<ResolvedArtifactResult>> artifacts
+
+    SnykConfigurationHandle(String name,
+                            Provider<ResolvedComponentResult> rootComponent,
+                            Provider<Set<ResolvedArtifactResult>> artifacts) {
+        this.name = name
+        this.rootComponent = rootComponent
+        this.artifacts = artifacts
+    }
+}
+
+// ─── graph walker ───────────────────────────────────────────────────────────
+
+// Walks each resolvable configuration via Gradle's modern resolution APIs:
+// resolutionResult for the post-conflict-resolution graph, and
+// artifactView { lenient = true } for resolved artifacts with file metadata.
+class SnykGraphBuilder {
+
+    private final SnykGradleGraph graph = new SnykGradleGraph('root-node')
+    private final boolean normalized
+    private final boolean includeComponentMetadata
+
+    // A coordinate must not surface under two node ids (e.g. hashFile here,
+    // hashString in emitUnresolvedNode), which produces phantom real+pruned pairs
+    // downstream. Scoped to one project rather than the whole build, which is
+    // sound because lib/graph.ts turns each project's gradleGraph into its own
+    // dep-graph, so ids only have to agree within a project. That scoping is also
+    // what lets one builder cover all of a project's configurations inside a
+    // single provider; see SnykProjectConfigurer.fragmentProvider.
+    private final Map<String, String> coordToNodeId = [:]
+    private final Map<String, String> sha1Coordinates = [:]
+
+    SnykGraphBuilder(boolean normalized, boolean includeComponentMetadata) {
+        this.normalized = normalized
+        this.includeComponentMetadata = includeComponentMetadata
+    }
+
+    // Resolves every handle and returns the finished, plain-data fragment for one
+    // project. Called from inside a provider, so it runs while the configuration
+    // cache entry is being stored (or in the task action when the cache is off),
+    // so it never leaves a Gradle resolution object in task state.
+    Map<String, Object> buildFragment(List<SnykConfigurationHandle> handles,
+                                      String targetFile,
+                                      String projectVersion) {
+        handles.each { handle ->
+            Set<ComponentIdentifier> visited = new HashSet<>()
+            try {
+                Map<ComponentIdentifier, List<ResolvedArtifactResult>> artifactsByComponent =
+                        collectArtifactsByComponent(handle)
+                // Per-configuration so a module resolved in compileClasspath but
+                // failed (e.g. repo content filtering) in testRuntimeClasspath
+                // still surfaces as unresolved where it failed. See
+                // emitUnresolvedNode for what this suppresses.
+                Set<String> resolvedNames = new HashSet<>()
+                artifactsByComponent.each { cid, _arts ->
+                    // Use group/module directly: getModuleIdentifier() is Gradle
+                    // 4.9+. .toString() is load-bearing: GStrings hash != Strings.
+                    if (cid instanceof ModuleComponentIdentifier) {
+                        resolvedNames.add("${cid.group}:${cid.module}".toString())
+                    }
+                }
+                def root = handle.rootComponent.get()
+                walkComponent(root, 'root-node', visited, artifactsByComponent, true, resolvedNames)
+                SnykLog.debug("conf ${handle.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
+            } catch (Exception e) {
+                SnykLog.debug("traversal failed for conf ${handle.name}: ${e.class.simpleName}: ${e.message}")
+            }
+        }
+        Map<String, Object> fragment = [
+                'targetFile'    : targetFile,
+                'gradleGraph'   : graph.nodes,
+                'projectVersion': projectVersion,
+        ]
+        // Carried inside the fragment rather than as a second property so one
+        // realization of one provider yields everything this project contributes.
+        if (normalized) fragment['sha1Map'] = sha1Coordinates
+        return fragment
+    }
+
+    private Map<ComponentIdentifier, List<ResolvedArtifactResult>> collectArtifactsByComponent(
+            SnykConfigurationHandle handle) {
+        def grouped = [:].withDefault { [] }
+        try {
+            // The view is lenient, so this yields whatever resolved and omits the
+            // rest rather than throwing. Artifact-level failures are not
+            // enumerated here, because reaching them means holding the ArtifactCollection
+            // itself, which cannot be cached (see SnykConfigurationHandle). The
+            // dependency-level signal survives regardless: anything that failed to
+            // resolve arrives as an UnresolvedDependencyResult while walking the
+            // graph, which is both more useful and what the output already reports.
+            handle.artifacts.get().each { grouped[it.id.componentIdentifier] << it }
+        } catch (Exception e) {
+            SnykLog.debug("artifactView failed for conf ${handle.name}: ${e.message}")
+            return grouped
+        }
+        return grouped
+    }
+
+    // Recurse over ResolvedComponentResult.dependencies. component.moduleVersion
+    // is the SELECTED (post-conflict-resolution) version.
+    private void walkComponent(ResolvedComponentResult component,
+                               String parentId,
+                               Set<ComponentIdentifier> visited,
+                               Map artifactsByComponent,
+                               boolean isRoot,
+                               Set<String> resolvedNames) {
+        def cid = component.id
+        def mv = component.moduleVersion
+        // Root legitimately has null moduleVersion (the isRoot branch below skips
+        // emission). For non-root, no coordinate means a malformed pkgId
+        // downstream, so skip rather than fall back to displayName.
+        if (mv == null && !isRoot) {
+            SnykLog.debug("walkComponent: skipping ${cid} (non-root, null moduleVersion)")
+            return
+        }
+        String name = mv != null ? "${projectGroup(cid, mv.group)}:${mv.name}" : null
+        String version = mv != null ? (mv.version ?: 'unspecified') : null
+
+        List<String> nodeIdsForThisComponent = []
+        if (!isRoot) {
+            def artifacts = artifactsByComponent[cid] ?: []
+            // BOMs, platforms and project deps with no jar emit nothing AND stop
+            // the walk; see the early return below.
+            artifacts.each { artifact ->
+                def typeAndClassifier = extractTypeAndClassifier(artifact, name, version)
+                String coordinate = "${name}:${typeAndClassifier.type}"
+                if (typeAndClassifier.classifier) coordinate += ":${typeAndClassifier.classifier}"
+                coordinate += "@${version}"
+                String existingNodeId = coordToNodeId[coordinate]
+                String nodeId
+                if (existingNodeId) {
+                    nodeId = existingNodeId
+                } else if (normalized) {
+                    try {
+                        nodeId = SnykDigests.hashFile(artifact.file)
+                    } catch (Exception e) {
+                        SnykLog.debug("failed to hash ${artifact.id}: ${e.message}; falling back to coordinate hash")
+                        nodeId = SnykDigests.hashString(coordinate)
+                    }
+                    sha1Coordinates[nodeId] = coordinate
+                    coordToNodeId[coordinate] = nodeId
+                } else {
+                    nodeId = coordinate
+                    coordToNodeId[coordinate] = nodeId
+                }
+                graph.setNode(nodeId, ['name': name, 'version': version]) {
+                    buildArtifactMetadata(artifact, name, version)
+                }
+                graph.setEdge(parentId, nodeId)
+                nodeIdsForThisComponent.add(nodeId)
+            }
+        }
+
+        if (visited.contains(cid)) return
+        visited.add(cid)
+
+        // Skip children of components we emitted nothing for: their dependencies
+        // are constraint edges, not classpath contributions, and would leak in as
+        // phantom children of our parent. Can't filter dep.isConstraint():
+        // strict lock mode marks real direct deps as constraints too (a lock IS a
+        // constraint).
+        boolean currentEmittedNothing = !isRoot && nodeIdsForThisComponent.isEmpty()
+        if (currentEmittedNothing) return
+        // ResolutionResult.dependencies is an unordered Set; sort for determinism.
+        def sortedDeps = component.dependencies.toList().sort { a, b ->
+            def aKey = (a instanceof ResolvedDependencyResult) ? a.selected.id.displayName : a.requested.displayName
+            def bKey = (b instanceof ResolvedDependencyResult) ? b.selected.id.displayName : b.requested.displayName
+            aKey <=> bKey
+        }
+        // Attach children under EVERY emitted node, not just the first: a
+        // component with multiple artifacts (e.g. classifier variants) should show
+        // its transitives under each artifact. The visited check above blocks
+        // recursion explosion; subsequent calls only re-add parent edges.
+        def parents = nodeIdsForThisComponent.isEmpty() ? [parentId] : nodeIdsForThisComponent
+        parents.each { p ->
+            sortedDeps.each { dep ->
+                if (dep instanceof UnresolvedDependencyResult) {
+                    emitUnresolvedNode(dep, p, resolvedNames)
+                    return
+                }
+                if (!(dep instanceof ResolvedDependencyResult)) return
+                walkComponent(dep.selected, p, visited, artifactsByComponent, false, resolvedNames)
+            }
+        }
+    }
+
+    // Gradle 8.11-ish through 8.14.x append a trailing dot to a subproject's DEFAULT
+    // group when Isolated Projects is enabled, so ':list' surfaces as 'root.:list'
+    // rather than 'root:list'. Upstream bug, fixed in Gradle 9.1.0 and not backported:
+    // https://github.com/gradle/gradle/issues/33248
+    //
+    // Left alone, every project-dependency node id shifts the moment a build turns
+    // Isolated Projects on, which reads downstream as all of its project dependencies
+    // being replaced, and breaks anything keyed to the previous id. Trimming keeps a
+    // scan reporting the same coordinates whichever way the build is configured.
+    //
+    // Narrow on purpose: project components only, and only a trailing dot. It
+    // therefore cannot rewrite an external coordinate, and it is a no-op on versions
+    // without the bug.
+    //
+    // The bug only affects a DEFAULT group, and nothing here can distinguish a
+    // defaulted group from one the build set explicitly, so a project that declares
+    // `group = 'com.example.'` is trimmed too. That is reachable only by declaring a
+    // group whose trailing dot makes it an invalid coordinate in the first place,
+    // which is a better thing to normalize than to preserve.
+    private static String projectGroup(ComponentIdentifier cid, Object group) {
+        String resolved = group?.toString() ?: ''
+        if (cid instanceof ProjectComponentIdentifier) {
+            return resolved.replaceFirst(/\.+$/, '')
+        }
+        return resolved
+    }
+
+    // Emit a leaf node for an UnresolvedDependencyResult. Type is always 'jar'
+    // and classifier is dropped: ModuleComponentSelector's public API exposes
+    // neither (they live on the original Dependency's artifact filter, not the
+    // selector). 'foo:bar:1.0:linux-x86_64' that fails shows up as 'foo:bar:jar@1.0'.
+    private void emitUnresolvedNode(UnresolvedDependencyResult dep,
+                                    String parentId,
+                                    Set<String> resolvedNames) {
+        // Prefer attempted (the version Gradle actually tried) so dynamic-selector
+        // failures show what Gradle saw; fall back to requested when null.
+        def selector = dep.attempted ?: dep.requested
+        // Project/library selectors don't have a coordinate worth emitting as a leaf.
+        if (!(selector instanceof ModuleComponentSelector)) return
+        String name = "${selector.group}:${selector.module}"
+        // Lock-rejection noise: strict locks emit a rejected UnresolvedDep next to
+        // the resolved one for the locked version. If the name resolved at any
+        // version in this configuration, the unresolved emission is noise, so skip it.
+        if (resolvedNames.contains(name)) return
+        String version
+        try {
+            def versionConstraint = selector.versionConstraint
+            version = versionConstraint?.requiredVersion ?: versionConstraint?.preferredVersion ?: selector.version
+        } catch (Exception ignored) {
+            version = selector.version
+        }
+        version = version ?: 'unspecified'
+        String coordinate = "${name}:jar@${version}"
+        // Reuse if already in the graph (mirror of the lookup in walkComponent).
+        String existingNodeId = coordToNodeId[coordinate]
+        String nodeId
+        if (existingNodeId) {
+            nodeId = existingNodeId
+        } else {
+            nodeId = normalized ? SnykDigests.hashString(coordinate) : coordinate
+            if (normalized) sha1Coordinates[nodeId] = coordinate
+            coordToNodeId[coordinate] = nodeId
+        }
+        graph.setNode(nodeId, ['name': name, 'version': version])
+        graph.setEdge(parentId, nodeId)
+    }
+
+    // Build the per-node metadata map for a resolved artifact: file hashes plus,
+    // when we observed the real read, its distribution:url. Returns null when the
+    // flag is off or nothing could be derived (e.g. no artifact file).
+    private Map buildArtifactMetadata(ResolvedArtifactResult artifact, String name, String version) {
+        if (!includeComponentMetadata) return null
+        try {
+            File file = artifact?.file
+            if (file == null || !file.isFile()) return null
+            def meta = ['hashes': SnykDigests.computeHashes(file)]
+            String url = SnykResourceUrlIndex.lookup(name, version, file.name)
+            if (url) meta.distributionUrl = url
+            return meta
+        } catch (Exception e) {
+            SnykLog.debug("component-metadata: failed for ${name}@${version}: ${e.message}")
+            return null
+        }
+    }
+
+    // Get artifact type and classifier. Type comes from Gradle's own variant
+    // attributes (Gradle 5.1+, ResolvedArtifactResult.getVariant()), which
+    // includes non-jar types like java-classes-directory and
+    // java-resources-directory. Classifier always comes from the filename; there is no
+    // public-API alternative.
+    private static Map extractTypeAndClassifier(ResolvedArtifactResult artifact, String name, String version) {
+        File file = artifact.file
+        String fileName = file?.name
+        String classifier = extractClassifierFromFilename(fileName, name, version)
+
+        try {
+            def attr = artifact.variant?.attributes?.getAttribute(Attribute.of('artifactType', String))
+            if (attr) return [type: attr, classifier: classifier]
+        } catch (Exception ignored) {
+            // Fall through to filename-derived type.
+        }
+
+        // Detect directories explicitly so we don't mislabel them as 'jar'.
+        if (file?.isDirectory()) return [type: 'directory', classifier: null]
+        return [type: fileExtensionOr(fileName, 'jar'), classifier: classifier]
+    }
+
+    // Returns the file extension (chars after the last dot), or `fallback` if
+    // there's no usable extension. A leading dot (e.g. `.gitignore`) or trailing
+    // dot (e.g. `file.`) both count as "no usable extension".
+    private static String fileExtensionOr(String fileName, String fallback) {
+        if (!fileName) return fallback
+        int dotAt = fileName.lastIndexOf('.')
+        if (dotAt <= 0 || dotAt == fileName.length() - 1) return fallback
+        return fileName.substring(dotAt + 1)
+    }
+
+    // After stripping "<moduleName>-<version>" the rest (post leading dash) is
+    // the classifier. Assumes moduleName has no colon, true for
+    // ModuleComponentIdentifier.
+    private static String extractClassifierFromFilename(String fileName, String name, String version) {
+        if (!fileName) return null
+        int dotAt = fileName.lastIndexOf('.')
+        String stem = (dotAt > 0 && dotAt < fileName.length() - 1) ? fileName.substring(0, dotAt) : fileName
+        String moduleName = name.contains(':') ? name.substring(name.lastIndexOf(':') + 1) : name
+        String prefix = "${moduleName}-${version}"
+        if (stem.startsWith(prefix)) {
+            String suffix = stem.substring(prefix.length())
+            if (suffix.startsWith('-') && suffix.length() > 1) {
+                return suffix.substring(1)
+            }
+        }
+        return null
+    }
+}
+
+// ─── build-level facts ──────────────────────────────────────────────────────
+
+// Facts a single project cannot see about the build it belongs to. Derived from
+// the settings model, which is legal to read under Isolated Projects, and
+// carried as plain strings so it can cross both the isolated-action and the
+// configuration-cache boundaries.
+class SnykBuildLayout implements Serializable {
+
+    String defaultProjectPath
+    String defaultProjectName
+    String defaultProjectKey
+    List<String> allSubProjectNames
+
+    // A project path maps to a Snyk project key by dropping the leading colon
+    // and using slashes: ':a:b' -> 'a/b'.
+    static String formatPath(String path) {
+        return path.replace(':', '/').replaceAll(~/(^\/+?)|(\/+$)/, '')
+    }
+}
+
+// ─── collector build service ────────────────────────────────────────────────
+
+interface SnykCollectorParameters extends BuildServiceParameters {
+
+    Property<String> getDefaultProjectName()
+
+    Property<String> getDefaultProjectKey()
+
+    ListProperty<String> getAllSubProjectNames()
+}
+
+// Aggregation point and the single place that prints. Each project's task
+// contributes its own fragment; close() runs once, after all tasks, and emits
+// exactly one JSONATTRS line and one JSONDEPS line.
+//
+// A build service is the right shape for this because it needs no task ordering:
+// there is no cross-project task dependency to declare, which is precisely what
+// keeps the design compatible with Isolated Projects. close() is called at the
+// end of the build, including on a configuration cache hit; measured, because
+// that is the case where an init-script-level hook would not run at all.
+abstract class SnykDepsCollector
+        implements BuildService<SnykCollectorParameters>, AutoCloseable {
+
+    // None of these fields may be private, and closures must reach them through a
+    // local rather than by name. Gradle instantiates a generated subclass of this
+    // class, so `this` is not a SnykDepsCollector: an unqualified name inside a
+    // closure resolves dynamically against that subclass, which has no accessor
+    // for a private field of the superclass, and fails at runtime with
+    // "No such property: <field> for class: SnykDepsCollector$Inject_".
+    //
+    // Sorted so the emitted JSON is deterministic regardless of the order tasks
+    // finished in; synchronized because tasks may run in parallel.
+    final Map<String, Map> projects = Collections.synchronizedMap(new TreeMap<String, Map>())
+    final Map<String, Set<String>> attributes = Collections.synchronizedMap(new TreeMap<String, Set<String>>())
+
+    // Merged from every project that reported one. Node ids are computed per
+    // project, but a normalized id is the SHA-1 of the artifact's own bytes, so two
+    // projects that share a dependency agree on both id and coordinate and the
+    // merge cannot conflict.
+    final Map<String, String> sha1Coordinates = new ConcurrentHashMap<>()
+
+    volatile boolean normalized = false
+
+    void addProject(String projectKey, Map fragment, Map<String, String> projectSha1Map) {
+        projects.put(projectKey, fragment)
+        if (projectSha1Map != null) {
+            normalized = true
+            sha1Coordinates.putAll(projectSha1Map)
+        }
+    }
+
+    void addAttributes(Map<String, Set<String>> observed) {
+        Map<String, Set<String>> target = attributes
+        synchronized (target) {
+            observed.each { attributeName, values ->
+                target.computeIfAbsent(attributeName) { _ -> new TreeSet<String>() }.addAll(values)
+            }
+        }
+    }
+
+    // close() runs whether or not the build succeeded, so a build that died partway
+    // still emits whatever was collected. That is deliberate: the CLI decides
+    // success from the exit code, not from the presence of a JSONDEPS line, so a
+    // partial emission alongside a non-zero exit is read as the failure it is.
+    // Suppressing it would need the Flow API and would buy nothing.
+    @Override
+    void close() {
+        try {
+            println("JSONATTRS " + JsonOutput.toJson(attributes))
+            def result = [
+                    'defaultProject'    : parameters.defaultProjectName.get(),
+                    'defaultProjectKey' : parameters.defaultProjectKey.get(),
+                    'projects'          : projects,
+                    'allSubProjectNames': parameters.allSubProjectNames.get(),
+            ]
+            if (normalized) result['sha1Map'] = sha1Coordinates
+            println("JSONDEPS " + JsonOutput.toJson(result))
+        } finally {
+            SnykResourceUrlIndex.unregister()
+        }
+    }
+}
+
+// ─── collector task ─────────────────────────────────────────────────────────
+
+// Reports exactly one project. Every field is plain data or a provider of plain
+// data: no Project and no Gradle resolution object is reachable from the task
+// action, which is what the configuration cache requires.
+//
+// Nothing is declared as an input file. This task has no outputs, so it is never up
+// to date anyway, and snapshotting whole resolved classpaths would cost real time
+// for a result that is thrown away.
+abstract class SnykCollectDepsTask extends DefaultTask {
+
+    @Input
+    abstract Property<String> getProjectKey()
+
+    // Whether this project is in scope for graph collection. Attributes are
+    // reported by every project regardless, matching the old script, where the
+    // JSONATTRS pass ran over every project and only the graph pass honoured
+    // -PonlySubProject.
+    @Input
+    abstract Property<Boolean> getInScope()
+
+    @Input
+    abstract Property<Boolean> getNormalized()
+
+    @Internal
+    abstract Property<SnykDepsCollector> getCollector()
+
+    // This project's finished contribution, as plain data. Fed by a provider so
+    // the walk stays lazy; see SnykProjectConfigurer.fragmentProvider for why the
+    // result must be plain data rather than a resolution handle.
+    @Internal
+    abstract MapProperty<String, Object> getFragment()
+
+    // attributeName -> observed stringified values, read at configuration time.
+    @Internal
+    final Map<String, Set<String>> observedAttributes = [:]
+
+    @TaskAction
+    void collect() {
+        SnykDepsCollector collector = this.collector.get()
+        collector.addAttributes(observedAttributes)
+        if (!inScope.get()) {
+            return
+        }
+        SnykLog.debug("collecting project ${projectKey.get()}")
+        Map<String, Object> contributed = new LinkedHashMap<>(fragment.get())
+        Map<String, String> sha1Map = (Map<String, String>) contributed.remove('sha1Map')
+        collector.addProject(projectKey.get(), contributed, sha1Map)
+    }
+}
+
+// ─── per-project wiring ─────────────────────────────────────────────────────
+
+class SnykProjectConfigurer {
+
+    static final String TASK_REGULAR = 'snykResolvedDepsJson'
+    static final String TASK_NORMALIZED = 'snykNormalizedResolvedDepsJson'
+    private static final String SERVICE_NAME = 'snykDepsCollector'
+
+    static void configure(Project project, SnykBuildLayout layout) {
+        // registerIfAbsent is idempotent per name, so every project ends up with
+        // the one shared instance. Registering here rather than in the init
+        // script is not a style choice: a BuildServiceProvider cannot cross an
+        // isolated-action boundary, so the provider has to be obtained on this
+        // side of it.
+        Provider<SnykDepsCollector> collector = project.gradle.sharedServices
+                .registerIfAbsent(SERVICE_NAME, SnykDepsCollector) { spec ->
+                    spec.parameters.defaultProjectName.set(layout.defaultProjectName)
+                    spec.parameters.defaultProjectKey.set(layout.defaultProjectKey)
+                    spec.parameters.allSubProjectNames.set(layout.allSubProjectNames)
+                }
+
+        def regular = register(project, TASK_REGULAR, false, collector, layout)
+        def normalized = register(project, TASK_NORMALIZED, true, collector, layout)
+
+        // Configurations must be enumerated after the build script has declared
+        // them, and the filtering has to happen here rather than in the task
+        // action because a Configuration cannot cross into execution time. Only
+        // lazy handles and plain data are captured, so nothing resolves yet.
+        project.afterEvaluate {
+            def spec = readScanSpec(project, layout)
+            [regular, normalized].each { taskProvider ->
+                taskProvider.configure { task -> wire(project, task, spec) }
+            }
+        }
+    }
+
+    private static def register(Project project,
+                                String taskName,
+                                boolean normalized,
+                                Provider<SnykDepsCollector> collector,
+                                SnykBuildLayout layout) {
+        return project.tasks.register(taskName, SnykCollectDepsTask) { task ->
+            task.group = 'Snyk'
+            task.description = 'Emits the resolved dependency graph for this project as JSON.'
+            task.projectKey.set(projectKey(project, layout))
+            task.normalized.set(normalized)
+            task.collector.set(collector)
+            task.usesService(collector)
+            // No outputs means never up to date, but be explicit: a scan must
+            // re-resolve rather than be skipped.
+            task.outputs.upToDateWhen { false }
+        }
+    }
+
+    // A project's key in the result. The old script fell back to the default
+    // project's key when formatPath produced an empty string, which happens only
+    // for the root project.
+    private static String projectKey(Project project, SnykBuildLayout layout) {
+        String formatted = SnykBuildLayout.formatPath(project.path)
+        return formatted ?: layout.defaultProjectKey
+    }
+
+    // -P arguments are read through ProviderFactory rather than
+    // gradle.startParameter so that values set in gradle.properties are honoured
+    // too, matching the old script's project.hasProperty checks.
+    //
+    // Not project.hasProperty / project.property: those resolve dynamically up
+    // the project hierarchy, which Isolated Projects rejects outright: "Project
+    // ':sub' cannot dynamically look up a property in the parent project ':'".
+    // Nothing is lost, because Gradle only sources project properties from the
+    // root gradle.properties, the Gradle user home and the command line, all of
+    // which gradleProperty already sees.
+    private static Map readScanSpec(Project project, SnykBuildLayout layout) {
+        String onlySubProject = property(project, 'onlySubProject')
+        String configurationFilter = property(project, 'configuration')
+        String confAttr = property(project, 'confAttr')
+        return [
+                inScope                 : inScope(project, layout, onlySubProject),
+                confNameFilter          : configurationFilter
+                        ? Pattern.compile(configurationFilter, Pattern.CASE_INSENSITIVE)
+                        : ~/.*/,
+                confAttrSpec            : confAttr
+                        ? confAttr.toLowerCase().split(',').collect { it.split(':') }
+                        : null,
+                includeComponentMetadata: Boolean.parseBoolean(property(project, 'snykIncludeComponentMetadata') ?: 'false'),
+        ]
+    }
+
+    private static String property(Project project, String name) {
+        def value = project.providers.gradleProperty(name)
+        return value.present ? value.get() : null
+    }
+
+    private static boolean inScope(Project project, SnykBuildLayout layout, String onlySubProject) {
+        if (onlySubProject == null) return true
+        if (onlySubProject == '.') return project.path == layout.defaultProjectPath
+        return project.name == onlySubProject || SnykBuildLayout.formatPath(project.path) == onlySubProject
+    }
+
+    // The whole project is walked inside ONE provider, rather than one provider per
+    // configuration, because every configuration contributes to a single shared
+    // graph and node-id map; folding N providers together would leave the order of
+    // that accumulation up to whatever order Gradle realizes them in.
+    //
+    // What the provider yields is plain data, and that is the point. The
+    // configuration cache realizes a provider reachable from task state while
+    // storing the entry, so storing a resolution handle means storing Gradle's
+    // resolved graph, which includes UnresolvedDependencyResult.failure for
+    // anything that failed to resolve. Those are arbitrary exception types, and
+    // serializing them fails outright on JDK 17+ when a field lives in a
+    // non-opened module:
+    //
+    //   field `cause` of `SSLHandshakeException` ... field `rootComponent` of
+    //   `SnykConfigurationHandle` ... error writing value of type
+    //   'sun.security.validator.ValidatorException'
+    //   > Unable to make field ... accessible: module java.base does not "opens
+    //     sun.security.validator" to unnamed module
+    //
+    // Gradle's own `dependencies` task fails the same way on such a build, so this
+    // is not a Snyk-specific quirk to work around once. Mapping to plain data
+    // before the value can be stored sidesteps the entire class of problem.
+    private static Provider<Map<String, Object>> fragmentProvider(
+            Provider<?> trigger,
+            List<SnykConfigurationHandle> handles,
+            boolean normalized,
+            boolean includeComponentMetadata,
+            String targetFile,
+            String projectVersion) {
+        return trigger.map { ignored ->
+            new SnykGraphBuilder(normalized, includeComponentMetadata)
+                    .buildFragment(handles, targetFile, projectVersion)
+        }
+    }
+
+    private static void wire(Project project, SnykCollectDepsTask task, Map spec) {
+        task.inScope.set((boolean) spec.inScope)
+
+        // toList() before findAll, deliberately. DomainObjectCollection.findAll(Closure)
+        // is deprecated in Gradle 9 and scheduled for removal in Gradle 10, so calling it
+        // straight on project.configurations would break this script on the next major.
+        // Snapshotting first hands the filtering to Groovy's own List.findAll, and a
+        // snapshot is what this wants regardless, since the result is iterated twice.
+        List<Configuration> matching = project.configurations.toList().findAll { conf ->
+            conf.name =~ spec.confNameFilter && matchesAttributeFilter(conf, spec.confAttrSpec)
+        }
+
+        // Attributes are collected from every name/attribute-matching
+        // configuration, resolvable or not, because this is the user-facing hint shown
+        // when variant resolution fails ambiguously, so a consumable
+        // configuration's attributes are just as informative.
+        matching.each { conf ->
+            // Snapshot the key set with toList() before iterating: getAttribute()
+            // below can realize a lazy (provider-based) attribute, which on Gradle
+            // 7.4-8.2 mutates the live keySet() union view mid-iteration and
+            // throws ConcurrentModificationException (OSM-3867).
+            conf.attributes.keySet().toList().each { attr ->
+                task.observedAttributes
+                        .computeIfAbsent(attr.name) { _ -> new TreeSet<String>() }
+                        .add(conf.attributes.getAttribute(attr).toString())
+            }
+        }
+
+        if (!spec.inScope) return
+
+        List<SnykConfigurationHandle> handles = []
+        resolvableConfigurations(matching).each { conf ->
+            handles.add(new SnykConfigurationHandle(
+                    conf.name,
+                    conf.incoming.resolutionResult.rootComponent,
+                    conf.incoming.artifactView { it.lenient = true }.artifacts.resolvedArtifacts))
+        }
+        SnykLog.debug("${project.path}: ${handles.size()} resolvable configuration(s)")
+
+        // An already-valued provider used purely as a lazy trigger. The walk covers
+        // every configuration at once, so it cannot hang off any single
+        // configuration's provider, and it must stay lazy so that merely
+        // configuring this task resolves nothing.
+        Provider<Boolean> trigger = project.objects.property(Boolean).convention(Boolean.TRUE)
+        task.fragment.set(fragmentProvider(
+                trigger,
+                handles,
+                task.normalized.get(),
+                (boolean) spec.includeComponentMetadata,
+                project.buildFile.toString(),
+                project.version.toString()))
+    }
+
+    // Skip Gradle's auto-created "publication" configurations (default,
+    // archives): they are both resolvable AND consumable and exist to expose
+    // this project to downstream project-dep consumers, not to describe its own
+    // classpaths. Walking them transitively pulls in unlocked extends-from
+    // transitives (lockfiles typically cover compile/runtime classpaths, not
+    // default), which doesn't reflect any real classpath the project builds
+    // against.
+    //
+    // We can't filter purely on canBeConsumed: user-defined custom
+    // configurations declared without explicit roles (e.g.
+    // `configurations { extraLibs }`) also default to every flag true, and those
+    // ARE meant to be walked. The signal that distinguishes them: auto-created
+    // publication configurations have no directly-declared dependencies (they
+    // aggregate via extendsFrom), while user-intent custom configurations have
+    // their own.
+    //
+    // This holds for all of Gradle's current roles: a dependency scope
+    // (implementation) and a consumable (runtimeElements) are both excluded by
+    // canBeResolved, and a resolvable (runtimeClasspath) has canBeConsumed false.
+    private static Collection<Configuration> resolvableConfigurations(Collection<Configuration> matching) {
+        return matching.findAll { conf ->
+            conf.canBeResolved && (!conf.canBeConsumed || !conf.dependencies.isEmpty())
+        }
+    }
+
+    private static boolean matchesAttributeFilter(Configuration conf, Collection confAttrSpec) {
+        if (confAttrSpec == null) return true
+        boolean matches = true
+        def attrs = conf.attributes
+        // toList() snapshot for the same reason as above (OSM-3867).
+        attrs.keySet().toList().each { attr ->
+            String attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
+            confAttrSpec.each { keyValueFilter ->
+                // attr.name is a class name, e.g.
+                // com.android.build.api.attributes.BuildTypeAttr
+                if (attr.name.toLowerCase().contains(keyValueFilter[0]) && attrValueAsString != keyValueFilter[1]) {
+                    matches = false
+                }
+            }
+        }
+        return matches
+    }
+}
+
+// ─── bootstrap ──────────────────────────────────────────────────────────────
+
+// Component metadata capture has to be armed before resolution begins, so it is
+// set up here rather than from a task. Gate on the value, not mere presence, so
+// an explicit =false disables the feature.
+if (gradle.startParameter.projectProperties.get('snykIncludeComponentMetadata')?.toBoolean()) {
+    SnykResourceUrlIndex.register(gradle)
+}
+
+// Everything below runs inside settingsEvaluated, including registering the
+// per-project hook. That ordering is deliberate: the hook needs the build layout,
+// and the layout can only be derived once the settings model exists. Registering
+// the hook at script level would capture the layout variable while it was still
+// null, leaving correctness to depend on when Gradle happens to isolate the action.
+gradle.settingsEvaluated { settings ->
+    // Reading project descriptors here is legal under Isolated Projects; reading
+    // another project's *model* later would not be.
+    def descriptors = []
+    def pending = new ArrayDeque([settings.rootProject])
+    while (!pending.isEmpty()) {
+        def descriptor = pending.removeFirst()
+        descriptors.add(descriptor)
+        pending.addAll(descriptor.children)
+    }
+
+    // Which project the build was invoked on. The old script inferred this from
+    // whichever project's task ran first, which is only incidentally the invoked
+    // one; matching the start parameter's directory against the descriptors is
+    // the same answer, decided deterministically.
+    File invokedDir = (settings.startParameter.projectDir ?: settings.startParameter.currentDir)?.canonicalFile
+    def defaultDescriptor = descriptors.find { it.projectDir.canonicalFile == invokedDir } ?: settings.rootProject
+
+    String defaultPath = defaultDescriptor.path
+    def layout = new SnykBuildLayout()
+    layout.defaultProjectPath = defaultPath
+    layout.defaultProjectName = defaultDescriptor.name
+    // The root project has no formatted path, so it is keyed by name.
+    layout.defaultProjectKey = defaultPath == ':' ? defaultDescriptor.name : SnykBuildLayout.formatPath(defaultPath)
+    // Descendants of the invoked project only; a sibling is not a sub-project of it.
+    //
+    // Ordered by depth first and path second, which is what Project.compareTo does
+    // and therefore the order the old script inherited from
+    // Project.getAllprojects(). It is neither declaration order nor a plain sort of
+    // the paths: for `include ':lib', ':greeter', ':greeter:lib'` the result is
+    // greeter, lib, greeter/lib. Downstream tests compare this list exactly.
+    String prefix = defaultPath == ':' ? ':' : "${defaultPath}:"
+    layout.allSubProjectNames = descriptors
+            .findAll { it.path != defaultPath && it.path.startsWith(prefix) }
+            .sort { a, b ->
+                int depthA = a.path == ':' ? 0 : a.path.count(':')
+                int depthB = b.path == ':' ? 0 : b.path.count(':')
+                depthA != depthB ? depthA <=> depthB : a.path <=> b.path
+            }
+            .collect { SnykBuildLayout.formatPath(it.path) }
+    SnykLog.debug("defaultProjectName=${layout.defaultProjectName}; defaultProjectKey=${layout.defaultProjectKey}; allSubProjectNames=${layout.allSubProjectNames}")
+
+    if (GradleVersion.current() >= GradleVersion.version('8.8')) {
+        // gradle.lifecycle.beforeProject is the Isolated Projects-safe replacement
+        // for allprojects. Its parameter type, IsolatedAction, only exists on 8.8+,
+        // so it is never named here: Groovy coerces a closure to a
+        // single-abstract-method interface at the call site, and the property access
+        // itself is dynamic, so this file still parses on 8.1.
+        //
+        // dehydrate() is load-bearing. A Groovy closure carries owner / thisObject /
+        // delegate references to the script object that defined it, and the
+        // isolation serializer rejects those ("cannot serialize Gradle script object
+        // references"). dehydrate() returns a copy with all three nulled, which is
+        // sound because the body only touches its parameter, the captured layout,
+        // and a statically-resolved class.
+        def perProject = { Project project -> SnykProjectConfigurer.configure(project, layout) }
+        gradle.lifecycle.beforeProject(perProject.dehydrate())
+    } else {
+        // 8.1 - 8.7: no Isolated Projects support to be had, but the configuration
+        // cache works, and that is what this file is for.
+        settings.gradle.allprojects { Project project ->
+            SnykProjectConfigurer.configure(project, layout)
+        }
+    }
+}
