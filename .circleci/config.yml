@@ -325,14 +325,14 @@ workflows:
           context:
             - snyk-bot-slack
             - prodsec-orb-runtime
-          channel: snyk-vuln-alerts-sca
+          channel: snyk-vuln-alerts-sca-scanners
           <<: *filters_branches_ignore_main
 
       - security-scans:
           name: Security Scans
           node_version: "24.16"
           context:
-            - open_source-managed
+            - engines_sca-scanners
             - nodejs-install
             - prodsec-orb-runtime
 
