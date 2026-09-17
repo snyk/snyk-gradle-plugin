@@ -208,7 +208,15 @@ function buildVerboseGraph(
   const reachable = reachableFromRoot();
   const componentOf = findStronglyConnectedComponents(reachable, childrenOf);
 
-  const dominates = buildDominanceTest('root-node', reachable, childrenOf);
+  // `reachableFromRoot` starts from the root's children, so in its terms the
+  // root is neither blockable nor reachable unless something points back at
+  // it. Rooting the dominator tree at the root itself would encode the
+  // opposite - that it dominates everything and nothing dominates it - and
+  // give the wrong answer for any edge touching it. A separate entry keeps
+  // the root an ordinary vertex.
+  const dominates = buildDominanceTest(DOMINANCE_ENTRY, reachable, (id) =>
+    id === DOMINANCE_ENTRY ? childrenOf('root-node') : childrenOf(id),
+  );
 
   // `to` has to be able to reach `from` for the edge to sit on a cycle, and
   // `to` has to be reachable without `from` for it to be able to come first on
@@ -308,6 +316,10 @@ function buildVerboseGraph(
   return depGraphBuilder.build();
 }
 
+// A node id the graph cannot contain, so the dominator tree can have an entry
+// of its own that is distinct from the dependency graph's root.
+const DOMINANCE_ENTRY = '\u0000dominance-entry';
+
 // `to` is reachable from the root without `from` exactly when `from` does not
 // dominate `to`, so one dominator tree answers every such question in constant
 // time. Answering them with a reachability pass per cycle member instead cost
@@ -319,7 +331,7 @@ function buildDominanceTest(
   childrenOf: (id: string) => string[],
 ): (dominator: string, id: string) => boolean {
   const childrenIn = (id: string): string[] =>
-    childrenOf(id).filter((child) => reachable.has(child) || child === rootId);
+    childrenOf(id).filter((child) => reachable.has(child));
 
   // depth-first postorder, then reversed, so every node follows its
   // predecessors wherever the graph is acyclic
