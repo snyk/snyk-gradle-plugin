@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 // Snyk dependency resolution script for Gradle: configuration-cache and
-// Isolated Projects compatible. Requires Gradle 8.1+; `init.gradle` serves older
+// Isolated Projects compatible. Requires Gradle 8.1.1+; `init.gradle` serves older
 // versions and is selected by lib/index.ts based on `gradle -v`.
 //
 // WHY TWO SCRIPTS. Groovy resolves types at compile time, so naming a class that
@@ -38,7 +38,7 @@ import java.util.regex.Pattern
 // path exactly as it was rather than making it depend on a version gate.
 //
 // `IsolatedAction` (Gradle 8.8) is deliberately never named even here, for the
-// same reason: this file must parse on 8.1. See the bootstrap at the bottom.
+// same reason: this file must parse on 8.1.1. See the bootstrap at the bottom.
 //
 // HOW IT DIFFERS FROM init.gradle. The old script has one task walk
 // `rootProject.allprojects` at execution time, reading every project's
@@ -136,17 +136,26 @@ class SnykDigests {
 
 class SnykResourceUrlIndex {
 
-    // filename -> Set<url>. A Set because a shared cache can see the same
-    // filename from more than one repo across a build; disambiguated at lookup
-    // by Maven layout.
-    private static final Map<String, Set<String>> URLS_BY_FILENAME = new ConcurrentHashMap<>()
+    // One entry per Gradle instance the init script runs against, keyed by
+    // System.identityHashCode(gradle) rather than the instance itself: Gradle
+    // applies an init script separately to the root build, buildSrc, and every
+    // included build, each getting its own call to register(). A single shared
+    // static (the previous design) let one instance's unregister() null out, or
+    // its listener silently accumulate URLs into, a map that another instance was
+    // still relying on. The identity hash is stable for the process lifetime of
+    // that Gradle instance and, unlike the instance itself, is a plain int that a
+    // task can carry as @Input across the isolated-action and configuration-cache
+    // boundaries.
+    private static final Map<Integer, Registration> REGISTRATIONS = new ConcurrentHashMap<>()
 
-    // Held so the listener can be removed again. BuildOperationListenerManager
-    // is a daemon-scoped service, so a listener left registered survives into
-    // later builds on a reused daemon, accumulating one per build and pinning
-    // each build's captured state.
-    private static Object listenerManager = null
-    private static Object listener = null
+    private static class Registration {
+        Object listenerManager
+        Object listener
+        // filename -> Set<url>, scoped to this one instance's build. A Set
+        // because a shared cache can see the same filename from more than one
+        // repo across a build; disambiguated at lookup by Maven layout.
+        final Map<String, Set<String>> urlsByFilename = new ConcurrentHashMap<>()
+    }
 
     // Registering the listener is only possible while the init script runs, and
     // an init script is not re-executed on a configuration cache hit. Such a
@@ -154,49 +163,58 @@ class SnykResourceUrlIndex {
     // no-op in practice: a cache hit against a warm dependency cache performs no
     // resource reads, so there would be no URLs to capture either way. Artifact
     // hashes do not depend on this and are driven by a task input instead.
+    //
+    // computeIfAbsent makes this idempotent per Gradle instance: every project in
+    // that instance calls register() (see SnykProjectConfigurer.configure), and
+    // only the first one actually adds a listener. Returning null from the
+    // mapping function on failure leaves no entry, so a later call gets to retry.
     static void register(gradle) {
-        try {
-            def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
-            // Map-of-closures coerced to the interface: closures take untyped
-            // args, so this satisfies the interface's typed abstract methods on
-            // every Gradle version (the method set has changed, e.g. progress()
-            // was added later). Methods absent from the map become harmless
-            // no-ops.
-            def buildOperationListener = [
-                    started : { buildOp, startEvent -> },
-                    progress: { operationId, progressEvent -> },
-                    finished: { buildOp, finishEvent -> record(buildOp) },
-            ] as org.gradle.internal.operations.BuildOperationListener
-            manager.addListener(buildOperationListener)
-            listenerManager = manager
-            listener = buildOperationListener
-            SnykLog.debug('component-metadata: resource-read listener registered')
-        } catch (Exception e) {
-            SnykLog.debug("component-metadata: listener registration failed (${e.class.simpleName}: ${e.message}); distribution:url unavailable")
+        REGISTRATIONS.computeIfAbsent(System.identityHashCode(gradle)) { _ ->
+            try {
+                def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
+                Registration registration = new Registration()
+                // Map-of-closures coerced to the interface: closures take untyped
+                // args, so this satisfies the interface's typed abstract methods on
+                // every Gradle version (the method set has changed, e.g. progress()
+                // was added later). Methods absent from the map become harmless
+                // no-ops.
+                def buildOperationListener = [
+                        started : { buildOp, startEvent -> },
+                        progress: { operationId, progressEvent -> },
+                        finished: { buildOp, finishEvent -> record(registration, buildOp) },
+                ] as org.gradle.internal.operations.BuildOperationListener
+                manager.addListener(buildOperationListener)
+                registration.listenerManager = manager
+                registration.listener = buildOperationListener
+                SnykLog.debug('component-metadata: resource-read listener registered')
+                return registration
+            } catch (Exception e) {
+                SnykLog.debug("component-metadata: listener registration failed (${e.class.simpleName}: ${e.message}); distribution:url unavailable")
+                return null
+            }
         }
     }
 
     // Called from the collector service's close(), which is the last thing to
-    // run in the build. Replaces the `gradle.buildFinished` hook the old script
-    // used, which is itself a configuration cache problem.
-    static void unregister() {
+    // run in the build, for the same Gradle instance register() was called for.
+    // Replaces the `gradle.buildFinished` hook the old script used, which is
+    // itself a configuration cache problem.
+    static void unregister(int gradleIdentity) {
         try {
-            if (listenerManager != null && listener != null) {
-                listenerManager.removeListener(listener)
+            Registration registration = REGISTRATIONS.remove(gradleIdentity)
+            if (registration?.listenerManager != null && registration.listener != null) {
+                registration.listenerManager.removeListener(registration.listener)
             }
         } catch (Exception ignored) {
-            // The listener is reclaimed when the daemon exits, so the worst case
-            // is a bounded per-build leak.
-        } finally {
-            listenerManager = null
-            listener = null
+            // The listener is reclaimed when the daemon exits either way; removing
+            // the map entry above already drops this instance's captured URLs.
         }
     }
 
     // Record the URL of one finished build operation if it is an external
     // resource read. Duck-typed on getLocation() to avoid importing the internal
     // details type, whose package has moved across Gradle versions.
-    private static void record(buildOp) {
+    private static void record(Registration registration, buildOp) {
         try {
             def details = buildOp?.details
             if (details == null) return
@@ -220,7 +238,7 @@ class SnykResourceUrlIndex {
             String filename = path.substring(slash + 1)
             String clean = canonicalUrl(uri)
             if (clean == null) return
-            URLS_BY_FILENAME
+            registration.urlsByFilename
                     .computeIfAbsent(filename) { _ -> Collections.synchronizedSet(new LinkedHashSet<String>()) }
                     .add(clean)
         } catch (Exception ignored) {
@@ -273,19 +291,21 @@ class SnykResourceUrlIndex {
         }
     }
 
-    // Resolve a filename to the URL it was actually read from. Always confirm the
-    // captured URL belongs to THIS artifact's Maven-layout path before labelling:
-    // a shared build can read the same filename from more than one repo, and even
-    // a lone captured URL may belong to a different GAV that happens to share a
+    // Resolve a filename to the URL it was actually read from, scoped to one
+    // Gradle instance's own recorded reads. Always confirm the captured URL
+    // belongs to THIS artifact's Maven-layout path before labelling: a shared
+    // build can read the same filename from more than one repo, and even a lone
+    // captured URL may belong to a different GAV that happens to share a
     // filename. If no candidate, or more than one, matches the layout, emit
     // nothing rather than guess.
-    static String lookup(String name, String version, String fileName) {
-        Set<String> candidates = URLS_BY_FILENAME.get(fileName)
+    static String lookup(int gradleIdentity, String name, String version, String fileName) {
+        Registration registration = REGISTRATIONS.get(gradleIdentity)
+        Set<String> candidates = registration?.urlsByFilename?.get(fileName)
         if (!candidates || candidates.isEmpty()) {
             // Worth logging rather than silently omitting: the label going missing
             // looks identical whether nothing was downloaded (expected, warm cache)
             // or the listener never saw the read (a bug).
-            SnykLog.debug("component-metadata: no observed read for ${fileName} (${URLS_BY_FILENAME.size()} filename(s) captured)")
+            SnykLog.debug("component-metadata: no observed read for ${fileName} (${registration?.urlsByFilename?.size() ?: 0} filename(s) captured)")
             return null
         }
         try {
@@ -409,6 +429,10 @@ class SnykGraphBuilder {
     private final SnykGradleGraph graph = new SnykGradleGraph('root-node')
     private final boolean normalized
     private final boolean includeComponentMetadata
+    // Plain int, captured at configuration time from project.gradle: see
+    // SnykResourceUrlIndex for why this identity, not the Gradle instance itself,
+    // is what crosses into this provider-executed code.
+    private final int gradleIdentity
 
     // A coordinate must not surface under two node ids (e.g. hashFile here,
     // hashString in emitUnresolvedNode), which produces phantom real+pruned pairs
@@ -420,9 +444,10 @@ class SnykGraphBuilder {
     private final Map<String, String> coordToNodeId = [:]
     private final Map<String, String> sha1Coordinates = [:]
 
-    SnykGraphBuilder(boolean normalized, boolean includeComponentMetadata) {
+    SnykGraphBuilder(boolean normalized, boolean includeComponentMetadata, int gradleIdentity) {
         this.normalized = normalized
         this.includeComponentMetadata = includeComponentMetadata
+        this.gradleIdentity = gradleIdentity
     }
 
     // Resolves every handle and returns the finished, plain-data fragment for one
@@ -650,7 +675,7 @@ class SnykGraphBuilder {
             File file = artifact?.file
             if (file == null || !file.isFile()) return null
             def meta = ['hashes': SnykDigests.computeHashes(file)]
-            String url = SnykResourceUrlIndex.lookup(name, version, file.name)
+            String url = SnykResourceUrlIndex.lookup(gradleIdentity, name, version, file.name)
             if (url) meta.distributionUrl = url
             return meta
         } catch (Exception e) {
@@ -739,6 +764,11 @@ interface SnykCollectorParameters extends BuildServiceParameters {
     Property<String> getDefaultProjectKey()
 
     ListProperty<String> getAllSubProjectNames()
+
+    // Carries which Gradle instance this service's identityHashCode was taken
+    // from, so close() can unregister exactly this instance's resource-read
+    // listener. See SnykResourceUrlIndex.
+    Property<Integer> getGradleIdentity()
 }
 
 // Aggregation point and the single place that prints. Each project's task
@@ -808,7 +838,7 @@ abstract class SnykDepsCollector
             if (normalized) result['sha1Map'] = sha1Coordinates
             println("JSONDEPS " + JsonOutput.toJson(result))
         } finally {
-            SnykResourceUrlIndex.unregister()
+            SnykResourceUrlIndex.unregister(parameters.gradleIdentity.get())
         }
     }
 }
@@ -883,7 +913,20 @@ class SnykProjectConfigurer {
                     spec.parameters.defaultProjectName.set(layout.defaultProjectName)
                     spec.parameters.defaultProjectKey.set(layout.defaultProjectKey)
                     spec.parameters.allSubProjectNames.set(layout.allSubProjectNames)
+                    spec.parameters.gradleIdentity.set(System.identityHashCode(project.gradle))
                 }
+
+        // Armed here, at configuration time, rather than from the init script's
+        // top level: that top-level point has no Project yet, only
+        // gradle.startParameter.projectProperties, which is CLI (-P) only and
+        // misses the same property set in gradle.properties. Using the identical
+        // gradleProperty-backed read as readScanSpec's includeComponentMetadata
+        // means the two can't disagree about whether this build has it on.
+        // register() is idempotent per Gradle instance, so calling it from every
+        // project's configuration is deliberate, not wasteful.
+        if (Boolean.parseBoolean(property(project, 'snykIncludeComponentMetadata') ?: 'false')) {
+            SnykResourceUrlIndex.register(project.gradle)
+        }
 
         def regular = register(project, TASK_REGULAR, false, collector, layout)
         def normalized = register(project, TASK_NORMALIZED, true, collector, layout)
@@ -990,10 +1033,11 @@ class SnykProjectConfigurer {
             List<SnykConfigurationHandle> handles,
             boolean normalized,
             boolean includeComponentMetadata,
+            int gradleIdentity,
             String targetFile,
             String projectVersion) {
         return trigger.map { ignored ->
-            new SnykGraphBuilder(normalized, includeComponentMetadata)
+            new SnykGraphBuilder(normalized, includeComponentMetadata, gradleIdentity)
                     .buildFragment(handles, targetFile, projectVersion)
         }
     }
@@ -1006,8 +1050,18 @@ class SnykProjectConfigurer {
         // straight on project.configurations would break this script on the next major.
         // Snapshotting first hands the filtering to Groovy's own List.findAll, and a
         // snapshot is what this wants regardless, since the result is iterated twice.
+        //
+        // Each name-matching configuration's attributes are stringified exactly once,
+        // into attributesByConfig, and read from there both for the -PconfAttr
+        // decision below and for observedAttributes further down; without this the
+        // same getAttribute() calls (each able to realize a lazy, provider-based
+        // attribute) ran twice per configuration.
+        Map<Configuration, Map<String, String>> attributesByConfig = [:]
         List<Configuration> matching = project.configurations.toList().findAll { conf ->
-            conf.name =~ spec.confNameFilter && matchesAttributeFilter(conf, spec.confAttrSpec)
+            if (!(conf.name =~ spec.confNameFilter)) return false
+            Map<String, String> snapshot = snapshotAttributes(conf)
+            attributesByConfig[conf] = snapshot
+            return matchesAttributeFilter(snapshot, spec.confAttrSpec)
         }
 
         // Attributes are collected from every name/attribute-matching
@@ -1015,14 +1069,10 @@ class SnykProjectConfigurer {
         // when variant resolution fails ambiguously, so a consumable
         // configuration's attributes are just as informative.
         matching.each { conf ->
-            // Snapshot the key set with toList() before iterating: getAttribute()
-            // below can realize a lazy (provider-based) attribute, which on Gradle
-            // 7.4-8.2 mutates the live keySet() union view mid-iteration and
-            // throws ConcurrentModificationException (OSM-3867).
-            conf.attributes.keySet().toList().each { attr ->
+            attributesByConfig[conf].each { attrName, attrValue ->
                 task.observedAttributes
-                        .computeIfAbsent(attr.name) { _ -> new TreeSet<String>() }
-                        .add(conf.attributes.getAttribute(attr).toString())
+                        .computeIfAbsent(attrName) { _ -> new TreeSet<String>() }
+                        .add(attrValue)
             }
         }
 
@@ -1047,6 +1097,7 @@ class SnykProjectConfigurer {
                 handles,
                 task.normalized.get(),
                 (boolean) spec.includeComponentMetadata,
+                System.identityHashCode(project.gradle),
                 project.buildFile.toString(),
                 project.version.toString()))
     }
@@ -1076,17 +1127,27 @@ class SnykProjectConfigurer {
         }
     }
 
-    private static boolean matchesAttributeFilter(Configuration conf, Collection confAttrSpec) {
+    // Every attribute's stringified value, keyed by its class name (e.g.
+    // com.android.build.api.attributes.BuildTypeAttr). toList() on the key set is
+    // required, not cosmetic: getAttribute() below can realize a lazy,
+    // provider-based attribute, which on Gradle 7.4-8.2 mutates the live
+    // keySet() union view mid-iteration and throws ConcurrentModificationException
+    // (OSM-3867).
+    private static Map<String, String> snapshotAttributes(Configuration conf) {
+        Map<String, String> snapshot = [:]
+        conf.attributes.keySet().toList().each { attr ->
+            snapshot[attr.name] = conf.attributes.getAttribute(attr).toString()
+        }
+        return snapshot
+    }
+
+    private static boolean matchesAttributeFilter(Map<String, String> attributeSnapshot, Collection confAttrSpec) {
         if (confAttrSpec == null) return true
         boolean matches = true
-        def attrs = conf.attributes
-        // toList() snapshot for the same reason as above (OSM-3867).
-        attrs.keySet().toList().each { attr ->
-            String attrValueAsString = attrs.getAttribute(attr).toString().toLowerCase()
+        attributeSnapshot.each { attrName, attrValue ->
+            String attrValueAsString = attrValue.toLowerCase()
             confAttrSpec.each { keyValueFilter ->
-                // attr.name is a class name, e.g.
-                // com.android.build.api.attributes.BuildTypeAttr
-                if (attr.name.toLowerCase().contains(keyValueFilter[0]) && attrValueAsString != keyValueFilter[1]) {
+                if (attrName.toLowerCase().contains(keyValueFilter[0]) && attrValueAsString != keyValueFilter[1]) {
                     matches = false
                 }
             }
@@ -1097,13 +1158,12 @@ class SnykProjectConfigurer {
 
 // ─── bootstrap ──────────────────────────────────────────────────────────────
 
-// Component metadata capture has to be armed before resolution begins, so it is
-// set up here rather than from a task. Gate on the value, not mere presence, so
-// an explicit =false disables the feature.
-if (gradle.startParameter.projectProperties.get('snykIncludeComponentMetadata')?.toBoolean()) {
-    SnykResourceUrlIndex.register(gradle)
-}
-
+// Component metadata capture is armed from SnykProjectConfigurer.configure()
+// instead of here: this point has no Project yet, so the only property source
+// available is gradle.startParameter.projectProperties (CLI -P only), which
+// would disagree with readScanSpec's gradleProperty-backed read (CLI +
+// gradle.properties) for a value set only in the latter.
+//
 // Everything below runs inside settingsEvaluated, including registering the
 // per-project hook. That ordering is deliberate: the hook needs the build layout,
 // and the layout can only be derived once the settings model exists. Registering
@@ -1156,7 +1216,7 @@ gradle.settingsEvaluated { settings ->
         // for allprojects. Its parameter type, IsolatedAction, only exists on 8.8+,
         // so it is never named here: Groovy coerces a closure to a
         // single-abstract-method interface at the call site, and the property access
-        // itself is dynamic, so this file still parses on 8.1.
+        // itself is dynamic, so this file still parses on 8.1.1.
         //
         // dehydrate() is load-bearing. A Groovy closure carries owner / thisObject /
         // delegate references to the script object that defined it, and the
@@ -1167,7 +1227,7 @@ gradle.settingsEvaluated { settings ->
         def perProject = { Project project -> SnykProjectConfigurer.configure(project, layout) }
         gradle.lifecycle.beforeProject(perProject.dehydrate())
     } else {
-        // 8.1 - 8.7: no Isolated Projects support to be had, but the configuration
+        // 8.1.1 - 8.7: no Isolated Projects support to be had, but the configuration
         // cache works, and that is what this file is for.
         settings.gradle.allprojects { Project project ->
             SnykProjectConfigurer.configure(project, layout)

@@ -66,13 +66,13 @@ Additional command line arguments:
 
 Two Groovy scripts are injected into Gradle builds to gather and resolve the dependencies. Which one is used is decided from `gradle -v`:
 
-| Gradle  | script               | configuration cache      | Isolated Projects | parallel execution |
-| ------- | -------------------- | ------------------------ | ----------------- | ------------------ |
-| 4 - 8.0 | `lib/init.gradle`    | forced off               | not supported     | forced off         |
-| 8.1+    | `lib/init-cc.gradle` | left as the build has it | supported on 8.8+ | left as the build has it |
+| Gradle    | script               | configuration cache      | Isolated Projects | parallel execution |
+| --------- | -------------------- | ------------------------ | ----------------- | ------------------ |
+| 4 - 8.1.0 | `lib/init.gradle`    | forced off               | not supported     | forced off         |
+| 8.1.1+    | `lib/init-cc.gradle` | left as the build has it | supported on 8.8+ | left as the build has it |
 
-On 8.1 and above the plugin no longer passes `--no-configuration-cache`. It does not enable the configuration cache either. Whatever the build is already configured to do is what runs. This matters beyond the cache itself: Isolated Projects is built on the configuration cache and cannot run without one, so forcing the cache off used to fail those builds outright, before any dependency was resolved.
+On 8.1.1 and above the plugin no longer passes `--no-configuration-cache`. It does not enable the configuration cache either. Whatever the build is already configured to do is what runs. This matters beyond the cache itself: Isolated Projects is built on the configuration cache and cannot run without one, so forcing the cache off used to fail those builds outright, before any dependency was resolved.
 
 It also stops passing `-Dorg.gradle.parallel=` there. That flag existed because `init.gradle` emits from a task action that walks every project, which a parallel build can race into producing more than one result line. `init-cc.gradle` cannot: each project reports itself into a shared build service holding thread-safe state, and a single close emits exactly one line however many projects reported concurrently. Builds that are configured for parallel execution get it.
 
-Below 8.1 the behaviour is unchanged: both flags are still passed.
+Below 8.1.1 the behaviour is unchanged: both flags are still passed. Note this includes bare Gradle 8.1 (i.e. 8.1.0) — Gradle's own version banner omits the patch component only when it's zero, so "Gradle 8.1" unambiguously means 8.1.0.

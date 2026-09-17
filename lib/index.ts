@@ -406,31 +406,36 @@ type InitScriptName = 'init.gradle' | 'init-cc.gradle';
 // Floor for the configuration-cache-compatible init script. Older Gradle keeps the
 // original init.gradle, which resolves eagerly and is not cache-compatible.
 //
-// 8.1 is where the configuration cache became stable. The APIs the new script
-// needs land earlier (ResolutionResult.getRootComponent() and
-// ArtifactCollection.getResolvedArtifacts() are both 7.4), but 7.4.x cannot
-// actually store an entry for a build that has an unresolvable dependency: the
-// resolved graph carries the failure exception, and serializing it dies on JDK 17+
-// ("module java.base does not open java.util.concurrent"). Gradle's own
+// 8.1.1 is where the configuration cache became usable for this plugin's purposes.
+// The APIs the new script needs land earlier (ResolutionResult.getRootComponent()
+// and ArtifactCollection.getResolvedArtifacts() are both 7.4), but 7.4.x-8.1.0
+// cannot actually store an entry for a build that has an unresolvable dependency:
+// the resolved graph carries the failure exception, and serializing it dies on
+// JDK 17+ ("module java.base does not open java.util.concurrent"). Gradle's own
 // `dependencies` task fails identically there, and 8.1.1 onwards does not, so the
 // floor sits above it rather than shipping a version that breaks scans which
 // currently succeed.
 const CC_INIT_SCRIPT_MIN_MAJOR = 8;
 const CC_INIT_SCRIPT_MIN_MINOR = 1;
+const CC_INIT_SCRIPT_MIN_PATCH = 1;
 
-// `gradle -v` always reports a minor version, but treat a bare major as x.0 so an
-// unusual or truncated version string resolves to the older, more conservative
-// script rather than to no answer at all.
+// Gradle omits a trailing ".0", but prints the patch whenever it's nonzero
+// ("Gradle 8.10.1"), so it must be captured, not dropped — this plugin needs to
+// tell 8.1.0 (still broken) apart from 8.1.1+ (fixed), and both print as "8.1"
+// without a patch group. A missing patch defaults to 0, matching Gradle's own
+// omission of it. An unusual or truncated version string resolves to undefined,
+// which supportsConfigurationCache treats as the older, more conservative script.
 function parseGradleVersion(
   gradleVersionOutput: string,
-): { major: number; minor: number } | undefined {
-  const matched = gradleVersionOutput.match(/Gradle (\d+)(?:\.(\d+))?/);
+): { major: number; minor: number; patch: number } | undefined {
+  const matched = gradleVersionOutput.match(/Gradle (\d+)\.(\d+)(?:\.(\d+))?/);
   if (!matched) {
     return undefined;
   }
   return {
     major: parseInt(matched[1], 10),
-    minor: matched[2] ? parseInt(matched[2], 10) : 0,
+    minor: parseInt(matched[2], 10),
+    patch: matched[3] ? parseInt(matched[3], 10) : 0,
   };
 }
 
@@ -441,11 +446,22 @@ function supportsConfigurationCache(gradleVersionOutput: string): boolean {
   if (!version) {
     return false;
   }
-  return (
-    version.major > CC_INIT_SCRIPT_MIN_MAJOR ||
-    (version.major === CC_INIT_SCRIPT_MIN_MAJOR &&
-      version.minor >= CC_INIT_SCRIPT_MIN_MINOR)
-  );
+  const actual: [number, number, number] = [
+    version.major,
+    version.minor,
+    version.patch,
+  ];
+  const floor: [number, number, number] = [
+    CC_INIT_SCRIPT_MIN_MAJOR,
+    CC_INIT_SCRIPT_MIN_MINOR,
+    CC_INIT_SCRIPT_MIN_PATCH,
+  ];
+  for (let i = 0; i < 3; i++) {
+    if (actual[i] !== floor[i]) {
+      return actual[i] > floor[i];
+    }
+  }
+  return true;
 }
 
 function initScriptFor(gradleVersionOutput: string): InitScriptName {
@@ -713,6 +729,10 @@ function buildArgs(
   gradleVersion: string,
 ) {
   let args: string[] = [];
+  // Computed once: the parallel/no-cc/unsupported-args decisions below must all
+  // agree on this for one gradleVersion, and hoisting it is what guarantees that
+  // rather than relying on three call sites staying in sync by inspection.
+  const supportsCC = supportsConfigurationCache(gradleVersion);
   const taskName = options.gradleNormalizeDeps
     ? 'snykNormalizedResolvedDepsJson'
     : 'snykResolvedDepsJson';
@@ -777,7 +797,7 @@ function buildArgs(
   // Gradle 4.3.0+ has a `--no-parallel` flag, but older versions need this form.
   // Not `=false`, to stay compatible with 3.5.x:
   // https://github.com/gradle/gradle/issues/1827
-  if (!supportsConfigurationCache(gradleVersion)) {
+  if (!supportsCC) {
     args.push('-Dorg.gradle.parallel=');
   }
 
@@ -796,7 +816,7 @@ function buildArgs(
     args.push(...options.args);
   }
 
-  // Gradle 7 introduced configuration caching. From 8.1 the injected script is
+  // Gradle 7 introduced configuration caching. From 8.1.1 the injected script is
   // cache-compatible, so leave the build's own setting alone: neither forced on
   // nor forced off.
   //
@@ -807,10 +827,7 @@ function buildArgs(
   // anything. See https://github.com/snyk/snyk-gradle-plugin/issues/344.
   //
   // The regex matches Gradle 7, 8, 9 and any future two-digit versions.
-  if (
-    gradleVersion.match(/Gradle ([7-9]|\d{2,})/) &&
-    !supportsConfigurationCache(gradleVersion)
-  ) {
+  if (gradleVersion.match(/Gradle ([7-9]|\d{2,})/) && !supportsCC) {
     args.push('--no-configuration-cache');
   }
 
@@ -831,10 +848,8 @@ function buildArgs(
   });
 
   // Only strip a caller-supplied --configuration-cache where the injected script
-  // genuinely cannot honour it; from 8.1 it is a legitimate thing to ask for.
-  const unsupportedArgs = supportsConfigurationCache(gradleVersion)
-    ? []
-    : ['--configuration-cache'];
+  // genuinely cannot honour it; from 8.1.1 it is a legitimate thing to ask for.
+  const unsupportedArgs = supportsCC ? [] : ['--configuration-cache'];
   args = args.filter((arg) => {
     if (unsupportedArgs.includes(arg)) {
       debugLog(`Argument ${arg} not currently supported by Snyk.`);
