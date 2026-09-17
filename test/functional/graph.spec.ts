@@ -138,6 +138,101 @@ describe('buildGraph', () => {
     expect(received.equals(expected.build())).toBe(true);
   });
 
+  it('marks cycle edges without dropping the plain edge', async () => {
+    // Pins the verbose cycle semantics, which the timing test below cannot see
+    // because its graph is acyclic. `p1 -> p2` is drawn twice: once to the
+    // package and once to a cycle placeholder, because p1 and p2 share a cycle
+    // through p0 and p2 is reachable without p1. Deciding that exactly is
+    // NP-hard, so this is a deliberate over-approximation of the old per-route
+    // behaviour - the guarantee being pinned is that every package and every
+    // plain edge survives, and only placeholders may be added.
+    const received = await buildGraph(
+      {
+        'g:p0@1': {
+          name: 'g:p0',
+          version: '1',
+          parentIds: ['root-node', 'g:p2@1'],
+        },
+        'g:p1@1': { name: 'g:p1', version: '1', parentIds: ['g:p0@1'] },
+        'g:p2@1': {
+          name: 'g:p2',
+          version: '1',
+          parentIds: ['g:p0@1', 'g:p1@1'],
+        },
+      },
+      'project',
+      '1.2.3',
+      true,
+    );
+    const json = received.toJSON();
+    const depsOf = (nodeId: string) =>
+      (json.graph.nodes.find((node) => node.nodeId === nodeId)?.deps || [])
+        .map((dep) => dep.nodeId)
+        .sort();
+
+    expect(
+      received
+        .getPkgs()
+        .map((pkg) => pkg.name)
+        .sort(),
+    ).toEqual(['g:p0', 'g:p1', 'g:p2', 'project']);
+    expect(depsOf('root-node')).toEqual(['g:p0@1']);
+    expect(depsOf('g:p0@1')).toEqual(['g:p1@1', 'g:p2@1']);
+    // the back edge onto p0 keeps only the placeholder: no route reaches p2
+    // without passing through p0
+    expect(depsOf('g:p2@1')).toEqual(['g:p0@1:pruned']);
+    // p1 -> p2 keeps both, and the placeholder is a childless leaf
+    expect(depsOf('g:p1@1')).toEqual(['g:p2@1', 'g:p2@1:pruned']);
+    expect(depsOf('g:p2@1:pruned')).toEqual([]);
+    for (const nodeId of ['g:p0@1:pruned', 'g:p2@1:pruned']) {
+      expect(
+        json.graph.nodes.find((node) => node.nodeId === nodeId)?.info?.labels,
+      ).toEqual({ pruned: 'cyclic' });
+    }
+  });
+
+  it('treats a sha1Map collision as a cycle rather than a self dependency', async () => {
+    // sha1Map can resolve two ids Gradle reported separately onto one
+    // coordinate, which collapses a parent and its child into a single package.
+    // Cycles therefore have to be decided on resolved ids: deciding them on the
+    // raw ones makes the two look distinct and emits a package that depends on
+    // itself.
+    const received = await buildGraph(
+      {
+        'sha1-AAAA': {
+          name: 'org.example:widget',
+          version: '1.0.0',
+          parentIds: ['root-node'],
+        },
+        'sha1-BBBB': {
+          name: 'org.example:widget',
+          version: '1.0.0',
+          parentIds: ['sha1-AAAA'],
+        },
+      },
+      'project',
+      '1.2.3',
+      true,
+      {
+        'sha1-AAAA': 'org.example:widget:jar@1.0.0',
+        'sha1-BBBB': 'org.example:widget:jar@1.0.0',
+      },
+    );
+    const json = received.toJSON();
+    const widget = json.graph.nodes.find(
+      (node) => node.nodeId === 'org.example:widget:jar@1.0.0',
+    );
+
+    expect(widget?.deps.map((dep) => dep.nodeId)).toEqual([
+      'org.example:widget:jar@1.0.0:pruned',
+    ]);
+    expect(
+      json.graph.nodes.find(
+        (node) => node.nodeId === 'org.example:widget:jar@1.0.0:pruned',
+      )?.info?.labels,
+    ).toEqual({ pruned: 'cyclic' });
+  });
+
   it('builds a duplicate-heavy verbose graph in linear time', async () => {
     // Regression guard for exponential graph-build time in the verbose walk.
     // Every package below is reachable via many distinct routes, which is the
