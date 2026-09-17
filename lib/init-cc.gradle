@@ -924,7 +924,19 @@ class SnykProjectConfigurer {
         // means the two can't disagree about whether this build has it on.
         // register() is idempotent per Gradle instance, so calling it from every
         // project's configuration is deliberate, not wasteful.
-        if (Boolean.parseBoolean(property(project, 'snykIncludeComponentMetadata') ?: 'false')) {
+        //
+        // gradle.parent != null for buildSrc and included builds; this init script
+        // applies to those Gradle instances too, but they never run
+        // snykResolvedDepsJson (nothing requests it there), so their
+        // SnykDepsCollector is never instantiated and its close() never fires to
+        // unregister what would otherwise be a listener with nowhere left to remove
+        // it from, registered for the rest of the daemon's life on every reuse.
+        // Root cause is not registering it there in the first place, since it was
+        // always going to be pure waste: verified with System.identityHashCode(gradle)
+        // that buildSrc gets its own distinct instance, and with gradle.parent that
+        // it is reliably non-null there and null for the build actually being scanned.
+        if (project.gradle.parent == null &&
+                Boolean.parseBoolean(property(project, 'snykIncludeComponentMetadata') ?: 'false')) {
             SnykResourceUrlIndex.register(project.gradle)
         }
 
