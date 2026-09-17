@@ -1,5 +1,5 @@
 import { DepGraphBuilder } from '@snyk/dep-graph';
-import { buildGraph } from '../../lib/graph';
+import { buildGraph, GradleGraph } from '../../lib/graph';
 
 describe('buildGraph', () => {
   it('returns empty when graph empty', async () => {
@@ -136,6 +136,42 @@ describe('buildGraph', () => {
     });
     expected.connectDep('c@1', 'b@1:pruned');
     expect(received.equals(expected.build())).toBe(true);
+  });
+
+  it('builds a duplicate-heavy verbose graph in linear time', async () => {
+    // Regression guard for exponential graph-build time in the verbose walk.
+    // Every package below is reachable via many distinct routes, which is the
+    // ordinary shape of a large multi-module build's verbose dependency graph.
+    // Re-queueing an already-visited package's children once per incoming
+    // route made this O(routes) rather than O(nodes + edges): at 28 packages
+    // it took ~36s, against ~1ms here. The graph is identical either way, so
+    // elapsed time is the only thing that can assert the complexity class -
+    // hence a wall-clock budget, set far above the linear cost.
+    const packageCount = 28;
+    const fanIn = 3;
+    const key = (i: number) =>
+      `org.example:p${String(i).padStart(4, '0')}@1.0.0`;
+    const gradleGraph: GradleGraph = {};
+    for (let i = 1; i <= packageCount; i++) {
+      const parentIds: string[] = [];
+      for (let k = 1; k <= fanIn; k++) {
+        if (i - k >= 1) parentIds.push(key(i - k));
+      }
+      if (i <= fanIn) parentIds.push('root-node');
+      gradleGraph[key(i)] = {
+        name: `org.example:p${String(i).padStart(4, '0')}`,
+        version: '1.0.0',
+        parentIds,
+      };
+    }
+
+    const startedAt = Date.now();
+    const received = await buildGraph(gradleGraph, 'project', '1.2.3', true);
+    const elapsed = Date.now() - startedAt;
+
+    // the project plus every generated package, each added exactly once
+    expect(received.getPkgs()).toHaveLength(packageCount + 1);
+    expect(elapsed).toBeLessThan(5000);
   });
 
   it('returns expected graph with repeated dependencies', async () => {
