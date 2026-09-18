@@ -500,13 +500,13 @@ describe('buildGraph', () => {
     // one, so a plain sort gets this wrong.
     const received = await buildGraph(
       {
-        'aaaa1111': {
+        aaaa1111: {
           name: 'org.x:core',
           version: '1.0',
           parentIds: [],
           hashes: { sha1: 'sha1-of-the-unreachable-file' },
         },
-        'ffff9999': {
+        ffff9999: {
           name: 'org.x:core',
           version: '1.0',
           parentIds: ['root-node'],
@@ -518,8 +518,8 @@ describe('buildGraph', () => {
       '1.2.3',
       true,
       {
-        'aaaa1111': 'org.x:core:jar@1.0',
-        'ffff9999': 'org.x:core:jar@1.0',
+        aaaa1111: 'org.x:core:jar@1.0',
+        ffff9999: 'org.x:core:jar@1.0',
       },
     );
     const node = received
@@ -562,12 +562,12 @@ describe('buildGraph', () => {
     const received = await buildGraph(
       {
         'g:a@1': { name: 'g:a', version: '1', parentIds: ['root-node'] },
-        'hh': { name: 'g:b', version: '2', parentIds: ['g:a@1'] },
+        hh: { name: 'g:b', version: '2', parentIds: ['g:a@1'] },
       },
       'project',
       '1.2.3',
       true,
-      { 'hh': 'root-node' },
+      { hh: 'root-node' },
     );
 
     expect(
