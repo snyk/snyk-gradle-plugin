@@ -166,12 +166,27 @@ function buildVerboseGraph(
   // everything below therefore works in that space too, and never in the raw
   // one. Analysing the raw graph instead makes a collapsed parent and child
   // look like two packages and emits a package that depends on itself.
-  const resolvedIdOf = (id: string): string => (sha1Map && sha1Map[id]) || id;
+  // A sha1Map entry re-coordinating some package onto the root's own id would
+  // otherwise claim the root's slot in the group map below, so `childrenOf`
+  // would enumerate that package's children instead of the root's and return a
+  // graph holding nothing but the root. The old walk asked DepGraphBuilder to
+  // overwrite the root and got an error; keeping the raw id loses nothing.
+  const resolvedIdOf = (id: string): string => {
+    const resolvedId = (sha1Map && sha1Map[id]) || id;
+    if (resolvedId === 'root-node' && id !== 'root-node') return id;
+    return resolvedId;
+  };
 
   // Raw ids that resolve to one coordinate have to agree on the metadata they
   // contribute. The old walk took whichever the traversal happened to reach
   // first; picking the lowest raw id instead is arbitrary in the same way but
   // stable, so the emitted graph does not depend on traversal order.
+  //
+  // It has to be the lowest raw id the walk could actually have *reached*,
+  // though. An unreachable group member contributes nothing to the graph, and
+  // letting it win hands the package that member's hashes and distributionUrl
+  // - so a component's sha1 comes out wrong and its distributionUrl goes
+  // missing, which is exactly what an SBOM reports.
   const rawIdsByResolvedId = new Map<string, string[]>();
   for (const rawId of Object.keys(gradleGraph)) {
     const resolvedId = resolvedIdOf(rawId);
@@ -179,7 +194,23 @@ function buildVerboseGraph(
     if (rawIds) rawIds.push(rawId);
     else rawIdsByResolvedId.set(resolvedId, [rawId]);
   }
-  for (const rawIds of rawIdsByResolvedId.values()) rawIds.sort();
+  const rawReachable = new Set<string>();
+  const rawStack = [...(childrenMap.get('root-node') || [])];
+  while (rawStack.length > 0) {
+    const rawId = rawStack.pop() as string;
+    if (rawReachable.has(rawId) || !gradleGraph[rawId]) continue;
+    rawReachable.add(rawId);
+    for (const child of childrenMap.get(rawId) || []) {
+      if (!rawReachable.has(child)) rawStack.push(child);
+    }
+  }
+  for (const rawIds of rawIdsByResolvedId.values()) {
+    rawIds.sort((a, b) => {
+      const aReached = rawReachable.has(a);
+      if (aReached !== rawReachable.has(b)) return aReached ? -1 : 1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+  }
 
   const childrenOf = (resolvedId: string): string[] => {
     const children: string[] = [];
@@ -191,15 +222,15 @@ function buildVerboseGraph(
     return children;
   };
 
-  const reachableFromRoot = (without?: string): Set<string> => {
+  const reachableFromRoot = (): Set<string> => {
     const reached = new Set<string>();
-    const stack = childrenOf('root-node').filter((id) => id !== without);
+    const stack = childrenOf('root-node');
     while (stack.length > 0) {
       const id = stack.pop() as string;
       if (reached.has(id)) continue;
       reached.add(id);
       for (const child of childrenOf(id)) {
-        if (child !== without && !reached.has(child)) stack.push(child);
+        if (!reached.has(child)) stack.push(child);
       }
     }
     return reached;
@@ -247,10 +278,17 @@ function buildVerboseGraph(
     if (cached) return cached;
     const rawId = (rawIdsByResolvedId.get(resolvedId) || [resolvedId])[0];
     const node = gradleGraph[rawId];
-    let name = node?.name ?? 'unknown';
-    let version = node?.version ?? 'unknown';
+    // Destructuring, not `??`: the default has to fire on undefined alone, as
+    // it does on the non-verbose path above. `??` would also swallow a null
+    // name, so one plugin would report two different component identities for
+    // the same Gradle output depending on --print-graph.
+    let { name = 'unknown', version = 'unknown' } = node || {};
     let pkgIdProvenance: string | undefined = undefined;
-    if (sha1Map && sha1Map[rawId]) {
+    // Compare rather than just test for presence: when the guard in
+    // `resolvedIdOf` has declined a sha1Map entry, the resolved id is the raw
+    // one and re-coordinating against it would parse a sha1 hash as a Maven
+    // coordinate.
+    if (sha1Map && sha1Map[rawId] === resolvedId) {
       const coord = parseCoordinate(resolvedId);
       const newName = `${coord.groupId}:${coord.artifactId}`;
       const newVersion = coord.version;

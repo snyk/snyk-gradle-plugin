@@ -490,4 +490,91 @@ describe('buildGraph', () => {
       info: {},
     });
   });
+
+  it('takes component metadata from a reachable member of a sha1Map group', async () => {
+    // Several raw ids can resolve onto one coordinate, and only some of them
+    // are reachable. The unreachable one contributes nothing to the graph, so
+    // its metadata must not win: taking it would report the wrong sha1 and
+    // drop the distributionUrl for the package that really is in the graph.
+    // Sorting picks the lowest raw id, and here the lowest is the unreachable
+    // one, so a plain sort gets this wrong.
+    const received = await buildGraph(
+      {
+        'aaaa1111': {
+          name: 'org.x:core',
+          version: '1.0',
+          parentIds: [],
+          hashes: { sha1: 'sha1-of-the-unreachable-file' },
+        },
+        'ffff9999': {
+          name: 'org.x:core',
+          version: '1.0',
+          parentIds: ['root-node'],
+          hashes: { sha1: 'sha1-of-the-reachable-file' },
+          distributionUrl: 'https://repo/org/x/core/1.0/core-1.0.jar',
+        },
+      },
+      'project',
+      '1.2.3',
+      true,
+      {
+        'aaaa1111': 'org.x:core:jar@1.0',
+        'ffff9999': 'org.x:core:jar@1.0',
+      },
+    );
+    const node = received
+      .toJSON()
+      .graph.nodes.find((node) => node.nodeId === 'org.x:core:jar@1.0');
+
+    expect(node?.info?.labels).toEqual(
+      expect.objectContaining({
+        'hash:sha1': 'sha1-of-the-reachable-file',
+        'distribution:url': 'https://repo/org/x/core/1.0/core-1.0.jar',
+      }),
+    );
+  });
+
+  it('leaves a null name alone, as the non-verbose path does', async () => {
+    // The default has to fire on undefined alone. Coercing null here too would
+    // make one plugin report two different component identities for the same
+    // Gradle output depending on --print-graph.
+    const gradleGraph = {
+      'g:a@1': { name: 'g:a', version: '1', parentIds: ['root-node'] },
+      'g:b@2': {
+        name: null as unknown as string,
+        version: null as unknown as string,
+        parentIds: ['g:a@1'],
+      },
+    };
+    const namesOf = async (verbose: boolean) =>
+      (await buildGraph(gradleGraph, 'project', '1.2.3', verbose))
+        .getPkgs()
+        .map((pkg) => `${pkg.name}@${pkg.version}`)
+        .sort();
+
+    expect(await namesOf(true)).toEqual(await namesOf(false));
+  });
+
+  it('keeps the graph when a sha1Map entry resolves onto the root id', async () => {
+    // Nothing Gradle emits should hit this - sha1Map values are Maven
+    // coordinates - but resolving a package onto the root's own id must not
+    // let it claim the root's children and empty the whole graph.
+    const received = await buildGraph(
+      {
+        'g:a@1': { name: 'g:a', version: '1', parentIds: ['root-node'] },
+        'hh': { name: 'g:b', version: '2', parentIds: ['g:a@1'] },
+      },
+      'project',
+      '1.2.3',
+      true,
+      { 'hh': 'root-node' },
+    );
+
+    expect(
+      received
+        .getPkgs()
+        .map((pkg) => pkg.name)
+        .sort(),
+    ).toEqual(['g:a', 'g:b', 'project']);
+  });
 });
