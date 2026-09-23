@@ -121,6 +121,94 @@ def hashString(String str) {
     return md.digest(str.bytes).encodeHex().toString()
 }
 
+// Gradle dependency verification can reject ArtifactView even when its legacy
+// ResolvedConfiguration API can still provide a complete dependency graph.
+// Keep this fallback so a verification failure does not silently turn a
+// vulnerable project into an empty graph.
+def walkLegacyResolvedConfiguration(conf, GradleGraph graph, Sha1Map sha1Map) {
+    try {
+        def resolvedConfiguration = conf.resolvedConfiguration
+        def dependencies
+        if (resolvedConfiguration.hasError()) {
+            def lenientConfiguration = resolvedConfiguration.lenientConfiguration
+            dependencies = lenientConfiguration.firstLevelModuleDependencies
+            debugLog("conf ${conf.name}: using partially resolved legacy dependency graph")
+        } else {
+            dependencies = resolvedConfiguration.firstLevelModuleDependencies
+            debugLog("conf ${conf.name}: using legacy dependency graph after artifactView failure")
+        }
+
+        def currentChain = new HashSet()
+        if (sha1Map) {
+            loadLegacySha1Graph(dependencies, graph, 'root-node', currentChain, sha1Map)
+        } else {
+            loadLegacyGraph(dependencies, graph, 'root-node', currentChain)
+        }
+    } catch (Exception e) {
+        debugLog("legacy dependency traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+    }
+}
+
+def loadLegacyGraph(Iterable deps, GradleGraph graph, parentId, currentChain) {
+    deps.each { dep ->
+        dep.each { d ->
+            def moduleArtifacts
+            try {
+                moduleArtifacts = d.getModuleArtifacts()
+            } catch (Exception ex) {
+                debugLog("failed to get artifacts for dep: `$d`")
+                return
+            }
+            moduleArtifacts.each { a ->
+                def childName = "${d.moduleGroup}:${d.moduleName}"
+                def childId = "${childName}:${a.type}"
+                if (a.classifier) childId += ":${a.classifier}"
+                childId += "@${d.moduleVersion}"
+                graph.setNode(childId, ['name': childName, 'version': d.moduleVersion])
+                if (!currentChain.contains(childId) && d.children) {
+                    currentChain.add(childId)
+                    loadLegacyGraph(d.children, graph, childId, currentChain)
+                }
+                graph.setEdge(parentId, childId)
+            }
+        }
+    }
+}
+
+def loadLegacySha1Graph(Iterable deps, GradleGraph graph, parentId, currentChain, Sha1Map sha1Map) {
+    deps.each { dep ->
+        dep.each { d ->
+            def moduleArtifacts
+            try {
+                moduleArtifacts = d.getModuleArtifacts()
+            } catch (Exception ex) {
+                debugLog("failed to get artifacts for dep: `$d`")
+                return
+            }
+            moduleArtifacts.each { a ->
+                def childName = "${d.moduleGroup}:${d.moduleName}"
+                def coordinate = "${childName}:${a.type}"
+                if (a.classifier) coordinate += ":${a.classifier}"
+                coordinate += "@${d.moduleVersion}"
+                def nodeId
+                try {
+                    nodeId = hash(a.getFile())
+                } catch (Exception e) {
+                    debugLog("failed to hash artifact ${a.id}: ${e.message}")
+                    nodeId = hashString(coordinate)
+                }
+                sha1Map.setCoordinate(nodeId, coordinate)
+                graph.setNode(nodeId, ['name': childName, 'version': d.moduleVersion])
+                if (!currentChain.contains(nodeId) && d.children) {
+                    currentChain.add(nodeId)
+                    loadLegacySha1Graph(d.children, graph, nodeId, currentChain, sha1Map)
+                }
+                graph.setEdge(parentId, nodeId)
+            }
+        }
+    }
+}
+
 // Walks each resolvable configuration via Gradle's modern resolution APIs:
 // resolutionResult for the post-conflict-resolution graph (which v5's
 // ResolvedConfiguration didn't apply across project boundaries), and
@@ -153,6 +241,10 @@ def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map
         Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited = new HashSet<>()
         try {
             def artifactsByComponent = collectArtifactsByComponent(conf)
+            if (artifactsByComponent == null) {
+                walkLegacyResolvedConfiguration(conf, graph, sha1Map)
+                return
+            }
             // Per-config so a module resolved in compileClasspath but failed
             // (e.g. repo content filtering) in testRuntimeClasspath still
             // surfaces as unresolved where it failed. See emitUnresolvedNode
@@ -186,7 +278,7 @@ def collectArtifactsByComponent(conf) {
         artifacts.each { grouped[it.id.componentIdentifier] << it }
     } catch (Exception e) {
         debugLog("artifactView failed for conf ${conf.name}: ${e.message}")
-        return grouped
+        return null
     }
     // Best-effort: .failures access varies across Gradle versions. If it works
     // we log unresolved artifacts for diagnostic visibility; if it doesn't,
