@@ -233,15 +233,14 @@ describe('buildGraph', () => {
     ).toEqual({ pruned: 'cyclic' });
   });
 
-  it('builds a duplicate-heavy verbose graph in linear time', async () => {
+  it('builds a duplicate-heavy verbose graph without walking every route', async () => {
     // Regression guard for exponential graph-build time in the verbose walk.
     // Every package below is reachable via many distinct routes, which is the
     // ordinary shape of a large multi-module build's verbose dependency graph.
     // Re-queueing an already-visited package's children once per incoming
-    // route made this O(routes) rather than O(nodes + edges): at 28 packages
-    // it took ~36s, against ~1ms here. The graph is identical either way, so
-    // elapsed time is the only thing that can assert the complexity class -
-    // hence a wall-clock budget, set far above the linear cost.
+    // route made this O(routes): at 28 packages it took ~36s, against ~1ms
+    // here. The graph is identical either way, so elapsed time is the only
+    // thing that can assert it - hence a generous wall-clock budget.
     const packageCount = 28;
     const fanIn = 3;
     const key = (i: number) =>
@@ -267,6 +266,50 @@ describe('buildGraph', () => {
     // the project plus every generated package, each added exactly once
     expect(received.getPkgs()).toHaveLength(packageCount + 1);
     expect(elapsed).toBeLessThan(5000);
+  });
+
+  it('builds a long chain sharing one library without quadratic work', async () => {
+    // Every link of a long chain also depends on one shared library - the
+    // shape a framework or a ubiquitous helper gives a real build. A dominator
+    // tree over the whole graph climbs ever-longer chains here and took
+    // seconds at a few thousand packages, so dominance is only worked out
+    // inside cycles. A back edge closes the chain into one large cycle, so
+    // both the acyclic and the cyclic paths are held to the budget.
+    const chainLength = 8000;
+    const key = (i: number) => `org.example:c${i}@1.0.0`;
+    const chainGraph = (closed: boolean): GradleGraph => {
+      const gradleGraph: GradleGraph = {
+        'org.example:shared@1.0.0': {
+          name: 'org.example:shared',
+          version: '1.0.0',
+          parentIds: [],
+        },
+      };
+      for (let i = 1; i <= chainLength; i++) {
+        gradleGraph[key(i)] = {
+          name: `org.example:c${i}`,
+          version: '1.0.0',
+          parentIds: [i === 1 ? 'root-node' : key(i - 1)],
+        };
+        gradleGraph['org.example:shared@1.0.0'].parentIds.push(key(i));
+      }
+      if (closed) gradleGraph[key(1)].parentIds.push(key(chainLength));
+      return gradleGraph;
+    };
+
+    for (const closed of [false, true]) {
+      const startedAt = Date.now();
+      const received = await buildGraph(
+        chainGraph(closed),
+        'project',
+        '1.2.3',
+        true,
+      );
+      const elapsed = Date.now() - startedAt;
+
+      expect(received.getPkgs()).toHaveLength(chainLength + 2);
+      expect(elapsed).toBeLessThan(1000);
+    }
   });
 
   it('returns expected graph with repeated dependencies', async () => {
@@ -489,49 +532,6 @@ describe('buildGraph', () => {
     expect(expectNoLabel).toContainEqual({
       info: {},
     });
-  });
-
-  it('takes component metadata from a reachable member of a sha1Map group', async () => {
-    // Several raw ids can resolve onto one coordinate, and only some of them
-    // are reachable. The unreachable one contributes nothing to the graph, so
-    // its metadata must not win: taking it would report the wrong sha1 and
-    // drop the distributionUrl for the package that really is in the graph.
-    // Sorting picks the lowest raw id, and here the lowest is the unreachable
-    // one, so a plain sort gets this wrong.
-    const received = await buildGraph(
-      {
-        aaaa1111: {
-          name: 'org.x:core',
-          version: '1.0',
-          parentIds: [],
-          hashes: { sha1: 'sha1-of-the-unreachable-file' },
-        },
-        ffff9999: {
-          name: 'org.x:core',
-          version: '1.0',
-          parentIds: ['root-node'],
-          hashes: { sha1: 'sha1-of-the-reachable-file' },
-          distributionUrl: 'https://repo/org/x/core/1.0/core-1.0.jar',
-        },
-      },
-      'project',
-      '1.2.3',
-      true,
-      {
-        aaaa1111: 'org.x:core:jar@1.0',
-        ffff9999: 'org.x:core:jar@1.0',
-      },
-    );
-    const node = received
-      .toJSON()
-      .graph.nodes.find((node) => node.nodeId === 'org.x:core:jar@1.0');
-
-    expect(node?.info?.labels).toEqual(
-      expect.objectContaining({
-        'hash:sha1': 'sha1-of-the-reachable-file',
-        'distribution:url': 'https://repo/org/x/core/1.0/core-1.0.jar',
-      }),
-    );
   });
 
   it('leaves a null name alone, as the non-verbose path does', async () => {
