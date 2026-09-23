@@ -28,14 +28,14 @@ test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
       node_version: [ '20.20', '22.22', '24.16' ]
-      jdk_version: [ '8.0.292.j9-adpt' ]
+      jdk_version: [ '8.0.502-tem' ]
       gradle_version: [ '4.10', '5.5', '6.2.1']
 
 test_matrix_unix_new_versions: &test_matrix_unix_new_versions
   matrix:
     parameters:
       node_version: [ '20.20', '22.22', '24.16' ]
-      jdk_version: [ '17.0.9-jbr' ]
+      jdk_version: [ '17.0.14-jbr' ]
       gradle_version: [ '7.3', '8.4', '9.0.0', '9.2.0' ]
 
 test_matrix_win: &test_matrix_win
@@ -161,6 +161,20 @@ commands:
       - run:
           name: Installing JDK
           command: sdk install java << parameters.jdk_version >>
+      - run:
+          name: Install Java 21 for Gradle toolchain support
+          command: |
+            JDK_MAJOR=$(echo "<< parameters.jdk_version >>" | cut -d. -f1)
+            if [[ "$JDK_MAJOR" == "8" ]]; then
+              # Tolerate a non-zero exit when 21 is already present from cache,
+              # but hard-fail if the toolchain genuinely isn't installed rather
+              # than letting Gradle fail later with an opaque provisioning error.
+              if ! sdk install java 21.0.5-tem && [ ! -d "$HOME/.sdkman/candidates/java/21.0.5-tem" ]; then
+                echo "Failed to install Java 21 toolchain for Gradle" >&2
+                exit 1
+              fi
+              sdk default java << parameters.jdk_version >>
+            fi
       - save_cache:
           key: java-cli-{{ arch }}-v1
           paths:
@@ -184,6 +198,12 @@ commands:
               choco install -y openjdk<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
             else
               choco install --force -y openjdk --version=<< parameters.jdk_version >> --cache ~\AppData\Local\Temp\jdk
+            fi
+      - run:
+          name: Install Java 21 for Gradle toolchain support
+          command: |
+            if [[ << parameters.jdk_version >> == "8" ]]; then
+              choco install -y temurin21 --cache ~\AppData\Local\Temp\jdk
             fi
       - run:
           name: Set JAVA_HOME
@@ -304,15 +324,17 @@ workflows:
           name: Scan repository for secrets
           context:
             - snyk-bot-slack
-          channel: snyk-vuln-alerts-sca
+            - prodsec-orb-runtime
+          channel: snyk-vuln-alerts-sca-scanners
           <<: *filters_branches_ignore_main
 
       - security-scans:
           name: Security Scans
           node_version: "24.16"
           context:
-            - open_source-managed
+            - engines_sca-scanners
             - nodejs-install
+            - prodsec-orb-runtime
 
       - lint:
           name: Lint

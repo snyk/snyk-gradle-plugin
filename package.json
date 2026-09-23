@@ -1,10 +1,13 @@
 {
   "name": "snyk-gradle-plugin",
   "description": "Snyk CLI Gradle plugin",
-  "homepage": "https://github.com/snyk/snyk-gradle-plugin",
+  "homepage": "https://github.com/snyk/snyk-gradle-plugin#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/snyk/snyk-gradle-plugin"
+    "url": "https://github.com/snyk/snyk-gradle-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/snyk/snyk-gradle-plugin/issues"
   },
   "main": "dist/index.js",
   "directories": {
@@ -55,8 +58,8 @@
     "chalk": "^4.1.2",
     "p-map": "^4.0.0",
     "packageurl-js": "^1.2.1",
-    "shescape": "2.1.11",
-    "tmp": "^0.2.5",
+    "shescape": "2.1.14",
+    "tmp": "^0.2.7",
     "tslib": "^2.8.1"
   },
   "engines": {
