@@ -235,7 +235,15 @@ def canonicalUrl(URI u) {
 // the whole thing is best-effort: any failure degrades to "no distribution:url".
 def registerResourceReadListener() {
     try {
-        def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
+        // Look both types up by name. Groovy resolves a class named in a type
+        // position (`as`, casts, declarations) when the script compiles, and
+        // these internal types don't exist before Gradle 4.7 — so naming one
+        // fails the whole init script there, before this opt-in gate can run.
+        // Class.forName throws a catchable ClassNotFoundException instead.
+        def loader = getClass().classLoader
+        def managerType = Class.forName('org.gradle.internal.operations.BuildOperationListenerManager', false, loader)
+        def listenerType = Class.forName('org.gradle.internal.operations.BuildOperationListener', false, loader)
+        def manager = gradle.services.get(managerType)
         // Map-of-closures coerced to the interface: closures take untyped args,
         // so this satisfies the interface's typed abstract methods on every
         // Gradle version (the method set has changed — e.g. progress() was added
@@ -244,7 +252,7 @@ def registerResourceReadListener() {
             started : { buildOp, startEvent -> },
             progress: { operationId, progressEvent -> },
             finished: { buildOp, finishEvent -> recordResourceRead(buildOp) },
-        ] as org.gradle.internal.operations.BuildOperationListener
+        ].asType(listenerType)
         manager.addListener(listener)
         // BuildOperationListenerManager is a daemon-scoped service, so a listener
         // added here otherwise survives into later builds on a reused daemon —
