@@ -300,6 +300,31 @@ jobs:
           name: Run tests
           command: npm test
 
+  # The test matrix starts at Gradle 4.10, but init.gradle also has to compile
+  # on older 4.x. Groovy links every class named in a type position when the
+  # script compiles, so a reference to a type added after 4.0 breaks every
+  # scan on those versions without failing any test above. Run the script
+  # against a bare project on the oldest versions and require a result.
+  init-script-compat:
+    <<: *defaults
+    docker:
+      - image: cimg/node:<< parameters.node_version >>
+    steps:
+      - checkout
+      - install_sdkman
+      - install_jdk_unix:
+          jdk_version: << parameters.jdk_version >>
+      - install_gradle_unix:
+          gradle_version: << parameters.gradle_version >>
+      - run:
+          name: Run init.gradle on Gradle << parameters.gradle_version >>
+          command: |
+            project=$(mktemp -d)
+            echo "apply plugin: 'java'" > "$project/build.gradle"
+            gradle snykResolvedDepsJson -q --no-daemon -p "$project" \
+              -I "$PWD/lib/init.gradle" -PsnykIncludeComponentMetadata=true | tee out.txt
+            grep -q '^JSONDEPS ' out.txt
+
   release:
     <<: *defaults
     docker:
@@ -354,6 +379,18 @@ workflows:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix_new_versions
+          requires:
+            - Lint
+          <<: *filters_branches_ignore_main
+
+      - init-script-compat:
+          name: Init script compat Gradle=<<matrix.gradle_version>>
+          context: nodejs-install
+          matrix:
+            parameters:
+              node_version: [ '24.16' ]
+              jdk_version: [ '8.0.502-tem' ]
+              gradle_version: [ '4.0', '4.6' ]
           requires:
             - Lint
           <<: *filters_branches_ignore_main
