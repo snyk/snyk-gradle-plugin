@@ -695,6 +695,25 @@ def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
     return matching.findAll({ matchesAttributeFilter(it, confAttrSpec) })
 }
 
+// True when the configuration requests documentation variants (sources or
+// javadoc jars), e.g. the Kotlin plugin's <sourceSet>DependencySources. These
+// never contribute to a classpath, and modules that publish no sources variant
+// fail variant selection there, which the walker would otherwise emit as
+// unresolved leaves at the requested version (OSM-3992).
+def isDocumentationConfig(conf) {
+    if (!conf.hasProperty('attributes')) return false
+    try {
+        def attrs = conf.attributes
+        // Snapshot before iterating; see matchesAttributeFilter (OSM-3867).
+        def categoryAttr = attrs.keySet().toList().find { it.name == 'org.gradle.category' }
+        if (categoryAttr == null) return false
+        return attrs.getAttribute(categoryAttr)?.toString() == 'documentation'
+    } catch (Exception e) {
+        debugLog("isDocumentationConfig: attribute read failed for ${conf.name}: ${e.message}")
+        return false
+    }
+}
+
 def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
@@ -716,7 +735,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     // have no directly-declared dependencies (they aggregate via
     // extendsFrom), while user-intent custom configs have their own.
     def resolvable = matching.findAll {
-        it.canBeResolved && (!it.canBeConsumed || !it.dependencies.isEmpty())
+        it.canBeResolved && (!it.canBeConsumed || !it.dependencies.isEmpty()) && !isDocumentationConfig(it)
     }
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
