@@ -427,6 +427,10 @@ def collectArtifactsByComponent(conf) {
     // expected to support it.
     try {
         def failures = artifacts.failures
+        if (failures && failures.any { isVerificationFailure(it) }) {
+            debugLog("conf ${conf.name}: artifactView reported a verification failure; falling back to lenientConfiguration")
+            return collectLegacyArtifactsByComponent(conf)
+        }
         if (failures && !failures.isEmpty()) {
             debugLog("conf ${conf.name}: ${failures.size()} unresolved artifact(s):")
             failures.each { f ->
@@ -448,15 +452,30 @@ def collectLegacyArtifactsByComponent(conf) {
     def grouped = [:].withDefault { [] }
     try {
         conf.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { d ->
-            d.moduleArtifacts.each { a ->
-                def cid = a.id.componentIdentifier
-                if (!grouped[cid].any { it.id == a.id }) grouped[cid] << new LegacyArtifact(a)
+            try {
+                d.moduleArtifacts.each { a ->
+                    def cid = a.id.componentIdentifier
+                    if (!grouped[cid].any { it.id == a.id }) grouped[cid] << new LegacyArtifact(a)
+                }
+            } catch (Exception e) {
+                debugLog("conf ${conf.name}: no artifacts for ${d.name}: ${e.class.simpleName}: ${e.message}")
             }
         }
     } catch (Exception e) {
         debugLog("lenientConfiguration failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
     }
     return grouped
+}
+
+// DependencyVerificationException is internal API, so match on the class name
+// anywhere in the cause chain.
+def isVerificationFailure(Throwable t) {
+    def seen = [] as Set
+    while (t != null && seen.add(t)) {
+        if (t.class.simpleName.contains('Verification')) return true
+        t = t.cause
+    }
+    return false
 }
 
 // Reads a ResolvedArtifact's file once, so the walker's per-edge accesses
@@ -648,8 +667,9 @@ def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map,
 // attributes when available (Gradle 5.1+, ResolvedArtifactResult.getVariant());
 // this matches what v5's a.type returned, including non-jar types like
 // java-classes-directory and java-resources-directory. Falls back to filename
-// extension parsing for older Gradle. Classifier always comes from the
-// filename — no public-API alternative.
+// extension parsing for older Gradle. Classifier comes from the filename —
+// ResolvedArtifactResult has no public-API alternative — except for the
+// LegacyArtifact fallback, where ResolvedArtifact supplies both.
 def extractTypeAndClassifier(artifact, String name, String version) {
     if (artifact instanceof LegacyArtifact) {
         return [type: artifact.type ?: 'jar', classifier: artifact.classifier]
