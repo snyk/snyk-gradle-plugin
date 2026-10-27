@@ -418,8 +418,8 @@ def collectArtifactsByComponent(conf) {
         // use explicit .each to force the ResolvedArtifactResult view.
         artifacts.each { grouped[it.id.componentIdentifier] << it }
     } catch (Exception e) {
-        debugLog("artifactView failed for conf ${conf.name}: ${e.message}")
-        return grouped
+        debugLog("artifactView failed for conf ${conf.name}: ${e.message}; falling back to lenientConfiguration")
+        return collectLegacyArtifactsByComponent(conf)
     }
     // Best-effort: .failures access varies across Gradle versions. If it works
     // we log unresolved artifacts for diagnostic visibility; if it doesn't,
@@ -438,6 +438,45 @@ def collectArtifactsByComponent(conf) {
         debugLog("conf ${conf.name}: artifactCollection.failures access failed (${failuresErr.class.simpleName}: ${failuresErr.message}); continuing without unresolved-dep enumeration")
     }
     return grouped
+}
+
+// Dependency verification makes artifactView (and lenientConfiguration.artifacts)
+// throw for the whole conf, while each ResolvedDependency still lists its
+// artifacts. Only the artifact list comes from here; the graph still comes
+// from resolutionResult.
+def collectLegacyArtifactsByComponent(conf) {
+    def grouped = [:].withDefault { [] }
+    try {
+        conf.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { d ->
+            d.moduleArtifacts.each { a ->
+                def cid = a.id.componentIdentifier
+                if (!grouped[cid].any { it.id == a.id }) grouped[cid] << new LegacyArtifact(a)
+            }
+        }
+    } catch (Exception e) {
+        debugLog("lenientConfiguration failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+    }
+    return grouped
+}
+
+// Reads a ResolvedArtifact's file once, so the walker's per-edge accesses
+// don't re-trigger download and verification of an artifact that failed it.
+class LegacyArtifact {
+    final def id
+    final String type
+    final String classifier
+    final File file
+
+    LegacyArtifact(org.gradle.api.artifacts.ResolvedArtifact a) {
+        id = a.id
+        type = a.type
+        classifier = a.classifier
+        File f = null
+        try {
+            f = a.file
+        } catch (Exception ignored) { /* verification failure: no file */ }
+        file = f
+    }
 }
 
 // Walk ResolvedComponentResult.dependencies with an explicit work stack.
@@ -612,6 +651,9 @@ def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map,
 // extension parsing for older Gradle. Classifier always comes from the
 // filename — no public-API alternative.
 def extractTypeAndClassifier(artifact, String name, String version) {
+    if (artifact instanceof LegacyArtifact) {
+        return [type: artifact.type ?: 'jar', classifier: artifact.classifier]
+    }
     def file = artifact.file
     def fileName = file?.name
     String classifier = extractClassifierFromFilename(fileName, name, version)
