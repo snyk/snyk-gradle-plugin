@@ -167,3 +167,67 @@ describe('dependency verification', () => {
     expect(pkgIds(result.dependencyGraph)).toEqual(guavaCompileClasspath);
   }, 180_000);
 });
+
+// aTooling resolves before compileClasspath, so it is where Gradle reports the
+// failure; each configuration resolves Guava with a different failureaccess.
+describe('dependency verification across configurations', () => {
+  let project: VerificationFailureProject;
+
+  beforeAll(() => {
+    project = new VerificationFailureProject(`plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    aTooling {
+        resolutionStrategy.force 'com.google.guava:failureaccess:1.0'
+    }
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:30.1.1-jre'
+    aTooling 'com.google.guava:guava:30.1.1-jre'
+}
+`);
+  }, SETUP_TIMEOUT);
+
+  afterAll(() => project?.cleanUp());
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const expectGuavaToHaveBothFailureaccessVersions = (
+    depGraph: DepGraph | undefined,
+  ) => {
+    for (const version of ['1.0', '1.0.1']) {
+      const pkg = { name: 'com.google.guava:failureaccess', version };
+      expect(pkgIds(depGraph)).toContain(`${pkg.name}@${pkg.version}`);
+      const parents = (depGraph?.pkgPathsToRoot(pkg) ?? []).map(
+        (p) => `${p[1].name}@${p[1].version}`,
+      );
+      expect(parents).toContain('com.google.guava:guava@30.1.1-jre');
+    }
+  };
+
+  it('keeps each configuration’s transitives under the failing dependency', async () => {
+    const result = await inspect(project.projectDir, 'build.gradle', {
+      'configuration-matching': '^(aTooling|compileClasspath)$',
+    });
+
+    expectGuavaToHaveBothFailureaccessVersions(result.dependencyGraph);
+  }, 180_000);
+
+  it('keeps each configuration’s transitives with gradleNormalizeDeps', async () => {
+    mockMavenSearch();
+
+    const result = await inspect(project.projectDir, 'build.gradle', {
+      'configuration-matching': '^(aTooling|compileClasspath)$',
+      gradleNormalizeDeps: true,
+    });
+
+    expectGuavaToHaveBothFailureaccessVersions(result.dependencyGraph);
+  }, 180_000);
+});
