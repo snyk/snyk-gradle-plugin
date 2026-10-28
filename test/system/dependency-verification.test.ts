@@ -63,15 +63,32 @@ class VerificationFailureProject {
   private scanHome?: string;
   private readonly originalGradleUserHome = process.env.GRADLE_USER_HOME;
 
-  constructor(buildGradle?: string) {
+  constructor(buildGradle?: string, extraFiles: Record<string, string> = {}) {
     this.projectDir = fs.mkdtempSync(
       path.join(os.tmpdir(), 'snyk-gradle-plugin-verification-'),
     );
+    try {
+      this.setUp(buildGradle, extraFiles);
+    } catch (e) {
+      this.cleanUp();
+      throw e;
+    }
+  }
+
+  private setUp(
+    buildGradle: string | undefined,
+    extraFiles: Record<string, string>,
+  ) {
     fs.cpSync(getPathToFixture('basic-with-deps'), this.projectDir, {
       recursive: true,
     });
     if (buildGradle) {
       fs.writeFileSync(path.join(this.projectDir, 'build.gradle'), buildGradle);
+    }
+    for (const [file, contents] of Object.entries(extraFiles)) {
+      const filePath = path.join(this.projectDir, file);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, contents);
     }
     const wrapperPropertiesPath = path.join(
       this.projectDir,
@@ -121,6 +138,12 @@ class VerificationFailureProject {
       recursive: true,
     });
     process.env.GRADLE_USER_HOME = this.scanHome;
+  }
+
+  disableVerification() {
+    fs.rmSync(
+      path.join(this.projectDir, 'gradle', 'verification-metadata.xml'),
+    );
   }
 
   cleanUp() {
@@ -230,4 +253,55 @@ dependencies {
 
     expectGuavaToHaveBothFailureaccessVersions(result.dependencyGraph);
   }, 180_000);
+});
+
+// The fallback should be invisible: same graph as a scan that passes verification.
+describe('dependency verification fallback', () => {
+  let project: VerificationFailureProject;
+
+  beforeAll(() => {
+    project = new VerificationFailureProject(
+      `plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:30.1.1-jre'
+    implementation project(':lib')
+}
+`,
+      {
+        'settings.gradle': "rootProject.name = 'verification'\ninclude 'lib'\n",
+        'lib/build.gradle': "plugins {\n    id 'java-library'\n}\n",
+      },
+    );
+  }, SETUP_TIMEOUT);
+
+  afterAll(() => project?.cleanUp());
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const scan = async (gradleNormalizeDeps: boolean) => {
+    mockMavenSearch();
+    const result = await inspect(project.projectDir, 'build.gradle', {
+      'configuration-matching': '^compileClasspath$',
+      gradleNormalizeDeps,
+    });
+    return result.dependencyGraph;
+  };
+
+  it('matches a scan without the verification failure', async () => {
+    const fallback = [await scan(false), await scan(true)];
+    project.disableVerification();
+    const baseline = [await scan(false), await scan(true)];
+
+    expect(pkgIds(fallback[0])).toContain('verification:lib@unspecified');
+    for (const i of [0, 1]) {
+      expect(fallback[i]?.toJSON()).toEqual(baseline[i]?.toJSON());
+    }
+  }, 360_000);
 });
