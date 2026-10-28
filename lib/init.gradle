@@ -419,7 +419,11 @@ def collectArtifactsByComponent(conf) {
         artifacts.each { grouped[it.id.componentIdentifier] << it }
     } catch (Exception e) {
         debugLog("artifactView failed for conf ${conf.name}: ${e.message}; falling back to lenientConfiguration")
-        return collectLegacyArtifactsByComponent(conf)
+        // Keep what artifactView collected before it threw; fill only the gaps.
+        collectLegacyArtifactsByComponent(conf).each { cid, arts ->
+            if (!grouped.containsKey(cid)) grouped[cid] = arts
+        }
+        return grouped
     }
     // Best-effort: .failures access varies across Gradle versions. If it works
     // we log unresolved artifacts for diagnostic visibility; if it doesn't,
@@ -445,14 +449,16 @@ def collectArtifactsByComponent(conf) {
 // artifacts. Only the artifact list comes from here; the graph still comes
 // from resolutionResult, so keys are limited to components it selected.
 def collectLegacyArtifactsByComponent(conf) {
-    def grouped = [:].withDefault { [] }
+    def grouped = [:]
+    def seen = [] as Set
     def unlisted = [] as Set
     try {
         conf.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { d ->
             try {
                 d.moduleArtifacts.each { a ->
-                    def cid = a.id.componentIdentifier
-                    if (!grouped[cid].any { it.id == a.id }) grouped[cid] << new LegacyArtifact(a)
+                    if (seen.add(a.id)) {
+                        grouped.computeIfAbsent(a.id.componentIdentifier) { [] } << new LegacyArtifact(a)
+                    }
                 }
             } catch (Exception e) {
                 debugLog("conf ${conf.name}: no artifacts for ${d.name}: ${e.class.simpleName}: ${e.message}")
@@ -462,20 +468,15 @@ def collectLegacyArtifactsByComponent(conf) {
     } catch (Exception e) {
         debugLog("lenientConfiguration failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
     }
-    def selected = [:].withDefault { [] }
-    try {
-        conf.incoming.resolutionResult.allComponents.each { c ->
-            def arts = grouped.get(c.id)
-            def mv = c.moduleVersion
-            // An empty entry would make visitComponent skip the whole subtree.
-            if (!arts && mv && unlisted.contains("${mv.group}:${mv.name}:${mv.version}".toString())) {
-                arts = [LegacyArtifact.placeholder(c.id)]
-            }
-            if (arts) selected[c.id] = arts
+    def selected = [:]
+    conf.incoming.resolutionResult.allComponents.each { c ->
+        def arts = grouped.get(c.id)
+        def mv = c.moduleVersion
+        // An empty entry would make visitComponent skip the whole subtree.
+        if (!arts && mv && unlisted.contains("${mv.group}:${mv.name}:${mv.version}".toString())) {
+            arts = [LegacyArtifact.placeholder(c.id)]
         }
-    } catch (Exception e) {
-        debugLog("resolutionResult failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
-        return grouped
+        if (arts) selected[c.id] = arts
     }
     return selected
 }
