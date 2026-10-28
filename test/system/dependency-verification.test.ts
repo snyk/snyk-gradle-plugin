@@ -29,7 +29,7 @@ function pkgIds(depGraph: DepGraph | undefined): string[] {
 }
 
 function mockMavenSearch() {
-  jest
+  return jest
     .spyOn(search, 'getMavenPackageInfo')
     .mockImplementation(
       async (
@@ -286,12 +286,19 @@ dependencies {
   afterEach(() => jest.restoreAllMocks());
 
   const scan = async (gradleNormalizeDeps: boolean) => {
-    mockMavenSearch();
+    const search = mockMavenSearch();
     const result = await inspect(project.projectDir, 'build.gradle', {
       'configuration-matching': '^compileClasspath$',
       gradleNormalizeDeps,
     });
-    return result.dependencyGraph;
+    const sha1s = Object.fromEntries(
+      search.mock.calls.map(([sha1, c]) => [
+        `${c.groupId}:${c.artifactId}`,
+        sha1,
+      ]),
+    );
+    search.mockRestore();
+    return { depGraph: result.dependencyGraph, sha1s };
   };
 
   it('matches a scan without the verification failure', async () => {
@@ -299,9 +306,16 @@ dependencies {
     project.disableVerification();
     const baseline = [await scan(false), await scan(true)];
 
-    expect(pkgIds(fallback[0])).toContain('verification:lib@unspecified');
+    expect(pkgIds(fallback[0].depGraph)).toContain(
+      'verification:lib@unspecified',
+    );
     for (const i of [0, 1]) {
-      expect(fallback[i]?.toJSON()).toEqual(baseline[i]?.toJSON());
+      expect(fallback[i].depGraph?.toJSON()).toEqual(
+        baseline[i].depGraph?.toJSON(),
+      );
     }
+    // The mock ignores sha1s, so check the fallback sends the real ones.
+    expect(fallback[1].sha1s['com.google.guava:guava']).toBeDefined();
+    expect(fallback[1].sha1s).toEqual(baseline[1].sha1s);
   }, 360_000);
 });
