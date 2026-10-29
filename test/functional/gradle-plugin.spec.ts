@@ -183,4 +183,31 @@ describe('Gradle Plugin', () => {
       );
     },
   );
+
+  describe('isolatedProjectsErrorPattern', () => {
+    // Real Gradle output, verified directly rather than guessed: the wording changed
+    // between releases within the 8.8+ range where Isolated Projects exists at all.
+    it.each([
+      [
+        'Gradle 8.13 / 8.14.3 / 9.0.0',
+        'The configuration cache cannot be disabled when isolated projects is enabled.',
+      ],
+      [
+        'Gradle 9.5.1 / 9.7.1',
+        'Configuration Cache cannot be disabled when Isolated Projects is enabled',
+      ],
+    ])('matches the %s wording', (_label, message) => {
+      expect(testableMethods.isolatedProjectsErrorPattern.test(message)).toBe(
+        true,
+      );
+    });
+
+    it('does not match an unrelated configuration cache error', () => {
+      expect(
+        testableMethods.isolatedProjectsErrorPattern.test(
+          'Configuration cache problems found in this build.',
+        ),
+      ).toBe(false);
+    });
+  });
 });
