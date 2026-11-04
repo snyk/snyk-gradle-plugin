@@ -854,8 +854,20 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
     List allSubProjectNames = currProj.allprojects
         .findAll { it.path != currProj.path }
         .collect { formatPath(it.path) }
+    // All-sub-projects mode, entered from a subproject (no root build file, so the
+    // CLI passes each module as its own target): report only that module's subtree.
+    // Otherwise every target re-emits the whole build and N modules become N²
+    // projects (OSM-3958). Subtree = Gradle children plus projects whose directory
+    // is under this one, since the CLI skips any build file below another one.
+    File currDir = currProj.projectDir.canonicalFile
+    def isInCurrSubtree = { proj ->
+        isRootPath(currProj.path) ||
+        proj.path == currProj.path ||
+        proj.path.startsWith(currProj.path + ':') ||
+        proj.projectDir.canonicalFile.toPath().startsWith(currDir.toPath())
+    }
     def shouldScanProject = {
-        onlyProj == null ||
+        (onlyProj == null && isInCurrSubtree(it)) ||
         (onlyProj == '.' && it.path == currProj.path) ||
         it.name == onlyProj ||
         formatPath(it.path) == onlyProj
