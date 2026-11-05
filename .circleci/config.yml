@@ -1,9 +1,11 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.1.0
-  win: circleci/windows@5.0.0
+  # Snyk-owned orbs: track the latest release of the major version
   prodsec: snyk/prodsec-orb@1
+  # Third-party orbs: always pin an exact version
+  node: circleci/node@7.2.1
+  win: circleci/windows@5.1.1
 
 defaults: &defaults
   parameters:
@@ -267,8 +269,9 @@ jobs:
           jdk_version: << parameters.jdk_version >>
       - install_gradle_windows:
           gradle_version: << parameters.gradle_version >>
-      - node/install:
-          node-version: << parameters.node_version >>
+      - run:
+          name: Install Node.js << parameters.node_version >>
+          command: nvm install << parameters.node_version >>
       - show_node_version
       - node-install-packages
       - run:
