@@ -1,0 +1,10 @@
+// No root build.gradle on purpose (OSM-3958): the CLI's --all-projects then
+// passes each top-level module as its own target.
+rootProject.name = 'no-root-build'
+
+include 'mod-a', 'mod-b', 'mod-c', 'mod-c:nested'
+
+// A flat project whose directory sits under mod-b: the CLI never targets it
+// directly, so it must come back with mod-b.
+include 'relocated'
+project(':relocated').projectDir = file('mod-b/relocated')
