@@ -40,6 +40,21 @@ const cannotResolveVariantMarkers = [
   'Unable to find a matching variant of project',
 ];
 
+// Gradle's own wording when --no-configuration-cache (which this plugin passes on Gradle 7+)
+// meets a build with Isolated Projects enabled. Isolated Projects is built on the configuration
+// cache and cannot run without one, so the two are mutually exclusive and the build fails before
+// any dependency resolution happens.
+//
+// Case-insensitive, and matched on the invariant core rather than the full sentence, because the
+// exact wording changed between Gradle releases in the 8.8+ range where Isolated Projects exists
+// at all. Verified directly against real Gradle output:
+//   8.13 / 8.14.3 / 9.0.0: "The configuration cache cannot be disabled when isolated projects is enabled."
+//   9.5.1 / 9.7.1:         "Configuration Cache cannot be disabled when Isolated Projects is enabled"
+// A case-sensitive literal match on either exact sentence misses the other, silently falling back
+// to the generic "check your arguments" message for exactly the build this PR is meant to explain.
+const isolatedProjectsErrorPattern =
+  /configuration cache cannot be disabled when isolated projects is enabled/i;
+
 type Options = api.InspectOptions & GradleInspectOptions & CliOptions;
 type VersionBuildInfo = api.VersionBuildInfo;
 
@@ -561,6 +576,38 @@ to
     )}`;
     }
 
+    // else if, not a second independent if: precedence between this case and the variant
+    // case above must stay structural, not "whichever block runs last wins the overwrite",
+    // so inserting a third case later can't silently flip which message a build with two
+    // matching markers gets. When Isolated Projects is what failed, nothing else in the
+    // build got far enough to be the real cause, so this message should win if it matches.
+    else if (isolatedProjectsErrorPattern.test(error.message)) {
+      mainErrorMessage = `Error running Gradle dependency analysis.
+
+Your build has Gradle Isolated Projects enabled, which this plugin does not support yet.
+
+Isolated Projects is built on the configuration cache and cannot run without one, while this
+plugin passes ${chalk.whiteBright(
+        '--no-configuration-cache',
+      )} on Gradle 7 and above. Gradle rejects that
+combination before any dependency resolution happens, so the scan cannot start.
+
+Progress is tracked in ${chalk.whiteBright(
+        'https://github.com/snyk/snyk-gradle-plugin/issues/344',
+      )}.
+
+To scan in the meantime, turn Isolated Projects off for the scan. It is a Gradle property, so it
+can be overridden per invocation without editing your build:
+    ${chalk.whiteBright(
+      'snyk test -- -Dorg.gradle.unsafe.isolated-projects=false',
+    )}
+
+Use ${chalk.whiteBright(
+        '-Dorg.gradle.isolated-projects=false',
+      )} instead if your Gradle version has dropped the
+"unsafe" prefix from the property name.`;
+    }
+
     error.message = `${chalk.red.bold(
       'Gradle Error (short):\n' + gradleErrorEssence,
     )}
@@ -758,4 +805,5 @@ export const exportsForTests = {
   getVersionBuildInfo,
   toCamelCase,
   getGradleAttributesPretty,
+  isolatedProjectsErrorPattern,
 };
