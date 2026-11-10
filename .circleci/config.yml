@@ -358,7 +358,7 @@ workflows:
 
       - security-scans:
           name: Security Scans
-          node_version: "22"
+          node_version: "24"
           context:
             - engines_sca-scanners
             - nodejs-install
@@ -367,7 +367,7 @@ workflows:
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '22'
+          node_version: '24'
           <<: *filters_branches_ignore_main
 
       - test-unix:
@@ -391,7 +391,7 @@ workflows:
           context: nodejs-install
           matrix:
             parameters:
-              node_version: [ '22' ]
+              node_version: [ '24' ]
               jdk_version: [ '8.0.502-tem' ]
               gradle_version: [ '4.0', '4.6' ]
           requires:
@@ -419,5 +419,5 @@ workflows:
           context:
             - nodejs-install
             - github-release
-          node_version: '22'
+          node_version: '24'
           <<: *filters_branches_only_main
