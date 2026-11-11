@@ -33,9 +33,9 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 
 | Node | Supported |
 | ---- | --------- |
-| 20   | ✅        |
 | 22   | ✅        |
 | 24   | ✅        |
+| 26   | ✅        |
 
 
 ## Supported Gradle versions
