@@ -1,5 +1,5 @@
 import { DepGraphBuilder } from '@snyk/dep-graph';
-import { buildGraph } from '../../lib/graph';
+import { buildGraph, GradleGraph } from '../../lib/graph';
 
 describe('buildGraph', () => {
   it('returns empty when graph empty', async () => {
@@ -136,6 +136,180 @@ describe('buildGraph', () => {
     });
     expected.connectDep('c@1', 'b@1:pruned');
     expect(received.equals(expected.build())).toBe(true);
+  });
+
+  it('marks cycle edges without dropping the plain edge', async () => {
+    // Pins the verbose cycle semantics, which the timing test below cannot see
+    // because its graph is acyclic. `p1 -> p2` is drawn twice: once to the
+    // package and once to a cycle placeholder, because p1 and p2 share a cycle
+    // through p0 and p2 is reachable without p1. Deciding that exactly is
+    // NP-hard, so this is a deliberate over-approximation of the old per-route
+    // behaviour - the guarantee being pinned is that every package and every
+    // plain edge survives, and only placeholders may be added.
+    const received = await buildGraph(
+      {
+        'g:p0@1': {
+          name: 'g:p0',
+          version: '1',
+          parentIds: ['root-node', 'g:p2@1'],
+        },
+        'g:p1@1': { name: 'g:p1', version: '1', parentIds: ['g:p0@1'] },
+        'g:p2@1': {
+          name: 'g:p2',
+          version: '1',
+          parentIds: ['g:p0@1', 'g:p1@1'],
+        },
+      },
+      'project',
+      '1.2.3',
+      true,
+    );
+    const json = received.toJSON();
+    const depsOf = (nodeId: string) =>
+      (json.graph.nodes.find((node) => node.nodeId === nodeId)?.deps || [])
+        .map((dep) => dep.nodeId)
+        .sort();
+
+    expect(
+      received
+        .getPkgs()
+        .map((pkg) => pkg.name)
+        .sort(),
+    ).toEqual(['g:p0', 'g:p1', 'g:p2', 'project']);
+    expect(depsOf('root-node')).toEqual(['g:p0@1']);
+    expect(depsOf('g:p0@1')).toEqual(['g:p1@1', 'g:p2@1']);
+    // the back edge onto p0 keeps only the placeholder: no route reaches p2
+    // without passing through p0
+    expect(depsOf('g:p2@1')).toEqual(['g:p0@1:pruned']);
+    // p1 -> p2 keeps both, and the placeholder is a childless leaf
+    expect(depsOf('g:p1@1')).toEqual(['g:p2@1', 'g:p2@1:pruned']);
+    expect(depsOf('g:p2@1:pruned')).toEqual([]);
+    for (const nodeId of ['g:p0@1:pruned', 'g:p2@1:pruned']) {
+      expect(
+        json.graph.nodes.find((node) => node.nodeId === nodeId)?.info?.labels,
+      ).toEqual({ pruned: 'cyclic' });
+    }
+  });
+
+  it('treats a sha1Map collision as a cycle rather than a self dependency', async () => {
+    // sha1Map can resolve two ids Gradle reported separately onto one
+    // coordinate, which collapses a parent and its child into a single package.
+    // Cycles therefore have to be decided on resolved ids: deciding them on the
+    // raw ones makes the two look distinct and emits a package that depends on
+    // itself.
+    const received = await buildGraph(
+      {
+        'sha1-AAAA': {
+          name: 'org.example:widget',
+          version: '1.0.0',
+          parentIds: ['root-node'],
+        },
+        'sha1-BBBB': {
+          name: 'org.example:widget',
+          version: '1.0.0',
+          parentIds: ['sha1-AAAA'],
+        },
+      },
+      'project',
+      '1.2.3',
+      true,
+      {
+        'sha1-AAAA': 'org.example:widget:jar@1.0.0',
+        'sha1-BBBB': 'org.example:widget:jar@1.0.0',
+      },
+    );
+    const json = received.toJSON();
+    const widget = json.graph.nodes.find(
+      (node) => node.nodeId === 'org.example:widget:jar@1.0.0',
+    );
+
+    expect(widget?.deps.map((dep) => dep.nodeId)).toEqual([
+      'org.example:widget:jar@1.0.0:pruned',
+    ]);
+    expect(
+      json.graph.nodes.find(
+        (node) => node.nodeId === 'org.example:widget:jar@1.0.0:pruned',
+      )?.info?.labels,
+    ).toEqual({ pruned: 'cyclic' });
+  });
+
+  it('builds a duplicate-heavy verbose graph without walking every route', async () => {
+    // Regression guard for exponential graph-build time in the verbose walk.
+    // Every package below is reachable via many distinct routes, which is the
+    // ordinary shape of a large multi-module build's verbose dependency graph.
+    // Re-queueing an already-visited package's children once per incoming
+    // route made this O(routes): at 28 packages it took ~36s, against ~1ms
+    // here. The graph is identical either way, so elapsed time is the only
+    // thing that can assert it - hence a generous wall-clock budget.
+    const packageCount = 28;
+    const fanIn = 3;
+    const key = (i: number) =>
+      `org.example:p${String(i).padStart(4, '0')}@1.0.0`;
+    const gradleGraph: GradleGraph = {};
+    for (let i = 1; i <= packageCount; i++) {
+      const parentIds: string[] = [];
+      for (let k = 1; k <= fanIn; k++) {
+        if (i - k >= 1) parentIds.push(key(i - k));
+      }
+      if (i <= fanIn) parentIds.push('root-node');
+      gradleGraph[key(i)] = {
+        name: `org.example:p${String(i).padStart(4, '0')}`,
+        version: '1.0.0',
+        parentIds,
+      };
+    }
+
+    const startedAt = Date.now();
+    const received = await buildGraph(gradleGraph, 'project', '1.2.3', true);
+    const elapsed = Date.now() - startedAt;
+
+    // the project plus every generated package, each added exactly once
+    expect(received.getPkgs()).toHaveLength(packageCount + 1);
+    expect(elapsed).toBeLessThan(5000);
+  });
+
+  it('builds a long chain sharing one library without quadratic work', async () => {
+    // Every link of a long chain also depends on one shared library - the
+    // shape a framework or a ubiquitous helper gives a real build. A dominator
+    // tree over the whole graph climbs ever-longer chains here and took
+    // seconds at a few thousand packages, so dominance is only worked out
+    // inside cycles. A back edge closes the chain into one large cycle, so
+    // both the acyclic and the cyclic paths are held to the budget.
+    const chainLength = 8000;
+    const key = (i: number) => `org.example:c${i}@1.0.0`;
+    const chainGraph = (closed: boolean): GradleGraph => {
+      const gradleGraph: GradleGraph = {
+        'org.example:shared@1.0.0': {
+          name: 'org.example:shared',
+          version: '1.0.0',
+          parentIds: [],
+        },
+      };
+      for (let i = 1; i <= chainLength; i++) {
+        gradleGraph[key(i)] = {
+          name: `org.example:c${i}`,
+          version: '1.0.0',
+          parentIds: [i === 1 ? 'root-node' : key(i - 1)],
+        };
+        gradleGraph['org.example:shared@1.0.0'].parentIds.push(key(i));
+      }
+      if (closed) gradleGraph[key(1)].parentIds.push(key(chainLength));
+      return gradleGraph;
+    };
+
+    for (const closed of [false, true]) {
+      const startedAt = Date.now();
+      const received = await buildGraph(
+        chainGraph(closed),
+        'project',
+        '1.2.3',
+        true,
+      );
+      const elapsed = Date.now() - startedAt;
+
+      expect(received.getPkgs()).toHaveLength(chainLength + 2);
+      expect(elapsed).toBeLessThan(1000);
+    }
   });
 
   it('returns expected graph with repeated dependencies', async () => {
@@ -358,5 +532,49 @@ describe('buildGraph', () => {
     expect(expectNoLabel).toContainEqual({
       info: {},
     });
+  });
+
+  it('leaves a null name alone, as the non-verbose path does', async () => {
+    // The default has to fire on undefined alone. Coercing null here too would
+    // make one plugin report two different component identities for the same
+    // Gradle output depending on --print-graph.
+    const gradleGraph = {
+      'g:a@1': { name: 'g:a', version: '1', parentIds: ['root-node'] },
+      'g:b@2': {
+        name: null as unknown as string,
+        version: null as unknown as string,
+        parentIds: ['g:a@1'],
+      },
+    };
+    const namesOf = async (verbose: boolean) =>
+      (await buildGraph(gradleGraph, 'project', '1.2.3', verbose))
+        .getPkgs()
+        .map((pkg) => `${pkg.name}@${pkg.version}`)
+        .sort();
+
+    expect(await namesOf(true)).toEqual(await namesOf(false));
+  });
+
+  it('keeps the graph when a sha1Map entry resolves onto the root id', async () => {
+    // Nothing Gradle emits should hit this - sha1Map values are Maven
+    // coordinates - but resolving a package onto the root's own id must not
+    // let it claim the root's children and empty the whole graph.
+    const received = await buildGraph(
+      {
+        'g:a@1': { name: 'g:a', version: '1', parentIds: ['root-node'] },
+        hh: { name: 'g:b', version: '2', parentIds: ['g:a@1'] },
+      },
+      'project',
+      '1.2.3',
+      true,
+      { hh: 'root-node' },
+    );
+
+    expect(
+      received
+        .getPkgs()
+        .map((pkg) => pkg.name)
+        .sort(),
+    ).toEqual(['g:a', 'g:b', 'project']);
   });
 });

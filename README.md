@@ -33,9 +33,9 @@ Please refer to the [Snyk for Java](https://docs.snyk.io/products/snyk-open-sour
 
 | Node | Supported |
 | ---- | --------- |
-| 20   | ✅        |
 | 22   | ✅        |
 | 24   | ✅        |
+| 26   | ✅        |
 
 
 ## Supported Gradle versions
@@ -58,7 +58,11 @@ Additional command line arguments:
 
 - `--all-sub-projects` for "multi project" configurations, test all sub-projects.
 
-- `--configuration-matching=<string>` Resolve dependencies using only configuration(s) that match the provided Java regular expression, e.g. '^releaseRuntimeClasspath$'.
+- `--configuration-matching=<string>` Resolve dependencies using all configuration(s) that match the provided Java regular expression (case-insensitive), aggregating their dependencies into a single scan result.
+
+  Examples:
+  - `'^releaseRuntimeClasspath$'` -- scan only the `releaseRuntimeClasspath` configuration.
+  - `'^(?!test).*$'` -- scan all configurations except those starting with "test" (e.g. excludes `testCompileClasspath`, `testRuntimeClasspath`).
 
 - `--configuration-attributes=<string>` Select certain values of configuration attributes to resolve the dependencies. E.g.: 'buildtype:release,usage:java-runtime'
 
