@@ -1,9 +1,11 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.1.0
-  win: circleci/windows@5.0.0
+  # Snyk-owned orbs: track the latest release of the major version
   prodsec: snyk/prodsec-orb@1
+  # Third-party orbs: always pin an exact version
+  node: circleci/node@7.2.1
+  win: circleci/windows@5.1.1
 
 defaults: &defaults
   parameters:
@@ -27,28 +29,28 @@ windows_defaults: &windows_defaults
 test_matrix_unix: &test_matrix_unix
   matrix:
     parameters:
-      node_version: [ '20.20', '22.22', '24.16' ]
+      node_version: [ '22', '24', '26' ]
       jdk_version: [ '8.0.502-tem' ]
       gradle_version: [ '4.10', '5.5', '6.2.1']
 
 test_matrix_unix_new_versions: &test_matrix_unix_new_versions
   matrix:
     parameters:
-      node_version: [ '20.20', '22.22', '24.16' ]
+      node_version: [ '22', '24', '26' ]
       jdk_version: [ '17.0.14-jbr' ]
       gradle_version: [ '7.3', '8.4', '9.0.0', '9.2.0' ]
 
 test_matrix_win: &test_matrix_win
   matrix:
     parameters:
-      node_version: [ '20', '22', '24' ]
+      node_version: [ '22', '24', '26' ]
       jdk_version: [ '8' ]
       gradle_version: [ '4.10', '5.5', '6.2.1' ]
 
 test_matrix_win_new_versions: &test_matrix_win_new_versions
   matrix:
     parameters:
-      node_version: [ '20', '22', '24' ]
+      node_version: [ '22', '24', '26' ]
       jdk_version: [ '17.0.2' ]
       gradle_version: [ '7.3', '8.4', '9.0.0' ]
 
@@ -267,8 +269,9 @@ jobs:
           jdk_version: << parameters.jdk_version >>
       - install_gradle_windows:
           gradle_version: << parameters.gradle_version >>
-      - node/install:
-          node-version: << parameters.node_version >>
+      - run:
+          name: Install Node.js << parameters.node_version >>
+          command: nvm install << parameters.node_version >>
       - show_node_version
       - node-install-packages
       - run:
@@ -300,6 +303,31 @@ jobs:
           name: Run tests
           command: npm test
 
+  # The test matrix starts at Gradle 4.10, but init.gradle also has to compile
+  # on older 4.x. Groovy links every class named in a type position when the
+  # script compiles, so a reference to a type added after 4.0 breaks every
+  # scan on those versions without failing any test above. Run the script
+  # against a bare project on the oldest versions and require a result.
+  init-script-compat:
+    <<: *defaults
+    docker:
+      - image: cimg/node:<< parameters.node_version >>
+    steps:
+      - checkout
+      - install_sdkman
+      - install_jdk_unix:
+          jdk_version: << parameters.jdk_version >>
+      - install_gradle_unix:
+          gradle_version: << parameters.gradle_version >>
+      - run:
+          name: Run init.gradle on Gradle << parameters.gradle_version >>
+          command: |
+            project=$(mktemp -d)
+            echo "apply plugin: 'java'" > "$project/build.gradle"
+            gradle snykResolvedDepsJson -q --no-daemon -p "$project" \
+              -I "$PWD/lib/init.gradle" -PsnykIncludeComponentMetadata=true | tee out.txt
+            grep -q '^JSONDEPS ' out.txt
+
   release:
     <<: *defaults
     docker:
@@ -325,21 +353,21 @@ workflows:
           context:
             - snyk-bot-slack
             - prodsec-orb-runtime
-          channel: snyk-vuln-alerts-sca
+          channel: snyk-vuln-alerts-sca-scanners
           <<: *filters_branches_ignore_main
 
       - security-scans:
           name: Security Scans
-          node_version: "24.16"
+          node_version: "24"
           context:
-            - open_source-managed
+            - engines_sca-scanners
             - nodejs-install
             - prodsec-orb-runtime
 
       - lint:
           name: Lint
           context: nodejs-install
-          node_version: '24.16'
+          node_version: '24'
           <<: *filters_branches_ignore_main
 
       - test-unix:
@@ -354,6 +382,18 @@ workflows:
           name: Test OS=Unix Node=<<matrix.node_version>> JDK=<<matrix.jdk_version>> Gradle=<<matrix.gradle_version>>
           context: nodejs-install
           <<: *test_matrix_unix_new_versions
+          requires:
+            - Lint
+          <<: *filters_branches_ignore_main
+
+      - init-script-compat:
+          name: Init script compat Gradle=<<matrix.gradle_version>>
+          context: nodejs-install
+          matrix:
+            parameters:
+              node_version: [ '22' ]
+              jdk_version: [ '8.0.502-tem' ]
+              gradle_version: [ '4.0', '4.6' ]
           requires:
             - Lint
           <<: *filters_branches_ignore_main
@@ -379,5 +419,5 @@ workflows:
           context:
             - nodejs-install
             - github-release
-          node_version: '24.16'
+          node_version: '24'  # npm 11+ (Node 24) is needed for OIDC trusted publishing
           <<: *filters_branches_only_main

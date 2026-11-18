@@ -1,0 +1,29 @@
+// A resolvable configuration that requests documentation variants (sources
+// jars), shaped like the <sourceSet>DependencySources configurations that the
+// Kotlin Gradle Plugin 2.0.0 creates. jackson-core 2.22.x publishes no sources
+// variant in its Gradle module metadata, so variant selection fails here.
+// Documentation configurations never contribute to a classpath, so nothing
+// from them belongs in the dependency graph (OSM-3992).
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    testDependencySources {
+        canBeConsumed = false
+        canBeResolved = true
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, DocsType.SOURCES))
+        }
+    }
+}
+
+dependencies {
+    implementation 'commons-codec:commons-codec:1.17.1'
+    testDependencySources 'com.fasterxml.jackson.core:jackson-core:2.22.3'
+}

@@ -235,7 +235,15 @@ def canonicalUrl(URI u) {
 // the whole thing is best-effort: any failure degrades to "no distribution:url".
 def registerResourceReadListener() {
     try {
-        def manager = gradle.services.get(org.gradle.internal.operations.BuildOperationListenerManager)
+        // Look both types up by name. Groovy resolves a class named in a type
+        // position (`as`, casts, declarations) when the script compiles, and
+        // these internal types don't exist before Gradle 4.7 — so naming one
+        // fails the whole init script there, before this opt-in gate can run.
+        // Class.forName throws a catchable ClassNotFoundException instead.
+        def loader = getClass().classLoader
+        def managerType = Class.forName('org.gradle.internal.operations.BuildOperationListenerManager', false, loader)
+        def listenerType = Class.forName('org.gradle.internal.operations.BuildOperationListener', false, loader)
+        def manager = gradle.services.get(managerType)
         // Map-of-closures coerced to the interface: closures take untyped args,
         // so this satisfies the interface's typed abstract methods on every
         // Gradle version (the method set has changed — e.g. progress() was added
@@ -244,7 +252,7 @@ def registerResourceReadListener() {
             started : { buildOp, startEvent -> },
             progress: { operationId, progressEvent -> },
             finished: { buildOp, finishEvent -> recordResourceRead(buildOp) },
-        ] as org.gradle.internal.operations.BuildOperationListener
+        ].asType(listenerType)
         manager.addListener(listener)
         // BuildOperationListenerManager is a daemon-scoped service, so a listener
         // added here otherwise survives into later builds on a reused daemon —
@@ -410,7 +418,11 @@ def collectArtifactsByComponent(conf) {
         // use explicit .each to force the ResolvedArtifactResult view.
         artifacts.each { grouped[it.id.componentIdentifier] << it }
     } catch (Exception e) {
-        debugLog("artifactView failed for conf ${conf.name}: ${e.message}")
+        debugLog("artifactView failed for conf ${conf.name}: ${e.message}; falling back to lenientConfiguration")
+        // Keep what artifactView collected before it threw; fill only the gaps.
+        collectLegacyArtifactsByComponent(conf).each { cid, arts ->
+            if (!grouped.containsKey(cid)) grouped[cid] = arts
+        }
         return grouped
     }
     // Best-effort: .failures access varies across Gradle versions. If it works
@@ -432,13 +444,119 @@ def collectArtifactsByComponent(conf) {
     return grouped
 }
 
-// Recurse over ResolvedComponentResult.dependencies. component.moduleVersion
-// is the SELECTED (post-conflict-resolution) version — the correctness
-// improvement over the v5 walker.
+// Dependency verification makes artifactView (and lenientConfiguration.artifacts)
+// throw for the whole conf, while each ResolvedDependency still lists its
+// artifacts. Only the artifact list comes from here; the graph still comes
+// from resolutionResult, so keys are limited to components it selected.
+def collectLegacyArtifactsByComponent(conf) {
+    def grouped = [:]
+    def seen = [] as Set
+    def unlisted = [] as Set
+    try {
+        conf.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { d ->
+            try {
+                d.moduleArtifacts.each { a ->
+                    if (seen.add(a.id)) {
+                        grouped.computeIfAbsent(a.id.componentIdentifier) { [] } << new LegacyArtifact(a)
+                    }
+                }
+            } catch (Exception e) {
+                debugLog("conf ${conf.name}: no artifacts for ${d.name}: ${e.class.simpleName}: ${e.message}")
+                unlisted.add("${d.moduleGroup}:${d.moduleName}:${d.moduleVersion}".toString())
+            }
+        }
+    } catch (Exception e) {
+        debugLog("lenientConfiguration failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+    }
+    def selected = [:]
+    conf.incoming.resolutionResult.allComponents.each { c ->
+        def arts = grouped.get(c.id)
+        def mv = c.moduleVersion
+        // An empty entry would make visitComponent skip the whole subtree.
+        if (!arts && mv && unlisted.contains("${mv.group}:${mv.name}:${mv.version}".toString())) {
+            arts = [LegacyArtifact.placeholder(c.id)]
+        }
+        if (arts) selected[c.id] = arts
+    }
+    return selected
+}
+
+// Reads a ResolvedArtifact's file once, so the walker's per-edge accesses
+// don't re-trigger download and verification of an artifact that failed it.
+class LegacyArtifact {
+    final def id
+    final String type
+    final String classifier
+    final File file
+
+    LegacyArtifact(org.gradle.api.artifacts.ResolvedArtifact a) {
+        id = a.id
+        type = a.type
+        classifier = a.classifier
+        File f = null
+        try {
+            f = a.file
+        } catch (Exception ignored) { /* verification failure: no file */ }
+        file = f
+    }
+
+    private LegacyArtifact(componentId, String type) {
+        id = componentId
+        this.type = type
+        classifier = null
+        file = null
+    }
+
+    // Stands in for a component whose artifacts couldn't be listed, so it and
+    // its children still appear in the graph.
+    static LegacyArtifact placeholder(componentId) {
+        return new LegacyArtifact(componentId, 'jar')
+    }
+}
+
+// Walk ResolvedComponentResult.dependencies with an explicit work stack.
+// component.moduleVersion is the SELECTED (post-conflict-resolution) version —
+// the correctness improvement over the v5 walker.
+//
+// This was a recursive walk until CMPA-770. It descends once per dependency
+// edge, and Groovy closure dispatch burns enough real JVM stack per level that
+// a few hundred chained modules overflow the thread stack whatever the heap is
+// set to — so deep multi-module builds died with a StackOverflowError that no
+// customer-side memory setting could fix.
+//
+// Frame order is load-bearing, not incidental. `visited` gates descent but not
+// emission, so which parent a component's subtree hangs off depends on the
+// order components are first reached. Frames are pushed in reverse so they pop
+// in exactly the order the recursive walker entered them, and unresolved
+// dependencies are queued as frames rather than emitted inline for the same
+// reason: their emission also has to stay behind the preceding sibling's
+// entire subtree.
 def walkComponent(component, GradleGraph graph, String parentId,
                   Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
                   Map artifactsByComponent, Sha1Map sha1Map, boolean isRoot,
                   Map<String, String> coordToNodeId, Set<String> resolvedNames) {
+    Deque<Map> stack = new ArrayDeque<Map>()
+    stack.push([unresolved: false, component: component, parentId: parentId, isRoot: isRoot])
+    while (!stack.isEmpty()) {
+        def frame = stack.pop()
+        if (frame.unresolved) {
+            emitUnresolvedNode(frame.dep, graph, frame.parentId, sha1Map, coordToNodeId, resolvedNames)
+            continue
+        }
+        def next = visitComponent(frame.component, graph, frame.parentId, visited,
+                                  artifactsByComponent, sha1Map, frame.isRoot, coordToNodeId, resolvedNames)
+        for (int i = next.size() - 1; i >= 0; i--) {
+            stack.push(next[i])
+        }
+    }
+}
+
+// Emit one component's nodes and edges, and return the frames the recursive
+// walker would have descended into, in the order it would have descended.
+def visitComponent(component, GradleGraph graph, String parentId,
+                   Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited,
+                   Map artifactsByComponent, Sha1Map sha1Map, boolean isRoot,
+                   Map<String, String> coordToNodeId, Set<String> resolvedNames) {
     def cid = component.id
     def mv = component.moduleVersion
     // Root legitimately has null moduleVersion (isRoot branch below skips
@@ -446,7 +564,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
     // downstream — skip rather than fall back to displayName.
     if (mv == null && !isRoot) {
         debugLog("walkComponent: skipping ${cid} (non-root, null moduleVersion)")
-        return
+        return []
     }
     String name = mv != null ? "${mv.group}:${mv.name}" : null
     String version = mv != null ? (mv.version ?: 'unspecified') : null
@@ -488,7 +606,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
         }
     }
 
-    if (visited.contains(cid)) return
+    if (visited.contains(cid)) return []
     visited.add(cid)
 
     // Skip children of components we emitted nothing for: their dependencies
@@ -496,7 +614,7 @@ def walkComponent(component, GradleGraph graph, String parentId,
     // phantom children of our parent. Can't filter dep.isConstraint() — strict
     // lock mode marks real direct deps as constraints too (lock IS a constraint).
     boolean currentEmittedNothing = !isRoot && nodeIdsForThisComponent.isEmpty()
-    if (currentEmittedNothing) return
+    if (currentEmittedNothing) return []
     // ResolutionResult.dependencies is an unordered Set; sort for determinism.
     def sortedDeps = component.dependencies.toList().sort { a, b ->
         def aKey = (a instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) ? a.selected.id.displayName : a.requested.displayName
@@ -505,19 +623,21 @@ def walkComponent(component, GradleGraph graph, String parentId,
     }
     // Attach children under EVERY emitted node, not just the first: a component
     // with multiple artifacts (e.g. classifier variants) should show its
-    // transitives under each artifact. The visited check inside walkComponent
-    // blocks recursion explosion — subsequent calls only re-add parent edges.
+    // transitives under each artifact. The visited check at the top of this
+    // method blocks descent explosion — subsequent frames only re-add parent edges.
     def parents = nodeIdsForThisComponent.isEmpty() ? [parentId] : nodeIdsForThisComponent
+    def next = []
     parents.each { p ->
         sortedDeps.each { dep ->
             if (dep instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult) {
-                emitUnresolvedNode(dep, graph, p, sha1Map, coordToNodeId, resolvedNames)
+                next.add([unresolved: true, dep: dep, parentId: p])
                 return
             }
             if (!(dep instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult)) return
-            walkComponent(dep.selected, graph, p, visited, artifactsByComponent, sha1Map, false, coordToNodeId, resolvedNames)
+            next.add([unresolved: false, component: dep.selected, parentId: p, isRoot: false])
         }
     }
+    return next
 }
 
 // Emit a leaf node for an UnresolvedDependencyResult. Type is always 'jar'
@@ -563,9 +683,13 @@ def emitUnresolvedNode(dep, GradleGraph graph, String parentId, Sha1Map sha1Map,
 // attributes when available (Gradle 5.1+, ResolvedArtifactResult.getVariant());
 // this matches what v5's a.type returned, including non-jar types like
 // java-classes-directory and java-resources-directory. Falls back to filename
-// extension parsing for older Gradle. Classifier always comes from the
-// filename — no public-API alternative.
+// extension parsing for older Gradle. Classifier comes from the filename —
+// ResolvedArtifactResult has no public-API alternative — except for the
+// LegacyArtifact fallback, where ResolvedArtifact supplies both.
 def extractTypeAndClassifier(artifact, String name, String version) {
+    if (artifact instanceof LegacyArtifact) {
+        return [type: artifact.type ?: 'jar', classifier: artifact.classifier]
+    }
     def file = artifact.file
     def fileName = file?.name
     String classifier = extractClassifierFromFilename(fileName, name, version)
@@ -649,6 +773,25 @@ def findMatchingConfigs(confs, confNameFilter, confAttrSpec) {
     return matching.findAll({ matchesAttributeFilter(it, confAttrSpec) })
 }
 
+// True when the configuration requests documentation variants (sources or
+// javadoc jars), e.g. the Kotlin plugin's <sourceSet>DependencySources. These
+// never contribute to a classpath, and modules that publish no sources variant
+// fail variant selection there, which the walker would otherwise emit as
+// unresolved leaves at the requested version (OSM-3992).
+def isDocumentationConfig(conf) {
+    if (!conf.hasProperty('attributes')) return false
+    try {
+        def attrs = conf.attributes
+        // Snapshot before iterating; see matchesAttributeFilter (OSM-3867).
+        def categoryAttr = attrs.keySet().toList().find { it.name == 'org.gradle.category' }
+        if (categoryAttr == null) return false
+        return attrs.getAttribute(categoryAttr)?.toString() == 'documentation'
+    } catch (Exception e) {
+        debugLog("isDocumentationConfig: attribute read failed for ${conf.name}: ${e.message}")
+        return false
+    }
+}
+
 def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     def matching = findMatchingConfigs(proj.configurations, confNameFilter, confAttrSpec)
     proj.configurations.each({ debugLog("conf.name=$it.name; conf.canBeResolved=$it.canBeResolved; conf.canBeConsumed=$it.canBeConsumed") })
@@ -670,7 +813,7 @@ def findProjectConfigs(proj, confNameFilter, confAttrSpec) {
     // have no directly-declared dependencies (they aggregate via
     // extendsFrom), while user-intent custom configs have their own.
     def resolvable = matching.findAll {
-        it.canBeResolved && (!it.canBeConsumed || !it.dependencies.isEmpty())
+        it.canBeResolved && (!it.canBeConsumed || !it.dependencies.isEmpty()) && !isDocumentationConfig(it)
     }
     debugLog("resolvableConfigs=$resolvable")
     return resolvable
@@ -711,8 +854,20 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
     List allSubProjectNames = currProj.allprojects
         .findAll { it.path != currProj.path }
         .collect { formatPath(it.path) }
+    // All-sub-projects mode, entered from a subproject (no root build file, so the
+    // CLI passes each module as its own target): report only that module's subtree.
+    // Otherwise every target re-emits the whole build and N modules become N²
+    // projects (OSM-3958). Subtree = Gradle children plus projects whose directory
+    // is under this one, since the CLI skips any build file below another one.
+    File currDir = currProj.projectDir.canonicalFile
+    def isInCurrSubtree = { proj ->
+        isRootPath(currProj.path) ||
+        proj.path == currProj.path ||
+        proj.path.startsWith(currProj.path + ':') ||
+        proj.projectDir.canonicalFile.toPath().startsWith(currDir.toPath())
+    }
     def shouldScanProject = {
-        onlyProj == null ||
+        (onlyProj == null && isInCurrSubtree(it)) ||
         (onlyProj == '.' && it.path == currProj.path) ||
         it.name == onlyProj ||
         formatPath(it.path) == onlyProj
