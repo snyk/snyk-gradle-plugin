@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@common.js/yocto-queue": "^1.1.1",
-    "@snyk/cli-interface": "2.15.0",
+    "@snyk/cli-interface": "^2.16.0",
     "@snyk/dep-graph": "^1.28.0",
     "@types/debug": "^4.1.13",
     "chalk": "^4.1.2",
