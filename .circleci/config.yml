@@ -70,13 +70,7 @@ commands:
   node-install-packages:
     description: Install NPM packages
     steps:
-      - run:
-          # The Node orb handles all the boring work for us, but they do not understand repos with no package-lock.json
-          name: Create fake package-lock.json
-          command: touch package-lock.json
-      - node/install-packages:
-          cache-only-lockfile: false
-          override-ci-command: npm ci
+      - node/install-packages
 
   show_node_version:
     description: Log Node and npm version
