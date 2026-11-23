@@ -382,7 +382,11 @@ def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map
     // real+pruned pairs. resolvedNames below is per-config on purpose; see
     // its declaration site.
     def coordToNodeId = [:]
+    def configCount = 0
+    def failureCount = 0
+    def failureMessages = []
     resolvableConfigs.each { conf ->
+        configCount++
         Set<org.gradle.api.artifacts.component.ComponentIdentifier> visited = new HashSet<>()
         try {
             def artifactsByComponent = collectArtifactsByComponent(conf)
@@ -402,8 +406,20 @@ def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map
             walkComponent(root, graph, 'root-node', visited, artifactsByComponent, sha1Map, true, coordToNodeId, resolvedNames)
             debugLog("conf ${conf.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
         } catch (Exception e) {
-            debugLog("traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+            failureCount++
+            def failure = "conf ${conf.name}: ${e.class.simpleName}: ${e.message}"
+            failureMessages << failure
+            debugLog("traversal failed for ${failure}")
         }
+    }
+    // Silent empty graphs after every walk failed hide real resolution
+    // problems (e.g. OSM-3977). Legitimate empty projects have zero
+    // resolvable configs and must still succeed.
+    if (configCount > 0 && failureCount == configCount && graph.nodes.isEmpty()) {
+        throw new RuntimeException(
+            "Failed to resolve dependencies for all ${configCount} configuration(s); dependency graph is empty. Failures:\n" +
+            failureMessages.join('\n')
+        )
     }
 }
 

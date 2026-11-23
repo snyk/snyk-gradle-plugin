@@ -25,7 +25,9 @@ if (!fixtures.length) {
     // handled by a separate test due to platform-specific dependencies
     .filter((dir) => dir !== 'kts-basic-gradle9')
     // handled by a separate test: OSM-3867 ConcurrentModificationException guard
-    .filter((dir) => dir !== 'lazy-attribute-provider');
+    .filter((dir) => dir !== 'lazy-attribute-provider')
+    // handled by failure-states: expects inspect() to reject
+    .filter((dir) => dir !== 'all-config-walks-fail');
 }
 
 describe('inspect() fixtures', () => {
