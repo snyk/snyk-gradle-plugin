@@ -14,6 +14,15 @@ test('all configuration walks fail with empty graph', async () => {
   );
 }, 120000);
 
+test('some configuration walks fail but graph is non-empty', async () => {
+  const result = await inspect(
+    '.',
+    path.join(getPathToFixture('some-config-walks-fail'), 'build.gradle'),
+  );
+  const pkgs = result.dependencyGraph?.getPkgs() ?? [];
+  expect(pkgs.some((pkg) => pkg.name === 'com.google.guava:guava')).toBe(true);
+}, 120000);
+
 test('malformed build.gradle', async () => {
   await expect(
     inspect(

@@ -1,0 +1,23 @@
+// Fixture: only one resolvable configuration walk throws; others succeed.
+// Asserts partial walk failures do not abort the scan when the graph is
+// non-empty (FRG-538 boundary).
+apply plugin: 'java'
+
+group = 'io.snyk.fixtures'
+version = '1.0.0'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'com.google.guava:guava:31.1-jre'
+}
+
+configurations.configureEach { conf ->
+  if (conf.name == 'testRuntimeClasspath') {
+    conf.metaClass.getIncoming = {
+      throw new RuntimeException("forced configuration walk failure for test (${conf.name})")
+    }
+  }
+}

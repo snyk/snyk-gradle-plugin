@@ -27,7 +27,9 @@ if (!fixtures.length) {
     // handled by a separate test: OSM-3867 ConcurrentModificationException guard
     .filter((dir) => dir !== 'lazy-attribute-provider')
     // handled by failure-states: expects inspect() to reject
-    .filter((dir) => dir !== 'all-config-walks-fail');
+    .filter((dir) => dir !== 'all-config-walks-fail')
+    // handled by failure-states: partial walk failure still succeeds
+    .filter((dir) => dir !== 'some-config-walks-fail');
 }
 
 describe('inspect() fixtures', () => {
