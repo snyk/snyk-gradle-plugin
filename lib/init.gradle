@@ -360,22 +360,24 @@ def lookupDistributionUrl(String name, String version, String fileName) {
 // artifactView { lenient = true } for resolved artifacts with file metadata.
 // Replaces v5's ResolvedConfiguration.getFirstLevelModuleDependencies() walk,
 // which Gradle's own Javadoc calls "legacy API. Avoid this class for new code."
-def getGradleGraph(Iterable resolvableConfigs) {
+def getGradleGraph(Iterable resolvableConfigs, List walkFailures = []) {
     def graph = new GradleGraph('root-node')
-    walkResolvableConfigs(resolvableConfigs, graph, null)
+    walkResolvableConfigs(resolvableConfigs, graph, null, walkFailures)
     return graph.nodes
 }
 
-def getGradleGraphWithSha1Map(Iterable resolvableConfigs, Sha1Map sha1Map) {
+def getGradleGraphWithSha1Map(Iterable resolvableConfigs, Sha1Map sha1Map, List walkFailures = []) {
     if (!sha1Map) sha1Map = new Sha1Map()
     def graph = new GradleGraph('root-node')
-    walkResolvableConfigs(resolvableConfigs, graph, sha1Map)
+    walkResolvableConfigs(resolvableConfigs, graph, sha1Map, walkFailures)
     return [graph: graph.nodes, sha1Map: sha1Map]
 }
 
 // sha1Map != null switches the walker to normalized mode (nodeIds are sha1
 // hashes of artifact contents); null = regular mode (nodeIds are coordinates).
-def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map) {
+// walkFailures collects "<config>: <exception>: <message>" for every config
+// whose walk threw, so the plugin can tell an empty graph from a failed one.
+def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map sha1Map, List walkFailures = []) {
     // coordToNodeId is shared across configs: lib/graph.ts dedupes by coord,
     // so the same coord must not surface under two nodeIds (e.g. hash(file)
     // here, hashString(coord) in emitUnresolvedNode) — that produces phantom
@@ -403,6 +405,7 @@ def walkResolvableConfigs(Iterable resolvableConfigs, GradleGraph graph, Sha1Map
             debugLog("conf ${conf.name}: walked ${visited.size()} components, ${artifactsByComponent.size()} with artifacts")
         } catch (Exception e) {
             debugLog("traversal failed for conf ${conf.name}: ${e.class.simpleName}: ${e.message}")
+            walkFailures << "${conf.name}: ${e.class.simpleName}: ${e.message}".toString()
         }
     }
 }
@@ -881,9 +884,10 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
         debugLog("processing project: name=$proj.name; path=$proj.path")
         def resolvableConfigs = findProjectConfigs(proj, confNameFilter, confAttrSpec)
         debugLog("converting gradle graph to snyk-graph format")
+        def walkFailures = []
         def projGraph = withSha1Map
-            ? getGradleGraphWithSha1Map(resolvableConfigs, sha1Map).graph
-            : getGradleGraph(resolvableConfigs)
+            ? getGradleGraphWithSha1Map(resolvableConfigs, sha1Map, walkFailures).graph
+            : getGradleGraph(resolvableConfigs, walkFailures)
         String projKey = formatPath(proj.path)
         if (projKey == "") {
             debugLog("project path is empty (proj.path=$proj.path)! will use defaultProjectName=$defaultProjectName")
@@ -892,6 +896,7 @@ def buildSnykDepsResult(currProj, onlyProj, confNameFilter, confAttrSpec, boolea
         projectsDict[projKey] = [
             'targetFile': rootProject.findProject(proj.path).buildFile.toString(),
             'gradleGraph': projGraph,
+            'walkFailures': walkFailures,
             'projectVersion': proj.version.toString()
         ]
     }

@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import { DepGraph } from '@snyk/dep-graph';
 import { legacyCommon, legacyPlugin as api } from '@snyk/cli-interface';
 
-import { MissingSubProjectError } from './errors';
+import { EmptyDependencyGraphError, MissingSubProjectError } from './errors';
 import { getGradleAttributesPretty } from './gradle-attributes-pretty';
 import { buildGraph, GradleGraph } from './graph';
 import type { GradleInspectOptions, Sha1Map, SnykHttpClient } from './types';
@@ -164,6 +164,7 @@ interface ProjectsDict {
 interface GradleProjectInfo {
   depGraph?: DepGraph;
   gradleGraph?: GradleGraph; // gradleGraph from gradle init task
+  walkFailures?: string[]; // configurations whose walk threw, from init.gradle
   targetFile: string;
   projectVersion: string;
 }
@@ -582,7 +583,8 @@ export async function processProjectsInExtractedJSON(
 ) {
   for (const projectId in extractedJSON.projects) {
     const { defaultProject, defaultProjectKey } = extractedJSON;
-    const { gradleGraph, projectVersion } = extractedJSON.projects[projectId];
+    const { gradleGraph, projectVersion, walkFailures } =
+      extractedJSON.projects[projectId];
 
     if (!gradleGraph) {
       continue;
@@ -602,8 +604,16 @@ export async function processProjectsInExtractedJSON(
       verbose,
       sha1Map,
     );
-    // this property usage ends here
+    // An empty graph with failed configurations is a failed scan, not a clean one.
+    if (
+      walkFailures?.length &&
+      extractedJSON.projects[projectId].depGraph?.getDepPkgs().length === 0
+    ) {
+      throw new EmptyDependencyGraphError(rootPkgName, walkFailures);
+    }
+    // these properties' usage ends here
     delete extractedJSON.projects[projectId].gradleGraph;
+    delete extractedJSON.projects[projectId].walkFailures;
   }
 
   return extractedJSON;
