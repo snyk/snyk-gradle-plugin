@@ -1,0 +1,24 @@
+// Fixture: every resolvable configuration walk throws before any graph nodes
+// are emitted. Used to assert the plugin fails loudly instead of returning an
+// empty successful graph (FRG-538).
+apply plugin: 'java'
+
+group = 'io.snyk.fixtures'
+version = '1.0.0'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'com.google.guava:guava:31.1-jre'
+}
+
+// Make Configuration.incoming throw for Groovy callers (init.gradle). Both
+// artifactView and resolutionResult go through this getter, so
+// walkResolvableConfigs' per-config catch fires and the graph stays empty.
+configurations.configureEach { conf ->
+  conf.metaClass.getIncoming = {
+    throw new RuntimeException("forced configuration walk failure for test (${conf.name})")
+  }
+}

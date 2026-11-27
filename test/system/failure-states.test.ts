@@ -1,7 +1,27 @@
 import * as path from 'path';
-import { fixtureDir } from '../common';
+import { fixtureDir, getPathToFixture } from '../common';
 import { inspect } from '../../lib';
 const rootNoWrapper = fixtureDir('no wrapper');
+
+test('all configuration walks fail with empty graph', async () => {
+  await expect(
+    inspect(
+      '.',
+      path.join(getPathToFixture('all-config-walks-fail'), 'build.gradle'),
+    ),
+  ).rejects.toThrow(
+    /Failed to resolve dependencies for all \d+ configuration\(s\); dependency graph is empty/,
+  );
+}, 120000);
+
+test('some configuration walks fail but graph is non-empty', async () => {
+  const result = await inspect(
+    '.',
+    path.join(getPathToFixture('some-config-walks-fail'), 'build.gradle'),
+  );
+  const pkgs = result.dependencyGraph?.getPkgs() ?? [];
+  expect(pkgs.some((pkg) => pkg.name === 'com.google.guava:guava')).toBe(true);
+}, 120000);
 
 test('malformed build.gradle', async () => {
   await expect(
